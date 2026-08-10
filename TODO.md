@@ -118,3 +118,40 @@ API, so each new subcommand has to be added there explicitly.
   case?
 - Should closed PRs stay visible in the list for the rest of the day (so the action is
   undoable in place) or vanish on the next refresh?
+
+## 4. Summary widget in "My open PRs", with copy-unapproved-links button
+
+A small summary block at the top of the open-PR section, whose main action copies the
+links of every PR that is **not** approved yet to the clipboard — ready to paste into a
+chat when chasing reviews.
+
+**Shape**
+
+- Sits inside the open-PR panel, above the per-repo accordions, so it summarises exactly
+  what is listed below it.
+- Counts worth showing: total open, approved and waiting to merge, awaiting review,
+  changes requested, and drafts. The data is already in the report; this is derivation,
+  not a new fetch.
+- One button: **Copy links awaiting review**. Copies the URLs of PRs whose review state
+  is not `APPROVED`, one per line, and confirms how many were copied.
+
+**Mechanics**
+
+Purely client-side: `navigator.clipboard.writeText`, no server round trip and no new
+permission. The report already carries `review` and `url` per PR, so the filter is a one
+-liner over `report.repos.flatMap(r => r.prs)`.
+
+**Decisions to make**
+
+- Should drafts be included? A draft cannot be reviewed, so chasing it is noise — lean
+  toward excluding drafts and saying so on the button ("awaiting review, excluding
+  drafts").
+- Do `CHANGES_REQUESTED` PRs belong in the copy? Those are waiting on *me*, not on a
+  reviewer, so probably not — that argues for the filter being "awaiting someone else's
+  review" rather than the literal "not approved".
+- Plain URLs, or `repo#123 — title — url` per line? Plain URLs paste cleanly into Slack
+  and auto-unfurl; the richer form is easier to read in a comment. Possibly two buttons,
+  or a modifier-click for the verbose form.
+- Clipboard access needs a user gesture and a secure context. `localhost` counts as
+  secure, so this works in dev, but the fallback (select-and-copy from a textarea) is
+  worth having if the write is rejected.
