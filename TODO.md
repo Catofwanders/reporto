@@ -73,3 +73,48 @@ distinction matters:
   user a local command rather than attempting a resolution.
 - Should the action be available at all for repos without a `deploy-qc` branch? Those
   exist, and the report already knows which ones.
+
+## 3. Change a PR's status
+
+Act on my own pull requests from the open-PR list instead of opening each one on GitHub.
+The list already shows review state and the draft flag, so the state is visible but not
+editable.
+
+**Shape**
+
+Only the states the PR's author actually controls:
+
+- Mark a draft ready for review, and convert a PR back to draft.
+- Close a PR, and reopen a closed one. The stalest entries in the list are long-dead
+  drafts, which is the main thing this would clear out.
+- Request reviewers, if that turns out to be the step most often missing after a PR goes
+  ready.
+
+Review verdicts stay out of scope: approving or requesting changes belongs to other
+people, and GitHub does not allow approving your own PR. Merging is deliberately not
+here either — that is request 2, with its own constraints.
+
+**Mechanics**
+
+`gh pr ready`, `gh pr ready --undo`, `gh pr close`, `gh pr reopen`, and
+`gh pr edit --add-reviewer` cover all of it, so this reuses the same dev-server endpoint
+pattern as the other write actions, behind the cross-site guard. The `gh` allow-list in
+`vite.config.ts` currently permits only `gh search prs`, `gh pr view`, and the compare
+API, so each new subcommand has to be added there explicitly.
+
+**Constraints**
+
+- Closing a PR is the one action here that discards work in progress, so it needs an
+  explicit confirmation naming the repo and PR — and it should stay a single-PR action,
+  never a sweep over everything idle.
+- Ready-for-review and draft toggles are cheap and reversible; those can act immediately
+  with an optimistic row update.
+
+**Open questions**
+
+- After marking ready, should the dashboard also refresh the review state, given the PR
+  may immediately pick up required reviewers?
+- Is a reviewer picker worth the complexity, or is a link to GitHub enough for that one
+  case?
+- Should closed PRs stay visible in the list for the rest of the day (so the action is
+  undoable in place) or vanish on the next refresh?
