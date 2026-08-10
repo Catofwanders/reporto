@@ -1,5 +1,6 @@
-import type { ReportKind } from '../refresh';
-import { KIND_META, REPORT_KINDS, useRefresh } from '../refresh';
+import type { ReportKind } from '../reportKinds';
+import { KIND_META, REPORT_KINDS } from '../reportKinds';
+import { useRefresh } from '../refreshContext';
 import { RefreshButton } from './RefreshButton';
 
 interface ActionBarProps {

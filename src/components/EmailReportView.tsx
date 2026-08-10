@@ -3,7 +3,7 @@ import IconButton from '@mui/material/IconButton';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import type { EmailItem, EmailReport } from '../types';
 import type { Todo } from '../db';
-import { todoId } from '../db';
+import { emailRows } from '../emailRows';
 import { Chip } from './Chip';
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
@@ -64,9 +64,10 @@ const Row = ({ item, todo, onToggle, onDelete, id }: RowProps) => (
 
 export const EmailReportView = ({ report, todos, onToggle, onDelete }: EmailReportViewProps) => {
   const todoById = new Map(todos.map((t) => [t.id, t]));
-  const actionCount = report.sections
-    .flatMap((s) => s.items.map((i) => ({ i, todo: todoById.get(todoId(s.title, i.subject)) })))
-    .filter(({ i, todo }) => i.action && !todo?.checked && !todo?.deleted).length;
+  const rows = emailRows(report).map((row) => ({ ...row, todo: todoById.get(row.id) }));
+  const actionCount = rows.filter(
+    ({ item, todo }) => item.action && !todo?.checked && !todo?.deleted,
+  ).length;
 
   return (
     <section className="panel">
@@ -80,11 +81,13 @@ export const EmailReportView = ({ report, todos, onToggle, onDelete }: EmailRepo
       </div>
 
       {report.sections.map((section) => {
-        const rows = section.items
-          .map((item) => ({ item, id: todoId(section.title, item.subject) }))
-          .map((row) => ({ ...row, todo: todoById.get(row.id) }))
-          .filter((row) => !row.todo?.deleted);
-        const ordered = [...rows.filter((r) => !r.todo?.checked), ...rows.filter((r) => r.todo?.checked)];
+        const visible = rows.filter(
+          (row) => row.sectionTitle === section.title && !row.todo?.deleted,
+        );
+        const ordered = [
+          ...visible.filter((r) => !r.todo?.checked),
+          ...visible.filter((r) => r.todo?.checked),
+        ];
 
         return (
           <ReportAccordion

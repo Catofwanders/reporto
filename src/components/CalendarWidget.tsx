@@ -21,6 +21,10 @@ const tone = (kind: CalendarEvent['kind']) => {
   return 'warn';
 };
 
+// Titles repeat within a day ("1:1", "Interview"), so a title alone is not a stable key.
+const eventKey = (event: CalendarEvent, index: number) =>
+  `${index}:${event.start ?? 'all-day'}:${event.title}`;
+
 const EventLine = ({ event }: { event: CalendarEvent }) => (
   <li className="widget-event">
     <span className="chip-when">
@@ -53,8 +57,8 @@ export const CalendarWidget = ({ report }: { report: CalendarReport }) => (
       <p className="widget-empty">No meetings or kickoffs today.</p>
     ) : (
       <ul className="widget-list">
-        {report.events.map((e) => (
-          <EventLine key={e.title} event={e} />
+        {report.events.map((e, i) => (
+          <EventLine key={eventKey(e, i)} event={e} />
         ))}
       </ul>
     )}
@@ -62,8 +66,8 @@ export const CalendarWidget = ({ report }: { report: CalendarReport }) => (
       <>
         <h4 className="widget-sub">Watch</h4>
         <ul className="widget-list">
-          {report.upcoming.map((e) => (
-            <EventLine key={e.title} event={e} />
+          {report.upcoming.map((e, i) => (
+            <EventLine key={eventKey(e, i)} event={e} />
           ))}
         </ul>
       </>

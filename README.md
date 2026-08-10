@@ -64,10 +64,14 @@ Both members of a pair are regenerated together, because one skill run writes bo
 files. When the run exits 0, the client reloads only the affected reports.
 
 A headless `claude -p` run cannot prompt for permission, so the spawn passes an
-explicit `--allowedTools` list (see `REFRESH_COMMANDS` in `vite.config.ts`). Without
-it the run exits in seconds having fetched nothing. Only one run per command at a
-time — a second request gets a 409. Runs are killed after 15 minutes and the log tail
-comes back in the response, surfacing in the button's tooltip on failure.
+explicit `--allowedTools` list (built in `vite.config.ts`). Without it the run exits in
+seconds having fetched nothing.
+
+Only one run per command at a time. Pressing the sibling card's button during a run is
+not an error: the client sees the 409, waits for the run to finish, then loads its
+output. Runs get SIGTERM at 15 minutes and SIGKILL ten seconds later, and the request
+always answers even if the child never dies, so the lock cannot wedge. The log tail
+comes back in the response and shows in the button's tooltip on failure.
 
 ## Security model
 
@@ -110,6 +114,8 @@ own Chrome and `gh` — N private instances, no auth layer to build.
 
 ```
 config/             your settings (gitignored)
+src/emailRows.ts    shared mail-row/todo-id derivation
+src/reportSchema.ts report shape guards
 config.template/    committed template to copy
 public/reports/     report JSON + index.json (gitignored)
 db/                 per-day snapshots and todo state (gitignored)

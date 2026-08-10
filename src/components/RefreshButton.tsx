@@ -2,8 +2,9 @@ import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import type { ReportKind } from '../refresh';
-import { KIND_META, useRefresh } from '../refresh';
+import type { ReportKind } from '../reportKinds';
+import { KIND_META } from '../reportKinds';
+import { useRefresh } from '../refreshContext';
 
 interface RefreshButtonProps {
   kind: ReportKind;
@@ -11,16 +12,17 @@ interface RefreshButtonProps {
 }
 
 export const RefreshButton = ({ kind, size = 'small' }: RefreshButtonProps) => {
-  const { running, errors, run } = useRefresh();
+  const { running, errors, commandOf, run } = useRefresh();
   const meta = KIND_META[kind];
   const busy = running.has(kind);
   const error = errors[kind];
+  const command = commandOf[kind];
 
   const title = busy
-    ? `Running ${meta.command}…`
+    ? `Running ${command ?? 'update'}…`
     : error
       ? `Failed: ${error}`
-      : `Update ${meta.label} — runs ${meta.command}`;
+      : `Update ${meta.label}${command ? ` — runs ${command}` : ''}`;
 
   return (
     <Tooltip title={title} disableInteractive>

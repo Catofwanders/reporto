@@ -116,8 +116,14 @@ function refreshPlugin(): Plugin {
         res.setHeader('Content-Type', 'application/json')
         const kind = (req.url ?? '/').split('?')[0].replace(/^\//, '')
 
+        // The client needs the kind → command map to know which cards a single run
+        // covers; without it a sibling card reports its own run as a 409 failure.
         if (req.method === 'GET' && kind === '') {
-          res.end(JSON.stringify({ running: [...running.keys()] }))
+          const commandOf: Record<string, string> = {}
+          for (const [k, entry] of Object.entries(REFRESH_COMMANDS)) {
+            commandOf[k] = entry.command
+          }
+          res.end(JSON.stringify({ running: [...running.keys()], commandOf }))
           return
         }
 
@@ -155,6 +161,14 @@ function refreshPlugin(): Plugin {
             { cwd: __dirname, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] },
           )
           let out = ''
+          let settled = false
+          // Resolve on the timeout too: a child that ignores SIGTERM must not hold the
+          // lock (and the HTTP response) open forever.
+          const settle = (code: number | null, extra = '') => {
+            if (settled) return
+            settled = true
+            resolve({ code, out: out + extra })
+          }
           const collect = (chunk: Buffer) => {
             out += chunk.toString()
             if (out.length > 20_000) out = out.slice(-20_000)
@@ -163,15 +177,17 @@ function refreshPlugin(): Plugin {
           child.stderr.on('data', collect)
           const timer = setTimeout(() => {
             child.kill('SIGTERM')
-            out += `\n[reporto] killed after ${RUN_TIMEOUT_MS / 60000} min`
+            const kill9 = setTimeout(() => child.kill('SIGKILL'), 10_000)
+            kill9.unref?.()
+            settle(null, `\n[reporto] timed out after ${RUN_TIMEOUT_MS / 60000} min`)
           }, RUN_TIMEOUT_MS)
           child.on('error', (err) => {
             clearTimeout(timer)
-            resolve({ code: null, out: `${out}\n[reporto] spawn failed: ${err.message}` })
+            settle(null, `\n[reporto] spawn failed: ${err.message}`)
           })
           child.on('close', (code) => {
             clearTimeout(timer)
-            resolve({ code, out })
+            settle(code)
           })
         }).finally(() => running.delete(lockKey))
 
@@ -193,6 +209,35 @@ function refreshPlugin(): Plugin {
       })
     },
   }
+}
+
+// Cap request bodies: these endpoints only ever receive small JSON documents.
+const MAX_BODY_BYTES = 1_000_000
+
+function readBody(
+  req: { on: (ev: string, cb: (chunk?: Buffer) => void) => void; destroy: () => void },
+  done: (body: string) => void,
+) {
+  let body = ''
+  let overflow = false
+  req.on('data', (chunk) => {
+    if (overflow) return
+    body += String(chunk)
+    if (body.length > MAX_BODY_BYTES) {
+      overflow = true
+      req.destroy()
+    }
+  })
+  req.on('end', () => {
+    if (!overflow) done(body)
+  })
+}
+
+// A crash mid-write would leave a truncated day file, so write beside it and rename.
+function writeJsonAtomic(file: string, value: unknown) {
+  const tmp = `${file}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(value, null, 2))
+  fs.renameSync(tmp, file)
 }
 
 // Tiny file-backed API so the client can persist daily report DBs to db/<date>.json.
@@ -224,6 +269,41 @@ function dbPlugin(): Plugin {
           return
         }
 
+        // POST /api/db/<date>/reconcile — add rows for report items that have no todo
+        // yet (a same-day mail refresh brings new items), never touching existing flags.
+        const reconcileMatch = name.match(/^(\d{4}-\d{2}-\d{2})\/reconcile$/)
+        if (reconcileMatch && req.method === 'POST') {
+          const file = path.join(dbDir, `${reconcileMatch[1]}.json`)
+          if (!fs.existsSync(file)) {
+            res.statusCode = 404
+            res.end('{"error":"day not found"}')
+            return
+          }
+          readBody(req, (body) => {
+            try {
+              const incoming = JSON.parse(body) as {
+                todos: { id: string; label: string; action: string | null }[]
+              }
+              const db = JSON.parse(fs.readFileSync(file, 'utf8'))
+              db.todos = db.todos ?? []
+              const known = new Set(db.todos.map((t: { id: string }) => t.id))
+              let added = 0
+              for (const row of incoming.todos ?? []) {
+                if (known.has(row.id)) continue
+                db.todos.push({ ...row, checked: false, deleted: false, checkedAt: null })
+                known.add(row.id)
+                added++
+              }
+              if (added) writeJsonAtomic(file, db)
+              res.end(JSON.stringify({ added, todos: db.todos }))
+            } catch (err) {
+              res.statusCode = 400
+              res.end(JSON.stringify({ error: `invalid reconcile body: ${String(err)}` }))
+            }
+          })
+          return
+        }
+
         // POST /api/db/<date>/todo — merge one todo patch into the day file
         // (whole-doc PUT from a stale tab must never clobber other todos)
         const todoMatch = name.match(/^(\d{4}-\d{2}-\d{2})\/todo$/)
@@ -234,11 +314,7 @@ function dbPlugin(): Plugin {
             res.end('{"error":"day not found"}')
             return
           }
-          let body = ''
-          req.on('data', (chunk) => {
-            body += chunk
-          })
-          req.on('end', () => {
+          readBody(req, (body) => {
             try {
               const patch = JSON.parse(body) as {
                 id: string
@@ -256,7 +332,7 @@ function dbPlugin(): Plugin {
               if (patch.checked !== undefined) todo.checked = patch.checked
               if (patch.deleted !== undefined) todo.deleted = patch.deleted
               if (patch.checkedAt !== undefined) todo.checkedAt = patch.checkedAt
-              fs.writeFileSync(file, JSON.stringify(db, null, 2))
+              writeJsonAtomic(file, db)
               res.end(JSON.stringify(todo))
             } catch {
               res.statusCode = 400
@@ -284,19 +360,16 @@ function dbPlugin(): Plugin {
         }
 
         if (req.method === 'PUT') {
-          let body = ''
-          req.on('data', (chunk) => {
-            body += chunk
-          })
-          req.on('end', () => {
+          readBody(req, (body) => {
+            let parsed: unknown
             try {
-              JSON.parse(body)
+              parsed = JSON.parse(body)
             } catch {
               res.statusCode = 400
               res.end('{"error":"invalid json"}')
               return
             }
-            fs.writeFileSync(file, body)
+            writeJsonAtomic(file, parsed)
             res.end('{"ok":true}')
           })
           return

@@ -25,6 +25,10 @@ const whenLabel = (event: CalendarEvent) => {
   });
 };
 
+// Titles repeat within a day ("1:1", "Interview"), so a title alone is not a stable key.
+const eventKey = (event: CalendarEvent, index: number) =>
+  `${index}:${event.start ?? 'all-day'}:${event.title}`;
+
 const EventRow = ({ event }: { event: CalendarEvent }) => (
   <article className="item">
     <span className="chip-when">
@@ -64,8 +68,8 @@ export const CalendarReportView = ({ report }: CalendarReportViewProps) => (
     <ReportAccordion title="Today" count={report.events.length}>
       <div className="list">
         {report.events.length === 0 && <div className="empty">No events today.</div>}
-        {report.events.map((e) => (
-          <EventRow key={e.title} event={e} />
+        {report.events.map((e, i) => (
+          <EventRow key={eventKey(e, i)} event={e} />
         ))}
       </div>
     </ReportAccordion>
@@ -73,8 +77,8 @@ export const CalendarReportView = ({ report }: CalendarReportViewProps) => (
     <ReportAccordion title="Upcoming / watch" count={report.upcoming.length}>
       <div className="list">
         {report.upcoming.length === 0 && <div className="empty">Nothing upcoming.</div>}
-        {report.upcoming.map((e) => (
-          <EventRow key={e.title} event={e} />
+        {report.upcoming.map((e, i) => (
+          <EventRow key={eventKey(e, i)} event={e} />
         ))}
       </div>
     </ReportAccordion>

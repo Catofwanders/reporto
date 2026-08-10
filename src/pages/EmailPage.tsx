@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { EmailReport, JiraReport } from '../types';
-import type { DayDb } from '../db';
-import { initDay, loadDay, patchTodoRemote, saveDay } from '../db';
+import type { DayDb, Todo } from '../db';
+import { initDay, loadDay, patchTodoRemote, reconcileTodos, saveDay } from '../db';
 import { EmailReportView } from '../components/EmailReportView';
 
 interface EmailPageProps {
@@ -23,6 +23,9 @@ export const EmailPage = ({ report, jira }: EmailPageProps) => {
         if (!day) {
           day = initDay(report.date, report, jira);
           await saveDay(day);
+        } else {
+          // The report may have gained items since this day file was written.
+          day = { ...day, todos: await reconcileTodos(report.date, report) };
         }
         if (!cancelled) setDb(day);
       } catch (err) {
@@ -35,22 +38,21 @@ export const EmailPage = ({ report, jira }: EmailPageProps) => {
   }, [report, jira]);
 
   const patchTodo = (id: string, patch: { checked?: boolean; deleted?: boolean }) => {
-    if (!report) return;
+    if (!report || !db) return;
+    const before = db.todos;
     const checkedAt =
       patch.checked === undefined ? undefined : patch.checked ? new Date().toISOString() : null;
-    setDb((prev) =>
-      prev
-        ? {
-            ...prev,
-            todos: prev.todos.map((t) =>
-              t.id === id ? { ...t, ...patch, checkedAt: checkedAt ?? t.checkedAt } : t,
-            ),
-          }
-        : prev,
-    );
-    void patchTodoRemote(report.date, { id, ...patch, checkedAt }).catch((err) =>
-      setDbError(String(err)),
-    );
+
+    const apply = (todos: Todo[]) =>
+      todos.map((t) => (t.id === id ? { ...t, ...patch, checkedAt: checkedAt ?? t.checkedAt } : t));
+    setDb((prev) => (prev ? { ...prev, todos: apply(prev.todos) } : prev));
+    setDbError(null);
+
+    void patchTodoRemote(report.date, { id, ...patch, checkedAt }).catch((err) => {
+      // Roll back, so a row never looks saved when the write failed.
+      setDb((prev) => (prev ? { ...prev, todos: before } : prev));
+      setDbError(err instanceof Error ? err.message : String(err));
+    });
   };
 
   return (
@@ -58,7 +60,7 @@ export const EmailPage = ({ report, jira }: EmailPageProps) => {
       <Link to="/" className="back-link">
         ← Home
       </Link>
-      {dbError && <p className="status error">DB error: {dbError}</p>}
+      {dbError && <p className="status error">Not saved: {dbError}</p>}
       {report ? (
         <EmailReportView
           report={report}
