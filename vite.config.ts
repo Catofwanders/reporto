@@ -153,6 +153,22 @@ function refreshPlugin(): Plugin {
           return
         }
 
+        // A skill that cannot do its job may still exit 0 after explaining why (the mail
+        // skill does exactly that when the Chrome extension is absent). Exit status alone
+        // would report success while nothing changed, so compare the report files too.
+        const reportsDir = path.resolve(__dirname, 'public/reports')
+        const stamps = (kinds: string[]) =>
+          kinds.map((kind) => {
+            if (!fs.existsSync(reportsDir)) return `${kind}:none`
+            const newest = fs
+              .readdirSync(reportsDir)
+              .filter((f) => f.startsWith(`${kind}-`) && f.endsWith('.json'))
+              .map((f) => fs.statSync(path.join(reportsDir, f)).mtimeMs)
+              .sort((a, b) => b - a)[0]
+            return `${kind}:${newest ?? 'none'}`
+          })
+        const before = stamps(entry.writes)
+
         const started = Date.now()
         const run = new Promise<{ code: number | null; out: string }>((resolve) => {
           const child = spawn(
@@ -193,14 +209,24 @@ function refreshPlugin(): Plugin {
 
         running.set(lockKey, run)
         void run.then(({ code, out }) => {
-          res.statusCode = code === 0 ? 200 : 500
+          const wrote = stamps(entry.writes).some((s, i) => s !== before[i])
+          const ok = code === 0 && wrote
+          const reason =
+            code !== 0
+              ? `${entry.command} exited ${code}`
+              : wrote
+                ? undefined
+                : `${entry.command} finished without writing any report — see the log`
+          res.statusCode = ok ? 200 : 500
           res.end(
             JSON.stringify({
-              ok: code === 0,
+              ok,
+              error: reason,
               kind,
               command: entry.command,
               writes: entry.writes,
               exitCode: code,
+              wrote,
               durationMs: Date.now() - started,
               log: out.slice(-4000),
             }),

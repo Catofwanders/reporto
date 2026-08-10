@@ -223,3 +223,29 @@ command execution as the user, and the existing cross-site guard **does not cove
   Code session" that hands off to the real terminal? The handoff is far less work and
   carries none of the PTY risk — worth prototyping first to see whether the embedded
   version earns its complexity.
+
+## 6. Make the mail/calendar refresh actually work
+
+The Mail and Calendar update buttons cannot succeed as built. `/email` reads both inboxes
+and both calendars through the Chrome extension, and that MCP server attaches only to an
+interactive session: a spawned `claude -p` run reports "Chrome extension not connected —
+no `mcp__claude-in-chrome__*` tools in this session" and stops, having read nothing. The
+helper forbids a Playwright fallback for mail, so there is no headless path.
+
+Until this is solved the buttons correctly report "finished without writing any report",
+and the fix is to run `/email` in an interactive session.
+
+**Options, roughly in order of appeal**
+
+1. **Hand off instead of spawning.** The button opens a Claude Code session in this
+   directory with `/email` pre-typed, and the user presses enter there. No browser
+   automation puzzle, and it doubles as the groundwork for request 5's handoff variant.
+2. **Attach to the user's live session** rather than spawning a new one, so the existing
+   extension connection is reused. Needs a way to address that session — worth checking
+   whether the CLI exposes one.
+3. **Replace browser automation with APIs** for mail and calendar: Google and Microsoft
+   OAuth, tokens stored locally. Removes the interactive dependency entirely, at the cost
+   of real integration work and two more consent flows.
+
+Whichever wins, the button should say what it will do rather than implying a refresh that
+cannot happen — a disabled state with a tooltip is better than a run that always fails.

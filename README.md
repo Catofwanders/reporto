@@ -67,6 +67,17 @@ A headless `claude -p` run cannot prompt for permission, so the spawn passes an
 explicit `--allowedTools` list (built in `vite.config.ts`). Without it the run exits in
 seconds having fetched nothing.
 
+A run counts as successful only if it actually rewrote a report file. A skill that
+cannot do its job may still exit 0 after explaining why in its output, so exit status
+alone would report a success that changed nothing.
+
+**Mail and calendar cannot refresh from the button today.** `/email` reads Gmail and
+Outlook through the Chrome extension, and the extension attaches only to an interactive
+session — a spawned `claude -p` run has no `mcp__claude-in-chrome__*` tools at all, so it
+aborts without reading anything. Run `/email` in your own Claude Code session instead;
+the Jira and PR buttons work headlessly because `gh` and the Atlassian MCP do not need a
+browser. See TODO.md request 6.
+
 Only one run per command at a time. Pressing the sibling card's button during a run is
 not an error: the client sees the 409, waits for the run to finish, then loads its
 output. Runs get SIGTERM at 15 minutes and SIGKILL ten seconds later, and the request
