@@ -1,0 +1,16 @@
+{
+  "$comment": "Copy this directory to ./config and edit. ./config is gitignored, so nothing personal or employer-specific reaches the remote.",
+  "githubOrg": "your-github-org",
+  "commandGroups": [
+    {
+      "command": "/email",
+      "writes": ["email", "calendar"],
+      "tools": "mail"
+    },
+    {
+      "command": "/jira",
+      "writes": ["jira", "prs"],
+      "tools": "jira"
+    }
+  ]
+}
