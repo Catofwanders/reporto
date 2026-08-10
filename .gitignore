@@ -35,3 +35,6 @@ config/
 .env
 .env.*
 !.env.example
+
+# Local agent kit (agents, rules, skills) — personal, not published.
+.claude/
