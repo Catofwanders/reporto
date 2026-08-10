@@ -155,3 +155,71 @@ permission. The report already carries `review` and `url` per PR, so the filter 
 - Clipboard access needs a user gesture and a secure context. `localhost` counts as
   secure, so this works in dev, but the fallback (select-and-copy from a textarea) is
   worth having if the write is rejected.
+
+## 5. Per-PR "Resolve comments" — PR detail page with a live Claude terminal
+
+For a PR that has unresolved review comments, one click opens a dedicated page showing
+the full PR context and, under it, a large terminal already running `claude` in that
+repo's local checkout — so the review feedback can be worked through without leaving the
+dashboard or hunting for the directory.
+
+**Shape**
+
+- The button appears on a PR row only when that PR has **unresolved** review threads, and
+  says how many.
+- It navigates to a detail route, `/pr/:repo/:number`, which shows:
+  - PR title, state, review verdict, branch, ticket link;
+  - each unresolved thread — file, line, author, body, and the surrounding diff hunk —
+    since that is the actual work list;
+  - resolved threads collapsed, for context.
+- Below that, a terminal filling most of the viewport, attached to a `claude` session
+  whose working directory is that repo's checkout, seeded with the PR number and the
+  thread list so the first turn already has the context.
+
+**Mechanics**
+
+Three pieces this repo does not have yet:
+
+1. **Unresolved-thread data.** REST does not expose resolution state; the GraphQL API
+   does, via `pullRequest.reviewThreads { isResolved, comments { path, line, body } }`.
+   So `gh api graphql -f query=…`, which means a new entry in the `gh` allow-list.
+2. **Repo → local path mapping.** The dashboard knows repo names, not where they live on
+   disk. Add a `repoPaths` map to `config/reporto.json` (gitignored, so the paths stay
+   personal), and treat a missing entry as "button disabled, with a reason".
+3. **A terminal over the wire.** `node-pty` on the dev server, `xterm.js` in the page,
+   and a WebSocket between them. `node-pty` is a native module, so it needs a prebuild
+   or a compiler — weigh that before committing to it.
+
+**Security — read before building**
+
+This is the most dangerous feature in this file. A browser-reachable PTY is arbitrary
+command execution as the user, and the existing cross-site guard **does not cover it**:
+
+- WebSocket handshakes are not subject to CORS and cannot be blocked by a custom header,
+  so the server must check the `Origin` header on the upgrade request itself and reject
+  anything that is not this dev server, plus require a single-use token minted by the
+  page over HTTP.
+- Bind to loopback only (already the case) and refuse a second attach to the same session
+  so a stray tab cannot type into a live shell.
+- The terminal must be interactive, not `-p`: permission prompts belong on screen where
+  the human answers them. Do not pass a broad `--allowedTools` list to make it quiet.
+- Merging stays forbidden regardless of what is typed in that terminal — see
+  `.claude/rules/git-operations.md`.
+
+**Open questions**
+
+- "Resolve comments" is two different things: *fixing the code* (the agent's job) and
+  *marking the threads resolved on GitHub* (a `resolveReviewThread` mutation). Probably
+  the button means the first, with an explicit per-thread "mark resolved" action after
+  the fix lands — never resolving threads automatically.
+- What if the checkout is on another branch, or dirty? The page should show branch and
+  working-tree state up front and let the human decide; the agent must not switch
+  branches or stash on its own.
+- One session per PR, or a single shared terminal? Per PR is clearer but multiplies
+  processes; either way sessions need an idle timeout and a visible kill button.
+- Should scrollback survive a page reload, and if so, where does it live? A buffer in the
+  dev server is simplest; nothing should be written to `db/`.
+- Is a terminal even the right surface, versus a plain "open this repo in a new Claude
+  Code session" that hands off to the real terminal? The handoff is far less work and
+  carries none of the PTY risk — worth prototyping first to see whether the embedded
+  version earns its complexity.
