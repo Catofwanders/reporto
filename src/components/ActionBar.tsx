@@ -19,7 +19,7 @@ const fmtStamp = (iso: string | undefined) => {
 };
 
 export const ActionBar = ({ generatedAt }: ActionBarProps) => {
-  const { running, errors } = useRefresh();
+  const { running, errors, handedOff } = useRefresh();
 
   return (
     <div className="action-bar">
@@ -29,7 +29,11 @@ export const ActionBar = ({ generatedAt }: ActionBarProps) => {
           <div className="action-labels">
             <span className="action-name">{KIND_META[kind].label}</span>
             <span className="action-stamp">
-              {running.has(kind) ? 'updating…' : fmtStamp(generatedAt[kind])}
+              {running.has(kind)
+                ? 'updating…'
+                : handedOff.has(kind)
+                  ? 'in terminal…'
+                  : fmtStamp(generatedAt[kind])}
             </span>
           </div>
           <RefreshButton kind={kind} />

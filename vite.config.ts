@@ -10,10 +10,18 @@ interface CommandGroup {
   command: string
   writes: string[]
   tools: 'mail' | 'jira'
+  /**
+   * headless: spawn `claude -p <command>` and wait for it.
+   * handoff:  open an interactive session in a terminal instead — required for skills
+   *           that need the Chrome extension, which never attaches to a spawned run.
+   */
+  mode?: 'headless' | 'handoff'
 }
 
 interface ReportoConfig {
   githubOrg?: string
+  /** macOS application to open for handoffs. */
+  terminalApp?: string
   commandGroups: CommandGroup[]
 }
 
@@ -64,13 +72,17 @@ function buildToolLists(githubOrg: string | undefined) {
 function buildRefreshCommands() {
   const config = loadConfig()
   const tools = buildToolLists(config.githubOrg)
-  const byKind: Record<string, { command: string; writes: string[]; allowedTools: string[] }> = {}
+  const byKind: Record<
+    string,
+    { command: string; writes: string[]; allowedTools: string[]; mode: 'headless' | 'handoff' }
+  > = {}
   for (const group of config.commandGroups) {
     for (const kind of group.writes) {
       byKind[kind] = {
         command: group.command,
         writes: group.writes,
         allowedTools: tools[group.tools] ?? tools.jira,
+        mode: group.mode ?? 'headless',
       }
     }
   }
@@ -78,6 +90,7 @@ function buildRefreshCommands() {
 }
 
 const REFRESH_COMMANDS = buildRefreshCommands()
+const TERMINAL_APP = loadConfig().terminalApp ?? 'Terminal'
 
 const RUN_TIMEOUT_MS = 15 * 60 * 1000
 
@@ -120,10 +133,12 @@ function refreshPlugin(): Plugin {
         // covers; without it a sibling card reports its own run as a 409 failure.
         if (req.method === 'GET' && kind === '') {
           const commandOf: Record<string, string> = {}
+          const modeOf: Record<string, string> = {}
           for (const [k, entry] of Object.entries(REFRESH_COMMANDS)) {
             commandOf[k] = entry.command
+            modeOf[k] = entry.mode
           }
-          res.end(JSON.stringify({ running: [...running.keys()], commandOf }))
+          res.end(JSON.stringify({ running: [...running.keys()], commandOf, modeOf }))
           return
         }
 
@@ -143,6 +158,15 @@ function refreshPlugin(): Plugin {
         if (req.method !== 'POST') {
           res.statusCode = 405
           res.end('{"error":"use POST"}')
+          return
+        }
+        if (entry.mode === 'handoff') {
+          res.statusCode = 400
+          res.end(
+            JSON.stringify({
+              error: `${entry.command} cannot run headlessly — use /api/handoff/${kind}`,
+            }),
+          )
           return
         }
         // One run per command, so two cards backed by the same command can't collide.
@@ -229,6 +253,92 @@ function refreshPlugin(): Plugin {
               wrote,
               durationMs: Date.now() - started,
               log: out.slice(-4000),
+            }),
+          )
+        })
+      })
+    },
+  }
+}
+
+// Handoff API: POST /api/handoff/<kind> opens an interactive Claude Code session in a
+// terminal, in this directory, with the skill's slash command as the opening prompt.
+// Needed because the Chrome extension attaches only to interactive sessions, so the mail
+// and calendar skills can never run from a spawned `claude -p`.
+function handoffPlugin(): Plugin {
+  // Two terminals running the same skill would race on the same report files, and a
+  // double-click is easy. Refuse a repeat launch of the same command for a short while.
+  const HANDOFF_DEBOUNCE_MS = 60_000
+  const lastLaunch = new Map<string, number>()
+
+  return {
+    name: 'reporto-handoff',
+    configureServer(server) {
+      server.middlewares.use('/api/handoff', (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        const kind = (req.url ?? '/').split('?')[0].replace(/^\//, '')
+
+        const blocked = rejectCrossSite(req)
+        if (blocked) {
+          res.statusCode = 403
+          res.end(JSON.stringify({ error: `handoff blocked: ${blocked}` }))
+          return
+        }
+        const entry = REFRESH_COMMANDS[kind]
+        if (!entry) {
+          res.statusCode = 404
+          res.end(JSON.stringify({ error: `unknown report "${kind}"` }))
+          return
+        }
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.end('{"error":"use POST"}')
+          return
+        }
+
+        const since = Date.now() - (lastLaunch.get(entry.command) ?? 0)
+        if (since < HANDOFF_DEBOUNCE_MS) {
+          res.statusCode = 409
+          res.end(
+            JSON.stringify({
+              error: `${entry.command} was opened ${Math.round(since / 1000)}s ago — finish it in that terminal`,
+            }),
+          )
+          return
+        }
+        lastLaunch.set(entry.command, Date.now())
+
+        // Only the command name reaches the shell, and it comes from config, not the
+        // request — the URL selects a known entry, it never supplies a command.
+        const shell = `cd ${JSON.stringify(__dirname)} && claude ${JSON.stringify(entry.command)}`
+        const script = [
+          `tell application ${JSON.stringify(TERMINAL_APP)}`,
+          `  activate`,
+          `  do script ${JSON.stringify(shell)}`,
+          `end tell`,
+        ].join('\n')
+
+        const child = spawn('osascript', ['-e', script], { stdio: ['ignore', 'pipe', 'pipe'] })
+        let err = ''
+        child.stderr.on('data', (c) => {
+          err += String(c)
+        })
+        child.on('error', (e) => {
+          res.statusCode = 500
+          res.end(JSON.stringify({ error: `could not open ${TERMINAL_APP}: ${e.message}` }))
+        })
+        child.on('close', (code) => {
+          if (res.writableEnded) return
+          const ok = code === 0
+          res.statusCode = ok ? 200 : 500
+          res.end(
+            JSON.stringify({
+              ok,
+              kind,
+              command: entry.command,
+              writes: entry.writes,
+              terminal: TERMINAL_APP,
+              error: ok ? undefined : err.trim() || `osascript exited ${code}`,
             }),
           )
         })
@@ -413,5 +523,5 @@ export default defineConfig({
   // Loopback only: the dev server exposes file writes and agent runs, so it must not
   // be reachable from the LAN.
   server: { host: '127.0.0.1' },
-  plugins: [react(), dbPlugin(), refreshPlugin()],
+  plugins: [react(), dbPlugin(), refreshPlugin(), handoffPlugin()],
 })

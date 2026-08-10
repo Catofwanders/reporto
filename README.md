@@ -71,12 +71,18 @@ A run counts as successful only if it actually rewrote a report file. A skill th
 cannot do its job may still exit 0 after explaining why in its output, so exit status
 alone would report a success that changed nothing.
 
-**Mail and calendar cannot refresh from the button today.** `/email` reads Gmail and
-Outlook through the Chrome extension, and the extension attaches only to an interactive
-session — a spawned `claude -p` run has no `mcp__claude-in-chrome__*` tools at all, so it
-aborts without reading anything. Run `/email` in your own Claude Code session instead;
-the Jira and PR buttons work headlessly because `gh` and the Atlassian MCP do not need a
-browser. See TODO.md request 6.
+**Mail and calendar hand off to a terminal instead of running headlessly.** `/email` reads
+Gmail and Outlook through the Chrome extension, and that extension attaches only to an
+interactive session — a spawned `claude -p` run has no `mcp__claude-in-chrome__*` tools at
+all and aborts without reading anything. So those two cards show a terminal icon: pressing
+one opens an interactive Claude Code session in this directory with `/email` as its opening
+prompt, you answer its prompts there, and the dashboard reloads the reports when you switch
+back to the browser tab. Repeat presses within a minute are refused so two sessions cannot
+race on the same files.
+
+Which cards behave this way is config, not code: `mode: "handoff"` on a command group in
+`config/reporto.json`. Jira and PRs stay `headless` because `gh` and the Atlassian MCP need
+no browser.
 
 Only one run per command at a time. Pressing the sibling card's button during a run is
 not an error: the client sees the 409, waits for the run to finish, then loads its

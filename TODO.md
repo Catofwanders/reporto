@@ -226,6 +226,10 @@ command execution as the user, and the existing cross-site guard **does not cove
 
 ## 6. Make the mail/calendar refresh actually work
 
+**Option 1 is done** — the buttons hand off to an interactive terminal session (see the
+README). What remains below is about removing the interactive dependency altogether.
+
+
 The Mail and Calendar update buttons cannot succeed as built. `/email` reads both inboxes
 and both calendars through the Chrome extension, and that MCP server attaches only to an
 interactive session: a spawned `claude -p` run reports "Chrome extension not connected —

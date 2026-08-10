@@ -4,13 +4,22 @@
   "commandGroups": [
     {
       "command": "/email",
-      "writes": ["email", "calendar"],
-      "tools": "mail"
+      "writes": [
+        "email",
+        "calendar"
+      ],
+      "tools": "mail",
+      "mode": "handoff"
     },
     {
       "command": "/jira",
-      "writes": ["jira", "prs"],
-      "tools": "jira"
+      "writes": [
+        "jira",
+        "prs"
+      ],
+      "tools": "jira",
+      "mode": "headless"
     }
-  ]
+  ],
+  "terminalApp": "Terminal"
 }
