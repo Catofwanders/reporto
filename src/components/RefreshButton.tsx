@@ -3,6 +3,7 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import TerminalIcon from '@mui/icons-material/Terminal';
+import BoltIcon from '@mui/icons-material/Bolt';
 import type { ReportKind } from '../reportKinds';
 import { KIND_META } from '../reportKinds';
 import { useRefresh } from '../refreshContext';
@@ -13,19 +14,22 @@ interface RefreshButtonProps {
 }
 
 export const RefreshButton = ({ kind, size = 'small' }: RefreshButtonProps) => {
-  const { running, errors, commandOf, modeOf, handedOff, run } = useRefresh();
+  const { running, errors, commandOf, modeOf, handedOff, apiKinds, run } = useRefresh();
   const meta = KIND_META[kind];
   const busy = running.has(kind);
   const error = errors[kind];
   const command = commandOf[kind];
-  const handoff = modeOf[kind] === 'handoff';
+  const viaApi = apiKinds.has(kind);
+  const handoff = !viaApi && modeOf[kind] === 'handoff';
   const waiting = handedOff.has(kind);
 
   const title = busy
-    ? `${handoff ? 'Opening a terminal for' : 'Running'} ${command ?? 'update'}…`
+    ? `${handoff ? 'Opening a terminal for' : viaApi ? 'Fetching' : 'Running'} ${viaApi ? meta.label : (command ?? 'update')}…`
     : error
       ? `Failed: ${error}`
-      : handoff
+      : viaApi
+        ? `Update ${meta.label} — fetched straight from the API`
+        : handoff
         ? waiting
           ? `${command} is open in a terminal — finish it there, then return to this tab`
           : `Update ${meta.label} — opens ${command} in a terminal (it needs your browser session)`
@@ -46,6 +50,8 @@ export const RefreshButton = ({ kind, size = 'small' }: RefreshButtonProps) => {
         >
           {busy ? (
             <CircularProgress size={16} sx={{ color: 'var(--accent)' }} />
+          ) : viaApi ? (
+            <BoltIcon fontSize="small" />
           ) : handoff ? (
             <TerminalIcon fontSize="small" />
           ) : (

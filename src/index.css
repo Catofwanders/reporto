@@ -163,6 +163,26 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .home-content { display: grid; gap: 1.6rem; align-items: start; min-width: 0; }
 .home-widgets { display: grid; gap: 1.6rem; align-content: start; }
 
+/* open PRs: summary strip above the repo groups */
+.pr-summary {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.4rem;
+  margin-top: 1rem; padding-bottom: .2rem;
+}
+.pr-counts { list-style: none; display: flex; flex-wrap: wrap; gap: 1.1rem; margin: 0; padding: 0; }
+.pr-counts li { display: flex; align-items: baseline; gap: .35rem; }
+.pr-count { font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pr-count-ok { color: var(--ok-ink); }
+.pr-count-warn { color: var(--warn-ink); }
+.pr-count-bad { color: var(--bad-ink); }
+.pr-count-na { color: var(--na-ink); }
+.pr-count-label { color: var(--ink-2); font-size: .78rem; }
+.pr-copy-fallback { flex: 1 1 100%; font-size: .78rem; color: var(--ink-2); }
+.pr-copy-fallback textarea {
+  width: 100%; margin-top: .4rem; background: var(--bg); color: var(--ink);
+  border: 1px solid var(--line); border-radius: .4rem; padding: .4rem .5rem;
+  font: 500 .76rem/1.5 ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
 /* open PRs: repo groups side by side when there's room */
 .pr-groups { display: grid; gap: .7rem; margin-top: 1rem; align-items: start; }
 @media (min-width: 1150px) { .pr-groups { grid-template-columns: 1fr 1fr; } }

@@ -21,5 +21,8 @@
       "mode": "headless"
     }
   ],
-  "terminalApp": "Terminal"
+  "terminalApp": "Terminal",
+  "githubAuthor": "your-github-login",
+  "githubAccount": "your-github-login",
+  "jiraBrowseUrl": "https://your-site.atlassian.net/browse"
 }

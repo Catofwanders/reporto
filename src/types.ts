@@ -98,6 +98,8 @@ export interface OpenPr {
   review: ReviewDecision;
   draft: boolean;
   updatedAt: string;
+  /** Unresolved inline review threads. Only set by the API puller. */
+  unresolvedThreads?: number;
 }
 
 export interface PrRepoGroup {

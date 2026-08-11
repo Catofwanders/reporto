@@ -24,6 +24,7 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
   const [commandOf, setCommandOf] = useState<Partial<Record<ReportKind, string>>>({});
   const [modeOf, setModeOf] = useState<Partial<Record<ReportKind, 'headless' | 'handoff'>>>({});
   const [handedOff, setHandedOff] = useState<Set<ReportKind>>(new Set());
+  const [apiKinds, setApiKinds] = useState<Set<ReportKind>>(new Set());
 
   // The kind → command map lives on the server; without it we cannot tell which cards
   // a single run covers.
@@ -51,6 +52,23 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
     };
   }, []);
 
+  // Kinds with a direct API puller: preferred over any agent run, since they answer in
+  // about a second and fetch exactly what the caller asked for.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/pull')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { kinds?: string[] } | null) => {
+        if (!cancelled && body?.kinds) setApiKinds(new Set(body.kinds as ReportKind[]));
+      })
+      .catch(() => {
+        /* no pull API — everything falls back to the skill path */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const setBusy = useCallback((kinds: ReportKind[], busy: boolean) => {
     setRunning((prev) => {
       const next = new Set(prev);
@@ -67,7 +85,9 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
         ? REPORT_KINDS.filter((k) => commandOf[k] === command)
         : [kind];
 
-      setBusy(siblings, true);
+      // An API pull rewrites only its own report, so it must not mark siblings busy.
+      const affected = apiKinds.has(kind) ? [kind] : siblings;
+      setBusy(affected, true);
       setErrors((prev) => {
         const next = { ...prev };
         siblings.forEach((k) => delete next[k]);
@@ -75,6 +95,17 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
       });
 
       try {
+        if (apiKinds.has(kind)) {
+          const res = await fetch(`/api/pull/${kind}`, {
+            method: 'POST',
+            headers: { 'X-Reporto-Write': '1' },
+          });
+          const body = (await res.json()) as RefreshResult;
+          if (!res.ok || !body.ok) throw new Error(body.error ?? `exit ${res.status}`);
+          await onReload(body.writes ?? [kind]);
+          return;
+        }
+
         if (modeOf[kind] === 'handoff') {
           // The skill needs a live browser session, so open a terminal and let the human
           // drive it. Reports land on disk; the focus listener below picks them up.
@@ -118,10 +149,10 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
           return next;
         });
       } finally {
-        setBusy(siblings, false);
+        setBusy(affected, false);
       }
     },
-    [commandOf, modeOf, onReload, setBusy],
+    [apiKinds, commandOf, modeOf, onReload, setBusy],
   );
 
   // Coming back to the tab is the natural moment to pick up whatever a handed-off
@@ -140,8 +171,8 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
   }, [onReload]);
 
   const value = useMemo(
-    () => ({ running, errors, commandOf, modeOf, handedOff, run }),
-    [running, errors, commandOf, modeOf, handedOff, run],
+    () => ({ running, errors, commandOf, modeOf, handedOff, apiKinds, run }),
+    [running, errors, commandOf, modeOf, handedOff, apiKinds, run],
   );
   return <RefreshContext.Provider value={value}>{children}</RefreshContext.Provider>;
 };

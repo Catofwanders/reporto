@@ -10,6 +10,8 @@ export interface RefreshStatus {
   modeOf: Partial<Record<ReportKind, 'headless' | 'handoff'>>;
   /** Kinds whose terminal session was opened and is presumably still being worked on. */
   handedOff: Set<ReportKind>;
+  /** Kinds fetchable straight from an upstream API — seconds, not an agent run. */
+  apiKinds: Set<ReportKind>;
   run: (kind: ReportKind) => Promise<void>;
 }
 

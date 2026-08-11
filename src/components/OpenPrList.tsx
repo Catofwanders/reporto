@@ -2,6 +2,7 @@ import type { OpenPr, PrsReport, ReviewDecision } from '../types';
 import { Chip } from './Chip';
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
+import { PrSummary } from './PrSummary';
 
 const REVIEW_LABEL: Record<ReviewDecision, string> = {
   APPROVED: 'approved',
@@ -62,6 +63,8 @@ export const OpenPrList = ({ report }: { report: PrsReport }) => {
           <RefreshButton kind="prs" />
         </span>
       </div>
+
+      <PrSummary report={report} />
 
       <div className="pr-groups">
         {report.repos.map((group) => (

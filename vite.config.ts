@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { pullOpenPrs } from './server/github.mjs'
 
 // Personal / employer-specific settings live in ./config (gitignored). The committed
 // config.template is the fallback, so a fresh checkout still boots.
@@ -20,6 +21,12 @@ interface CommandGroup {
 
 interface ReportoConfig {
   githubOrg?: string
+  /** GitHub login whose PRs the dashboard reports on. */
+  githubAuthor?: string
+  /** gh keyring account to pin — org repos 404 under the wrong active account. */
+  githubAccount?: string
+  /** e.g. https://your-site.atlassian.net/browse — used to link tickets. */
+  jiraBrowseUrl?: string
   /** macOS application to open for handoffs. */
   terminalApp?: string
   commandGroups: CommandGroup[]
@@ -268,8 +275,9 @@ function refreshPlugin(): Plugin {
 function handoffPlugin(): Plugin {
   // Two terminals running the same skill would race on the same report files, and a
   // double-click is easy. Refuse a repeat launch of the same command for a short while.
-  const HANDOFF_DEBOUNCE_MS = 60_000
-  const lastLaunch = new Map<string, number>()
+  // Terminal window per command, so a repeat press focuses it rather than spawning.
+  // (Terminal tabs have no id — only windows do, hence window-level tracking.)
+  const openWindows = new Map<string, number>()
 
   return {
     name: 'reporto-handoff',
@@ -296,29 +304,72 @@ function handoffPlugin(): Plugin {
           return
         }
 
-        const since = Date.now() - (lastLaunch.get(entry.command) ?? 0)
-        if (since < HANDOFF_DEBOUNCE_MS) {
-          res.statusCode = 409
-          res.end(
-            JSON.stringify({
-              error: `${entry.command} was opened ${Math.round(since / 1000)}s ago — finish it in that terminal`,
-            }),
-          )
+        // Reuse the window instead of stacking up new ones: pressing again focuses the
+        // session that is already open for this command.
+        const openWindow = openWindows.get(entry.command)
+        if (openWindow !== undefined) {
+          const focus = [
+            `tell application ${JSON.stringify(TERMINAL_APP)}`,
+            `  activate`,
+            `  try`,
+            `    set frontmost of window id ${openWindow} to true`,
+            `  on error`,
+            `    return "gone"`,
+            `  end try`,
+            `end tell`,
+            `return "focused"`,
+          ].join('\n')
+          const check = spawn('osascript', ['-e', focus], { stdio: ['ignore', 'pipe', 'pipe'] })
+          let focusOut = ''
+          check.stdout.on('data', (c) => {
+            focusOut += String(c)
+          })
+          check.on('close', () => {
+            // The user may have closed that window; fall through to a fresh launch next
+            // press rather than silently doing nothing.
+            if (focusOut.trim() !== 'focused') openWindows.delete(entry.command)
+            res.end(
+              JSON.stringify({
+                ok: true,
+                kind,
+                command: entry.command,
+                writes: entry.writes,
+                terminal: TERMINAL_APP,
+                reusedWindow: focusOut.trim() === 'focused',
+              }),
+            )
+          })
           return
         }
-        lastLaunch.set(entry.command, Date.now())
 
+        // The Chrome extension attaches to a session only when the human runs /chrome in
+        // it, and that is a CLI command an agent cannot invoke. So do not auto-submit the
+        // skill — print the two steps and hand over an interactive prompt.
+        const banner = [
+          `echo`,
+          `echo "  reporto — refresh ${entry.command}"`,
+          `echo "  1) /chrome    connect the browser extension to this session"`,
+          `echo "  2) ${entry.command}       read the inboxes and rewrite the reports"`,
+          `echo`,
+        ].join(' && ')
         // Only the command name reaches the shell, and it comes from config, not the
         // request — the URL selects a known entry, it never supplies a command.
-        const shell = `cd ${JSON.stringify(__dirname)} && claude ${JSON.stringify(entry.command)}`
+        const shell = `cd ${JSON.stringify(__dirname)} && ${banner} && claude`
         const script = [
           `tell application ${JSON.stringify(TERMINAL_APP)}`,
           `  activate`,
           `  do script ${JSON.stringify(shell)}`,
+          `  return id of front window as text`,
           `end tell`,
         ].join('\n')
 
+        // Ask for the tab back so a later press can focus this window instead of opening
+        // another one.
         const child = spawn('osascript', ['-e', script], { stdio: ['ignore', 'pipe', 'pipe'] })
+        let out = ''
+        child.stdout.on('data', (c) => {
+          out += String(c)
+        })
         let err = ''
         child.stderr.on('data', (c) => {
           err += String(c)
@@ -329,6 +380,10 @@ function handoffPlugin(): Plugin {
         })
         child.on('close', (code) => {
           if (res.writableEnded) return
+          const windowId = Number(out.trim())
+          if (code === 0 && Number.isFinite(windowId)) {
+            openWindows.set(entry.command, windowId)
+          }
           const ok = code === 0
           res.statusCode = ok ? 200 : 500
           res.end(
@@ -342,6 +397,98 @@ function handoffPlugin(): Plugin {
             }),
           )
         })
+      })
+    },
+  }
+}
+
+
+// Pull API: POST /api/pull/<kind> fetches a report straight from the upstream API, no
+// agent run involved. One GraphQL call replaces the skill's search-plus-per-PR calls, so
+// this answers in about a second and the caller controls exactly what is fetched.
+function pullPlugin(): Plugin {
+  const reportsDir = path.resolve(__dirname, 'public/reports')
+
+  const PULLERS: Record<string, (c: ReportoConfig) => Promise<{ date: string }>> = {
+    prs: (c) =>
+      pullOpenPrs({
+        author: c.githubAuthor ?? '',
+        org: c.githubOrg ?? '',
+        jiraBrowseUrl: c.jiraBrowseUrl ?? '',
+        account: c.githubAccount,
+      }),
+  }
+
+  return {
+    name: 'reporto-pull',
+    configureServer(server) {
+      server.middlewares.use('/api/pull', (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        const kind = (req.url ?? '/').split('?')[0].replace(/^\//, '')
+
+        if (req.method === 'GET' && kind === '') {
+          res.end(JSON.stringify({ kinds: Object.keys(PULLERS) }))
+          return
+        }
+        const blocked = rejectCrossSite(req)
+        if (blocked) {
+          res.statusCode = 403
+          res.end(JSON.stringify({ error: `pull blocked: ${blocked}` }))
+          return
+        }
+        const puller = PULLERS[kind]
+        if (!puller) {
+          res.statusCode = 404
+          res.end(JSON.stringify({ error: `no API puller for "${kind}"` }))
+          return
+        }
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.end('{"error":"use POST"}')
+          return
+        }
+
+        const started = Date.now()
+        const config = loadConfig()
+        if (!config.githubAuthor || !config.githubOrg) {
+          res.statusCode = 400
+          res.end(
+            JSON.stringify({
+              error: 'set githubAuthor and githubOrg in config/reporto.json (see config.template)',
+            }),
+          )
+          return
+        }
+
+        void puller(config).then(
+          (report) => {
+            const file = `${kind}-${report.date}.json`
+            fs.mkdirSync(reportsDir, { recursive: true })
+            writeJsonAtomic(path.join(reportsDir, file), report)
+
+            // Point the dashboard at the file just written, and keep the day in history.
+            const indexFile = path.join(reportsDir, 'index.json')
+            const index = fs.existsSync(indexFile)
+              ? JSON.parse(fs.readFileSync(indexFile, 'utf8'))
+              : { latest: {}, history: [] }
+            index.latest[kind] = file
+            let day = index.history.find((h: { date: string }) => h.date === report.date)
+            if (!day) {
+              day = { date: report.date }
+              index.history.unshift(day)
+            }
+            day[kind] = file
+            writeJsonAtomic(indexFile, index)
+
+            res.end(
+              JSON.stringify({ ok: true, kind, file, writes: [kind], durationMs: Date.now() - started }),
+            )
+          },
+          (err: Error) => {
+            res.statusCode = 500
+            res.end(JSON.stringify({ ok: false, kind, error: err.message }))
+          },
+        )
       })
     },
   }
@@ -523,5 +670,5 @@ export default defineConfig({
   // Loopback only: the dev server exposes file writes and agent runs, so it must not
   // be reachable from the LAN.
   server: { host: '127.0.0.1' },
-  plugins: [react(), dbPlugin(), refreshPlugin(), handoffPlugin()],
+  plugins: [react(), dbPlugin(), refreshPlugin(), handoffPlugin(), pullPlugin()],
 })

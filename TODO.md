@@ -121,6 +121,17 @@ API, so each new subcommand has to be added there explicitly.
 
 ## 4. Summary widget in "My open PRs", with copy-unapproved-links button
 
+**Built.** The strip sits above the repo accordions: counts for awaiting review / approved /
+changes requested / drafts, and a button copying the links of PRs awaiting *someone else's*
+review — drafts and changes-requested excluded, since neither is waiting on a reviewer.
+
+One thing worth remembering: `navigator.clipboard.writeText` can hang forever — never
+resolving, never rejecting — when the window is not frontmost, even with permission granted
+in a secure context. `src/copyText.ts` races it against a 1.2s timeout, falls back to the
+synchronous selection trick, and only then shows the links in a textarea to select by hand.
+A bare `await` on the clipboard API leaves the button dead with no error.
+
+
 A small summary block at the top of the open-PR section, whose main action copies the
 links of every PR that is **not** approved yet to the clipboard — ready to paste into a
 chat when chasing reviews.
@@ -224,105 +235,73 @@ command execution as the user, and the existing cross-site guard **does not cove
   carries none of the PTY risk — worth prototyping first to see whether the embedded
   version earns its complexity.
 
-## 6. Make the mail/calendar refresh actually work
+## 6. Pull Jira and GitHub data from APIs instead of driving an agent
 
-**Option 1 is done** — the buttons hand off to an interactive terminal session (see the
-README). What remains below is about removing the interactive dependency altogether.
-
-
-The Mail and Calendar update buttons cannot succeed as built. `/email` reads both inboxes
-and both calendars through the Chrome extension, and that MCP server attaches only to an
-interactive session: a spawned `claude -p` run reports "Chrome extension not connected —
-no `mcp__claude-in-chrome__*` tools in this session" and stops, having read nothing. The
-helper forbids a Playwright fallback for mail, so there is no headless path.
-
-Until this is solved the buttons correctly report "finished without writing any report",
-and the fix is to run `/email` in an interactive session.
-
-**Options, roughly in order of appeal**
-
-1. **Hand off instead of spawning.** The button opens a Claude Code session in this
-   directory with `/email` pre-typed, and the user presses enter there. No browser
-   automation puzzle, and it doubles as the groundwork for request 5's handoff variant.
-2. **Attach to the user's live session** rather than spawning a new one, so the existing
-   extension connection is reused. Needs a way to address that session — worth checking
-   whether the CLI exposes one.
-3. **Replace browser automation with APIs** for mail and calendar: Google and Microsoft
-   OAuth, tokens stored locally. Removes the interactive dependency entirely, at the cost
-   of real integration work and two more consent flows.
-
-Whichever wins, the button should say what it will do rather than implying a refresh that
-cannot happen — a disabled state with a tooltip is better than a run that always fails.
-
-## 7. Pull data from APIs instead of driving a browser — realistic plan
-
-The agent path works but costs minutes per refresh, needs a live Chrome session for mail,
-and gives no control over what is fetched. Direct APIs invert all three. What follows is
-what is actually obtainable, verified on this machine rather than assumed.
+Mail and calendar stay as they are — read by the `/email` skill in an interactive session,
+which needs the Chrome extension and is not worth replacing. This request covers only the
+two sources that can be fetched directly, which are also the two that refresh most often.
 
 ### Where the credentials come from
 
-Nothing goes in a file or in chat. Each secret lands in the macOS Keychain, typed by the
-human once:
+Nothing in a file, nothing in git, nothing pasted into a chat. Each secret goes into the
+macOS Keychain, typed by the human once:
 
 ```bash
 security add-generic-password -s reporto-jira -a you@example.com -w   # prompts for the token
 security find-generic-password -s reporto-jira -w                     # how the server reads it
 ```
 
-The dev server shells out to `security find-generic-password`; the values never touch
-`config/`, git, or a log.
+### GitHub — no new credential needed
 
-### Source by source, in build order
+`gh auth token` already returns a working token on this machine (scopes `repo`,
+`read:org`, `admin:public_key`, `gist`), and `gh api graphql` authenticates fine. Shell out
+to `gh api`, 5000 requests/hour.
 
-**1. GitHub — no new credential needed.** `gh auth token` already returns a working token
-on this machine, scopes `repo, read:org, admin:public_key, gist`, and `gh api graphql`
-authenticates fine. Shell out to `gh api` (or reuse the token directly) at 5000 req/hour.
-This replaces the whole `prs` report and the deploy-branch ancestry check. GraphQL is
-required for `pullRequest.reviewThreads { isResolved }` — REST cannot express resolution
-state, which is what request 5 needs.
+Note the account trap: Bluedrop org repos are visible only to **BaturaBluedrop**. If the
+active `gh` account is another one, every call against the org returns `HTTP 404`. Either
+pin the account per call (`gh --hostname`/`GH_TOKEN` from the right keyring entry) or check
+`gh auth status` first and fail with a clear message rather than reporting an empty PR list.
 
-**2. Jira — Atlassian API token, self-service.** Create at
-`id.atlassian.com/manage-profile/security/api-tokens`, no admin involved; authenticate
-with Basic (email + token) against `/rest/api/3/…`. Confirmed the REST host answers (401
-unauthenticated). Covers JQL search, issue detail, comments, and — for request 1 —
-`/transitions` to read and apply status changes.
+Replaces the whole `prs` report plus the deploy-branch ancestry check. GraphQL is required
+for `pullRequest.reviewThreads { isResolved }` — REST cannot express resolution state,
+which is exactly what request 5 needs.
 
-**3. Google Calendar — no OAuth at all.** Calendar exposes a private "secret address in
-iCal format" per calendar. Fetch that URL, parse the ICS, done: no Cloud project, no
-consent screen, no token refresh. Cheapest possible fix for the half of the calendar the
-dashboard keeps getting wrong.
+### Jira — one self-service API token
 
-**4. Outlook Calendar — same trick, if the tenant allows.** Settings → Calendar → Shared
-calendars → Publish a calendar yields an ICS URL. Some tenants disable publishing; that is
-a one-minute check before writing any code.
-
-**5. Gmail — OAuth desktop client, usually works.** Google Cloud project, enable the Gmail
-API, download the client JSON, one browser consent, store the refresh token in the
-Keychain. Scope stays `gmail.readonly` so nothing can send or delete. Risk: a Workspace
-admin can block third-party OAuth apps, and that shows up immediately at the consent
-screen — verify before investing.
-
-**6. Outlook mail — expect an IT ticket.** Basic auth and IMAP are dead at Microsoft, so
-Graph with `Mail.Read` is the only route, and corporate tenants commonly disable user
-consent for mail scopes. Needs an Entra app registration plus admin consent. Until that
-exists this inbox stays on the interactive path — which is fine, because it is the
-smallest of the four sources.
+Create at `id.atlassian.com/manage-profile/security/api-tokens`, no admin involved;
+authenticate with Basic (email + token) against `/rest/api/3/…`. Confirmed the REST host
+answers (401 unauthenticated). Covers JQL search, issue detail, comments, and — for
+request 1 — `/transitions` to read and apply status changes.
 
 ### Shape in the app
 
 - `POST /api/pull/<kind>` beside the existing `/api/refresh/<kind>`, same cross-site guard,
   returning the same report JSON the skills write — so `types.ts` stays the contract and
-  the UI needs no changes beyond swapping which endpoint the button calls.
-- Keep the agent path as a fallback per kind, chosen by config (`source: "api" | "skill"`),
-  so a broken token degrades to something that still works instead of a dead card.
-- Fetches are fast enough to be synchronous: no command lock, no 15-minute watchdog, no
-  handoff. The whole `mode: "handoff"` mechanism disappears for any kind that moves to an
-  API.
+  the UI changes only in which endpoint the button calls.
+- Keep the skill path as a per-kind fallback chosen by config
+  (`source: "api" | "skill"`), so a broken token degrades to something slow that works
+  rather than a dead card.
+- These fetches are fast enough to be synchronous: for `jira` and `prs` the command lock,
+  the 15-minute watchdog and the 409-join logic all stop being necessary.
 
 ### Order of work
 
-GitHub first, since it needs no new secret and covers the most-used report. Jira second,
-one self-service token. Then the two ICS calendar URLs, which together remove the browser
-dependency from the calendar entirely. Gmail fourth, once the consent screen is known to
-work. Outlook mail last, or never.
+GitHub first — no new secret, and it covers the most-used report. Jira second, one token.
+Nothing else moves.
+
+### Status
+
+**GitHub `prs` is done.** `POST /api/pull/prs` (see `server/github.mjs`) fetches every open
+PR in one GraphQL call — review decision, draft flag, updated time, ticket key from the
+title, and unresolved inline thread count — writes `prs-<date>.json` and bumps the index.
+Measured 1.5s against 11 PRs, versus roughly three minutes for the `/jira` agent run. The
+PRs card picks it automatically (bolt icon) and no longer marks the Jira card busy.
+
+Two things learned while building it:
+- `unresolvedThreads` counts *inline* threads only. A review left as a top-level body — as
+  on #987 — has zero threads, so request 5's button cannot key off this number alone.
+- The API result can be fresher than the skill's: #1791 merged at 06:45 UTC and vanished
+  from the open list within the same session.
+
+Still to do here: the `jira` puller, which needs the Atlassian token. The report also wants
+the deploy-branch ancestry check, which is GitHub-side and can reuse the same token.
