@@ -32,7 +32,6 @@ export interface Pr {
   num: number;
   url: string;
   state: 'open' | 'merged' | 'closed';
-  inQc: boolean | null;
   note?: string;
 }
 
@@ -43,7 +42,6 @@ export interface Ticket {
   chip: Chip;
   summary: string;
   prs: Pr[];
-  qc: string;
   notes: string[];
 }
 

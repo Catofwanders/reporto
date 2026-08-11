@@ -36,7 +36,6 @@ export const JiraActiveList = ({ report }: { report: JiraReport }) => {
       <div className="list ticket-list">
         {tickets.length === 0 && <div className="empty">No active tickets.</div>}
         {tickets.map((ticket) => {
-          const missingFromQc = ticket.prs.some((pr) => pr.inQc === false);
           return (
             <article key={ticket.key} className="item">
               <span className="chip-status">
@@ -48,7 +47,6 @@ export const JiraActiveList = ({ report }: { report: JiraReport }) => {
                     {ticket.key}
                   </a>
                   <span className="time">{prSummary(ticket)}</span>
-                  {missingFromQc && <Chip tone="bad">missing from deploy-qc</Chip>}
                 </div>
                 <p className="subj">{ticket.summary}</p>
               </div>

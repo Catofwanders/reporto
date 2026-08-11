@@ -25,7 +25,7 @@ Reports are JSON files in `public/reports/`, listed by `index.json`:
 |---|---|---|
 | `email-<date>.json` | `/email` skill | actionable mail from Gmail + Outlook |
 | `calendar-<date>.json` | `/email` skill | today's events, upcoming watch-list |
-| `jira-<date>.json` | `/jira` skill | active tickets, PRs, deploy-qc status |
+| `jira-<date>.json` | `/jira` skill | active tickets with their PRs |
 | `prs-<date>.json` | `/jira` skill | my open PRs grouped by repo |
 
 The TypeScript types in `src/types.ts` are the schema of record. The skills that
@@ -40,6 +40,17 @@ mail subjects, meeting join links (some with embedded passwords), and ticket det
 which has no business in a git remote. A fresh checkout therefore starts with no data:
 the cards stay hidden and the action bar reads "never" until you press an update
 button.
+
+## Committing
+
+This repository belongs to the `Catofwanders` account and **only that identity commits
+here** — set repo-locally, overriding whatever global git identity is configured for other
+projects:
+
+```bash
+git config user.name  "Catofwanders"
+git config user.email "23452775+Catofwanders@users.noreply.github.com"
+```
 
 ## Configuration
 

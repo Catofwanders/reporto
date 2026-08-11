@@ -34,47 +34,7 @@ the same shape as `/api/refresh`, with the cross-site guard applied.
 - Optimistic update or wait for Jira to confirm? Given how slow the round trip is,
   optimistic with rollback (the pattern already used for mail todos) is probably right.
 
-## 2. Merge a selected PR into `deploy-qc`
-
-Put an approved PR's branch onto `deploy-qc` so it lands in the QC environment, chosen
-from the open-PR list.
-
-**Shape**
-
-- A per-PR action in the open-PR list, enabled only for PRs that are approved and not
-  already in `deploy-qc` — the dashboard already computes both facts.
-- After the merge, re-check ancestry so the row immediately reflects the new state.
-
-**Mechanics**
-
-Merging a branch into `deploy-qc` is not the same as merging a PR to `master`, and the
-distinction matters:
-
-- `deploy-qc` is periodically hard-reset to `origin/master` and amended, which drops
-  QC-only merges. Anything this feature puts there is expected to disappear on the next
-  reset — that is normal, and it is exactly why the dashboard checks ancestry instead of
-  trusting a PR's merged flag.
-- The reset procedure treats console merges to `master` as forbidden. This feature must
-  never touch `master`; it targets `deploy-qc` only.
-
-**Constraints before building this**
-
-- **Never automated.** The merge must be triggered by an explicit human click, one PR at
-  a time, with the target branch and the PR shown in a confirmation step. No batch
-  action, no "merge everything approved", and no agent deciding to run it.
-- The confirmation has to name what is being merged where, because the failure mode
-  (merging the wrong branch, or into the wrong target) is not silently reversible.
-- Decide the merge method — a real merge commit onto `deploy-qc` keeps history honest
-  about what QC contains, whereas a squash makes ancestry checks harder to read.
-
-**Open questions**
-
-- Who owns conflicts? If the merge conflicts, the dashboard should refuse and hand the
-  user a local command rather than attempting a resolution.
-- Should the action be available at all for repos without a `deploy-qc` branch? Those
-  exist, and the report already knows which ones.
-
-## 3. Change a PR's status
+## 2. Change a PR's status
 
 Act on my own pull requests from the open-PR list instead of opening each one on GitHub.
 The list already shows review state and the draft flag, so the state is visible but not
@@ -91,8 +51,8 @@ Only the states the PR's author actually controls:
   ready.
 
 Review verdicts stay out of scope: approving or requesting changes belongs to other
-people, and GitHub does not allow approving your own PR. Merging is deliberately not
-here either — that is request 2, with its own constraints.
+people, and GitHub does not allow approving your own PR. Merging is deliberately out of scope
+here: only the human merges, ever — see `.claude/rules/git-operations.md`.
 
 **Mechanics**
 
@@ -119,7 +79,7 @@ API, so each new subcommand has to be added there explicitly.
 - Should closed PRs stay visible in the list for the rest of the day (so the action is
   undoable in place) or vanish on the next refresh?
 
-## 4. Summary widget in "My open PRs", with copy-unapproved-links button
+## 3. Summary widget in "My open PRs", with copy-unapproved-links button
 
 **Built.** The strip sits above the repo accordions: counts for awaiting review / approved /
 changes requested / drafts, and a button copying the links of PRs awaiting *someone else's*
@@ -167,7 +127,7 @@ permission. The report already carries `review` and `url` per PR, so the filter 
   secure, so this works in dev, but the fallback (select-and-copy from a textarea) is
   worth having if the write is rejected.
 
-## 5. Per-PR "Resolve comments" — PR detail page with a live Claude terminal
+## 4. Per-PR "Resolve comments" — PR detail page with a live Claude terminal
 
 For a PR that has unresolved review comments, one click opens a dedicated page showing
 the full PR context and, under it, a large terminal already running `claude` in that
@@ -235,7 +195,7 @@ command execution as the user, and the existing cross-site guard **does not cove
   carries none of the PTY risk — worth prototyping first to see whether the embedded
   version earns its complexity.
 
-## 6. Pull Jira and GitHub data from APIs instead of driving an agent
+## 5. Pull Jira and GitHub data from APIs instead of driving an agent
 
 Mail and calendar stay as they are — read by the `/email` skill in an interactive session,
 which needs the Chrome extension and is not worth replacing. This request covers only the
@@ -264,7 +224,7 @@ pin the account per call (`gh --hostname`/`GH_TOKEN` from the right keyring entr
 
 Replaces the whole `prs` report plus the deploy-branch ancestry check. GraphQL is required
 for `pullRequest.reviewThreads { isResolved }` — REST cannot express resolution state,
-which is exactly what request 5 needs.
+which is exactly what request 4 needs.
 
 ### Jira — one self-service API token
 
@@ -299,7 +259,7 @@ PRs card picks it automatically (bolt icon) and no longer marks the Jira card bu
 
 Two things learned while building it:
 - `unresolvedThreads` counts *inline* threads only. A review left as a top-level body — as
-  on #987 — has zero threads, so request 5's button cannot key off this number alone.
+  on #987 — has zero threads, so request 4's button cannot key off this number alone.
 - The API result can be fresher than the skill's: #1791 merged at 06:45 UTC and vanished
   from the open list within the same session.
 

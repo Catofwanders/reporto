@@ -61,9 +61,6 @@ export const JiraReportView = ({ report }: JiraReportViewProps) => (
                   </p>
                 ))}
               </div>
-              <div className={`action ${ticket.qc.startsWith('✓') ? 'qc-in' : 'none'}`}>
-                {ticket.qc}
-              </div>
             </article>
           ))}
         </div>

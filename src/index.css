@@ -108,7 +108,6 @@ body {
 }
 .action.need { color: var(--bad-ink); font-weight: 600; }
 .action.none { color: var(--ink-2); }
-.action.qc-in { color: var(--ok-ink); font-weight: 600; }
 @media (max-width: 640px) { .item { flex-wrap: wrap; } .action { width: 100%; border-left: none; padding-left: 0; } }
 
 a { color: var(--accent); text-decoration: none; }
