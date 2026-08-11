@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { CalendarReport, EmailReport, JiraReport, PrsReport } from '../types';
 import type { Todo } from '../db';
 import { loadDay } from '../db';
+import { useRefresh } from '../refreshContext';
 import { summarizeEmail } from '../summary';
 import { CalendarWidget } from '../components/CalendarWidget';
 import { MailWidget } from '../components/MailWidget';
@@ -17,6 +18,7 @@ interface HomePageProps {
 
 export const HomePage = ({ email, jira, calendar, prs }: HomePageProps) => {
   const [todos, setTodos] = useState<Todo[]>([]);
+  const { run } = useRefresh();
 
   useEffect(() => {
     if (!email) return;
@@ -39,7 +41,7 @@ export const HomePage = ({ email, jira, calendar, prs }: HomePageProps) => {
     <main className="home">
       <div className="home-content">
         {jira && <JiraActiveList report={jira} />}
-        {prs && <OpenPrList report={prs} />}
+        {prs && <OpenPrList report={prs} onChanged={() => void run('prs')} />}
       </div>
 
       <div className="home-widgets">

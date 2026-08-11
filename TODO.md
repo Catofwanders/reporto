@@ -36,6 +36,17 @@ the same shape as `/api/refresh`, with the cross-site guard applied.
 
 ## 2. Change a PR's status
 
+**Built.** Each PR row has a menu: mark ready for review / convert to draft, and close with
+a confirmation naming the repo, number and title. `POST /api/pr/<repo>/<num>/<action>`
+drives it — draft and ready are GraphQL mutations (REST cannot flip draft state), close and
+reopen a REST PATCH. The action comes from a fixed server-side list, so the request can only
+name one of four; **merge is deliberately not among them.** Unresolved inline thread count
+now shows as a red chip on the row.
+
+Still open from the original sketch: requesting reviewers, and whether closed PRs should
+linger in the list so the action is undoable in place.
+
+
 Act on my own pull requests from the open-PR list instead of opening each one on GitHub.
 The list already shows review state and the draft flag, so the state is visible but not
 editable.

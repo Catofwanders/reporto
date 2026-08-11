@@ -88,6 +88,14 @@ Only one run per command at a time; a second request during a run waits for it a
 loads its output. Runs get SIGTERM at 15 minutes and SIGKILL ten seconds later, and the
 request always answers even if the child never dies, so the lock cannot wedge.
 
+## PR actions
+
+Each row in "My open PRs" has a menu — mark ready for review, convert to draft, or close.
+`POST /api/pr/<repo>/<num>/<action>` applies it with the same pinned GitHub token as the
+puller, behind the same cross-site guard. The action must be one of four the server knows;
+**merging is not one of them and never will be.** Closing asks for confirmation first,
+naming the repo, number and title, since it is the only one that discards work.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive

@@ -3,6 +3,7 @@ import { Chip } from './Chip';
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
 import { PrSummary } from './PrSummary';
+import { PrRowActions } from './PrRowActions';
 
 const REVIEW_LABEL: Record<ReviewDecision, string> = {
   APPROVED: 'approved',
@@ -21,7 +22,13 @@ const reviewTone = (review: ReviewDecision) => {
 const staleDays = (iso: string) =>
   Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
 
-const PrRow = ({ pr }: { pr: OpenPr }) => {
+interface PrRowProps {
+  repo: string;
+  pr: OpenPr;
+  onChanged: () => void;
+}
+
+const PrRow = ({ repo, pr, onChanged }: PrRowProps) => {
   const days = staleDays(pr.updatedAt);
   return (
     <article className="item">
@@ -34,6 +41,11 @@ const PrRow = ({ pr }: { pr: OpenPr }) => {
             #{pr.num}
           </a>
           {pr.draft && <Chip tone="na">draft</Chip>}
+          {(pr.unresolvedThreads ?? 0) > 0 && (
+            <Chip tone="bad">
+              {pr.unresolvedThreads} unresolved
+            </Chip>
+          )}
           {pr.ticket && pr.ticketUrl && (
             <a className="time" href={pr.ticketUrl} target="_blank" rel="noopener noreferrer">
               {pr.ticket}
@@ -47,11 +59,18 @@ const PrRow = ({ pr }: { pr: OpenPr }) => {
           </a>
         </p>
       </div>
+      <PrRowActions repo={repo} pr={pr} onChanged={onChanged} />
     </article>
   );
 };
 
-export const OpenPrList = ({ report }: { report: PrsReport }) => {
+interface OpenPrListProps {
+  report: PrsReport;
+  /** Refetch after a PR's state changes, so the list stops showing the old state. */
+  onChanged: () => void;
+}
+
+export const OpenPrList = ({ report, onChanged }: OpenPrListProps) => {
   const total = report.repos.reduce((sum, group) => sum + group.prs.length, 0);
 
   return (
@@ -71,7 +90,7 @@ export const OpenPrList = ({ report }: { report: PrsReport }) => {
           <ReportAccordion key={group.repo} title={group.repo} count={group.prs.length}>
             <div className="list">
               {group.prs.map((pr) => (
-                <PrRow key={pr.url} pr={pr} />
+                <PrRow key={pr.url} repo={group.repo} pr={pr} onChanged={onChanged} />
               ))}
             </div>
           </ReportAccordion>

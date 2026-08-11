@@ -3,7 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
-import { pullOpenPrs } from './server/github.mjs'
+import type { PrActionName } from './server/github.mjs'
+import { PR_ACTIONS, prAction, pullOpenPrs } from './server/github.mjs'
 
 // Personal / employer-specific settings live in ./config (gitignored). The committed
 // config.template is the fallback, so a fresh checkout still boots.
@@ -328,6 +329,72 @@ function pullPlugin(): Plugin {
   }
 }
 
+// PR action API: POST /api/pr/<repo>/<num>/<action> flips one pull request's state.
+// Write actions on someone's real repository, so the URL selects a known action from a
+// fixed list and the org comes from config — the request never names a command.
+function prActionPlugin(): Plugin {
+  return {
+    name: 'reporto-pr-action',
+    configureServer(server) {
+      server.middlewares.use('/api/pr', (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+
+        if (req.method === 'GET') {
+          res.end(JSON.stringify({ actions: PR_ACTIONS }))
+          return
+        }
+        const blocked = rejectCrossSite(req)
+        if (blocked) {
+          res.statusCode = 403
+          res.end(JSON.stringify({ error: `action blocked: ${blocked}` }))
+          return
+        }
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.end('{"error":"use POST"}')
+          return
+        }
+
+        const parts = (req.url ?? '/').split('?')[0].replace(/^\//, '').split('/')
+        const [repo, numRaw, actionRaw] = parts
+        const num = Number(numRaw)
+        const action = actionRaw as PrActionName
+        if (!repo || !Number.isInteger(num) || !action) {
+          res.statusCode = 400
+          res.end('{"error":"expected /api/pr/<repo>/<number>/<action>"}')
+          return
+        }
+        if (!PR_ACTIONS.includes(action)) {
+          res.statusCode = 404
+          res.end(JSON.stringify({ error: `unknown action "${action}"`, actions: PR_ACTIONS }))
+          return
+        }
+
+        const config = loadConfig()
+        if (!config.githubOrg) {
+          res.statusCode = 400
+          res.end('{"error":"set githubOrg in config/reporto.json"}')
+          return
+        }
+
+        void prAction({
+          owner: config.githubOrg,
+          repo,
+          num,
+          action,
+          account: config.githubAccount ?? config.githubAuthor,
+        }).then(
+          (result) => res.end(JSON.stringify({ ok: true, action, ...result })),
+          (err: Error) => {
+            res.statusCode = 500
+            res.end(JSON.stringify({ ok: false, action, repo, num, error: err.message }))
+          },
+        )
+      })
+    },
+  }
+}
+
 // Cap request bodies: these endpoints only ever receive small JSON documents.
 const MAX_BODY_BYTES = 1_000_000
 
@@ -504,5 +571,5 @@ export default defineConfig({
   // Loopback only: the dev server exposes file writes and agent runs, so it must not
   // be reachable from the LAN.
   server: { host: '127.0.0.1' },
-  plugins: [react(), dbPlugin(), refreshPlugin(), pullPlugin()],
+  plugins: [react(), dbPlugin(), refreshPlugin(), pullPlugin(), prActionPlugin()],
 })

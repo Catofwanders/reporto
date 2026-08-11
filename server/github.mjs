@@ -21,13 +21,30 @@ async function ghToken(account) {
 }
 
 async function graphql(query, token) {
-  const { stdout } = await run('gh', ['api', 'graphql', '-f', `query=${query}`], {
-    env: { ...process.env, GH_TOKEN: token },
-    maxBuffer: 10 * 1024 * 1024,
-  })
+  let stdout
+  try {
+    ;({ stdout } = await run('gh', ['api', 'graphql', '-f', `query=${query}`], {
+      env: { ...process.env, GH_TOKEN: token },
+      maxBuffer: 10 * 1024 * 1024,
+    }))
+  } catch (err) {
+    // gh echoes the whole query back on failure; surface only what went wrong.
+    throw new Error(ghMessage(err))
+  }
   const body = JSON.parse(stdout)
   if (body.errors?.length) throw new Error(body.errors.map((e) => e.message).join('; '))
   return body.data
+}
+
+/** The useful line of a failed `gh` call, without the query echo. */
+function ghMessage(err) {
+  const text = String(err?.stderr || err?.message || err)
+  const line = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .find((l) => l.startsWith('gh:') || /^(HTTP|error|GraphQL)/i.test(l))
+  return (line ?? text.split('\n').pop() ?? 'gh call failed').replace(/^gh:\s*/, '')
 }
 
 const OPEN_PRS = (author, org) => `
@@ -90,4 +107,66 @@ export async function pullOpenPrs({ author, org, jiraBrowseUrl, account }) {
     author,
     repos,
   }
+}
+
+const PR_NODE_ID = (owner, repo, num) => `
+{
+  repository(owner: "${owner}", name: "${repo}") {
+    pullRequest(number: ${num}) { id isDraft state title }
+  }
+}`
+
+const READY = (id) => `
+mutation { markPullRequestReadyForReview(input: {pullRequestId: "${id}"}) {
+  pullRequest { number isDraft } } }`
+
+const DRAFT = (id) => `
+mutation { convertPullRequestToDraft(input: {pullRequestId: "${id}"}) {
+  pullRequest { number isDraft } } }`
+
+export const PR_ACTIONS = ['ready', 'draft', 'close', 'reopen']
+
+/**
+ * Applies one state change to one pull request.
+ *
+ * Draft and ready are GraphQL mutations (REST cannot flip draft state); close and reopen
+ * are a REST PATCH. Every call resolves the node id first, which also validates that the
+ * PR exists and is visible to the pinned account — a wrong account 404s here rather than
+ * silently doing nothing.
+ */
+export async function prAction({ owner, repo, num, action, account }) {
+  if (!PR_ACTIONS.includes(action)) throw new Error(`unknown action "${action}"`)
+  const token = await ghToken(account)
+
+  const info = await graphql(PR_NODE_ID(owner, repo, num), token)
+  const pr = info.repository?.pullRequest
+  if (!pr) throw new Error(`${repo}#${num} not found for this account`)
+
+  if (action === 'ready' || action === 'draft') {
+    if (action === 'ready' && !pr.isDraft) return { repo, num, changed: false, isDraft: false }
+    if (action === 'draft' && pr.isDraft) return { repo, num, changed: false, isDraft: true }
+    const data = await graphql(action === 'ready' ? READY(pr.id) : DRAFT(pr.id), token)
+    const out = data.markPullRequestReadyForReview ?? data.convertPullRequestToDraft
+    return { repo, num, changed: true, isDraft: out.pullRequest.isDraft }
+  }
+
+  const state = action === 'close' ? 'closed' : 'open'
+  try {
+    await run(
+    'gh',
+    [
+      'api',
+      '--method',
+      'PATCH',
+      `repos/${owner}/${repo}/pulls/${num}`,
+      '-f',
+      `state=${state}`,
+      '--silent',
+    ],
+      { env: { ...process.env, GH_TOKEN: token } },
+    )
+  } catch (err) {
+    throw new Error(ghMessage(err))
+  }
+  return { repo, num, changed: true, state }
 }
