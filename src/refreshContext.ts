@@ -6,12 +6,14 @@ export interface RefreshStatus {
   errors: Partial<Record<ReportKind, string>>;
   /** Which command regenerates each kind, as reported by the server. */
   commandOf: Partial<Record<ReportKind, string>>;
-  /** headless = spawned run; handoff = opens an interactive terminal session. */
-  modeOf: Partial<Record<ReportKind, 'headless' | 'handoff'>>;
-  /** Kinds whose terminal session was opened and is presumably still being worked on. */
-  handedOff: Set<ReportKind>;
   /** Kinds fetchable straight from an upstream API — seconds, not an agent run. */
   apiKinds: Set<ReportKind>;
+  /**
+   * Kinds this app can refresh at all. Mail and calendar are not among them: reading the
+   * inboxes needs the Chrome extension, which only attaches to the user's own interactive
+   * session, so those reports are written by running the skill there.
+   */
+  canRefresh: (kind: ReportKind) => boolean;
   run: (kind: ReportKind) => Promise<void>;
 }
 

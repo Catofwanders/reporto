@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import type { EmailReport } from '../types';
 import type { EmailSummary } from '../summary';
 import { Donut } from './Donut';
-import { RefreshButton } from './RefreshButton';
 
 interface MailWidgetProps {
   report: EmailReport;
@@ -15,7 +14,6 @@ export const MailWidget = ({ report, summary }: MailWidgetProps) => (
       <h3>📬 Mail</h3>
       <span className="widget-more">
         <Link to="/email">{report.date} →</Link>
-        <RefreshButton kind="email" />
       </span>
     </div>
     <Donut

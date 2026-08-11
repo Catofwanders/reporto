@@ -19,21 +19,23 @@ const fmtStamp = (iso: string | undefined) => {
 };
 
 export const ActionBar = ({ generatedAt }: ActionBarProps) => {
-  const { running, errors, handedOff } = useRefresh();
+  const { running, errors, canRefresh } = useRefresh();
 
   return (
     <div className="action-bar">
       {REPORT_KINDS.map((kind) => (
-        <div key={kind} className={`action-item ${errors[kind] ? 'has-error' : ''}`}>
+        <div
+          key={kind}
+          className={`action-item ${errors[kind] ? 'has-error' : ''} ${
+            canRefresh(kind) ? '' : 'action-manual'
+          }`}
+          title={canRefresh(kind) ? undefined : `${KIND_META[kind].label} is written by running the skill in your own session`}
+        >
           <span className="action-icon">{KIND_META[kind].icon}</span>
           <div className="action-labels">
             <span className="action-name">{KIND_META[kind].label}</span>
             <span className="action-stamp">
-              {running.has(kind)
-                ? 'updating…'
-                : handedOff.has(kind)
-                  ? 'in terminal…'
-                  : fmtStamp(generatedAt[kind])}
+              {running.has(kind) ? 'updating…' : fmtStamp(generatedAt[kind])}
             </span>
           </div>
           <RefreshButton kind={kind} />

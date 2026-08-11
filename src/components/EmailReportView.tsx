@@ -6,7 +6,6 @@ import type { Todo } from '../db';
 import { emailRows } from '../emailRows';
 import { Chip } from './Chip';
 import { ReportAccordion } from './ReportAccordion';
-import { RefreshButton } from './RefreshButton';
 
 interface EmailReportViewProps {
   report: EmailReport;
@@ -74,7 +73,6 @@ export const EmailReportView = ({ report, todos, onToggle, onDelete }: EmailRepo
       <div className="panel-head">
         <h2>📬 Mail</h2>
         <span className="panel-meta">
-          <RefreshButton kind="email" />
           {report.date}
           {actionCount > 0 && <Chip tone="bad">{actionCount} need action</Chip>}
         </span>

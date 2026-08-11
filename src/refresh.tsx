@@ -22,8 +22,6 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
   const [running, setRunning] = useState<Set<ReportKind>>(new Set());
   const [errors, setErrors] = useState<Partial<Record<ReportKind, string>>>({});
   const [commandOf, setCommandOf] = useState<Partial<Record<ReportKind, string>>>({});
-  const [modeOf, setModeOf] = useState<Partial<Record<ReportKind, 'headless' | 'handoff'>>>({});
-  const [handedOff, setHandedOff] = useState<Set<ReportKind>>(new Set());
   const [apiKinds, setApiKinds] = useState<Set<ReportKind>>(new Set());
 
   // The kind → command map lives on the server; without it we cannot tell which cards
@@ -32,18 +30,9 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
     let cancelled = false;
     fetch('/api/refresh')
       .then((res) => (res.ok ? res.json() : null))
-      .then(
-        (
-          body: {
-            commandOf?: Record<string, string>;
-            modeOf?: Record<string, 'headless' | 'handoff'>;
-          } | null,
-        ) => {
-          if (cancelled || !body) return;
-          if (body.commandOf) setCommandOf(body.commandOf as typeof commandOf);
-          if (body.modeOf) setModeOf(body.modeOf as typeof modeOf);
-        },
-      )
+      .then((body: { commandOf?: Record<string, string> } | null) => {
+        if (!cancelled && body?.commandOf) setCommandOf(body.commandOf as typeof commandOf);
+      })
       .catch(() => {
         /* falls back to per-kind behaviour */
       });
@@ -106,19 +95,6 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
           return;
         }
 
-        if (modeOf[kind] === 'handoff') {
-          // The skill needs a live browser session, so open a terminal and let the human
-          // drive it. Reports land on disk; the focus listener below picks them up.
-          const res = await fetch(`/api/handoff/${kind}`, {
-            method: 'POST',
-            headers: { 'X-Reporto-Write': '1' },
-          });
-          const body = (await res.json()) as RefreshResult;
-          if (!res.ok || !body.ok) throw new Error(body.error ?? `exit ${res.status}`);
-          setHandedOff((prev) => new Set([...prev, ...siblings]));
-          return;
-        }
-
         const res = await fetch(`/api/refresh/${kind}`, {
           method: 'POST',
           headers: { 'X-Reporto-Write': '1' },
@@ -152,15 +128,15 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
         setBusy(affected, false);
       }
     },
-    [apiKinds, commandOf, modeOf, onReload, setBusy],
+    [apiKinds, commandOf, onReload, setBusy],
   );
 
-  // Coming back to the tab is the natural moment to pick up whatever a handed-off
-  // session wrote while the browser was in the background.
+  // Mail and calendar are refreshed by running the skill in the user's own session, so
+  // returning to the tab is the moment their new files appear.
   useEffect(() => {
     const onFocus = () => {
       if (document.visibilityState !== 'visible') return;
-      void onReload([...REPORT_KINDS]).then(() => setHandedOff(new Set()));
+      void onReload([...REPORT_KINDS]);
     };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onFocus);
@@ -170,9 +146,14 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
     };
   }, [onReload]);
 
+  const canRefresh = useCallback(
+    (kind: ReportKind) => apiKinds.has(kind) || commandOf[kind] !== undefined,
+    [apiKinds, commandOf],
+  );
+
   const value = useMemo(
-    () => ({ running, errors, commandOf, modeOf, handedOff, apiKinds, run }),
-    [running, errors, commandOf, modeOf, handedOff, apiKinds, run],
+    () => ({ running, errors, commandOf, apiKinds, canRefresh, run }),
+    [running, errors, commandOf, apiKinds, canRefresh, run],
   );
   return <RefreshContext.Provider value={value}>{children}</RefreshContext.Provider>;
 };

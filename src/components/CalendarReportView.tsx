@@ -1,7 +1,6 @@
 import type { CalendarEvent, CalendarReport } from '../types';
 import { Chip } from './Chip';
 import { ReportAccordion } from './ReportAccordion';
-import { RefreshButton } from './RefreshButton';
 
 interface CalendarReportViewProps {
   report: CalendarReport;
@@ -57,10 +56,7 @@ export const CalendarReportView = ({ report }: CalendarReportViewProps) => (
   <section className="panel">
     <div className="panel-head">
       <h2>📅 Calendar</h2>
-      <span className="panel-meta">
-        {report.date}
-        <RefreshButton kind="calendar" />
-      </span>
+      <span className="panel-meta">{report.date}</span>
     </div>
 
     <p className="banner banner-ok">{report.summary}</p>

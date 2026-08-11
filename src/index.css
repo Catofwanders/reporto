@@ -53,6 +53,8 @@ body {
   padding: .25rem .35rem .25rem .6rem;
 }
 .action-item.has-error { border-color: var(--bad-line); }
+/* No update control: written by running the skill in the user's own session. */
+.action-item.action-manual { padding-right: .6rem; opacity: .75; }
 .action-icon { font-size: .9rem; }
 .action-labels { display: flex; flex-direction: column; line-height: 1.15; }
 .action-name { font-size: .78rem; font-weight: 600; }

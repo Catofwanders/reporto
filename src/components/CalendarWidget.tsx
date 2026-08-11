@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { CalendarEvent, CalendarReport } from '../types';
 import { Chip } from './Chip';
-import { RefreshButton } from './RefreshButton';
 
 const WEEKDAY_TIME: Intl.DateTimeFormatOptions = {
   weekday: 'short',
@@ -50,7 +49,6 @@ export const CalendarWidget = ({ report }: { report: CalendarReport }) => (
       <h3>📅 Today</h3>
       <span className="widget-more">
         <Link to="/calendar">{report.date} →</Link>
-        <RefreshButton kind="calendar" />
       </span>
     </div>
     {report.events.length === 0 ? (

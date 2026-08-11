@@ -2,7 +2,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import TerminalIcon from '@mui/icons-material/Terminal';
 import BoltIcon from '@mui/icons-material/Bolt';
 import type { ReportKind } from '../reportKinds';
 import { KIND_META } from '../reportKinds';
@@ -14,25 +13,24 @@ interface RefreshButtonProps {
 }
 
 export const RefreshButton = ({ kind, size = 'small' }: RefreshButtonProps) => {
-  const { running, errors, commandOf, modeOf, handedOff, apiKinds, run } = useRefresh();
+  const { running, errors, commandOf, apiKinds, canRefresh, run } = useRefresh();
+
+  // Nothing to offer for reports this app cannot regenerate — a button that always fails
+  // is worse than no button.
+  if (!canRefresh(kind)) return null;
+
   const meta = KIND_META[kind];
   const busy = running.has(kind);
   const error = errors[kind];
   const command = commandOf[kind];
   const viaApi = apiKinds.has(kind);
-  const handoff = !viaApi && modeOf[kind] === 'handoff';
-  const waiting = handedOff.has(kind);
 
   const title = busy
-    ? `${handoff ? 'Opening a terminal for' : viaApi ? 'Fetching' : 'Running'} ${viaApi ? meta.label : (command ?? 'update')}…`
+    ? `${viaApi ? 'Fetching' : 'Running'} ${viaApi ? meta.label : (command ?? 'update')}…`
     : error
       ? `Failed: ${error}`
       : viaApi
         ? `Update ${meta.label} — fetched straight from the API`
-        : handoff
-        ? waiting
-          ? `${command} is open in a terminal — finish it there, then return to this tab`
-          : `Update ${meta.label} — opens ${command} in a terminal (it needs your browser session)`
         : `Update ${meta.label}${command ? ` — runs ${command}` : ''}`;
 
   return (
@@ -44,7 +42,7 @@ export const RefreshButton = ({ kind, size = 'small' }: RefreshButtonProps) => {
           disabled={busy}
           aria-label={`update ${meta.label}`}
           sx={{
-            color: error ? 'var(--bad-ink)' : waiting ? 'var(--warn-ink)' : 'var(--ink-2)',
+            color: error ? 'var(--bad-ink)' : 'var(--ink-2)',
             '&:hover': { color: 'var(--accent)' },
           }}
         >
@@ -52,8 +50,6 @@ export const RefreshButton = ({ kind, size = 'small' }: RefreshButtonProps) => {
             <CircularProgress size={16} sx={{ color: 'var(--accent)' }} />
           ) : viaApi ? (
             <BoltIcon fontSize="small" />
-          ) : handoff ? (
-            <TerminalIcon fontSize="small" />
           ) : (
             <RefreshIcon fontSize="small" />
           )}

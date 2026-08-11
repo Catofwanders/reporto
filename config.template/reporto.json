@@ -3,25 +3,14 @@
   "githubOrg": "your-github-org",
   "commandGroups": [
     {
-      "command": "/email",
-      "writes": [
-        "email",
-        "calendar"
-      ],
-      "tools": "mail",
-      "mode": "handoff"
-    },
-    {
       "command": "/jira",
       "writes": [
         "jira",
         "prs"
       ],
-      "tools": "jira",
-      "mode": "headless"
+      "tools": "jira"
     }
   ],
-  "terminalApp": "Terminal",
   "githubAuthor": "your-github-login",
   "githubAccount": "your-github-login",
   "jiraBrowseUrl": "https://your-site.atlassian.net/browse"

@@ -65,41 +65,28 @@ template is used as a fallback.
 
 ## Update buttons
 
-Each card and the header action bar have an update button. It `POST`s to
-`/api/refresh/<kind>`, which spawns the matching Claude Code slash command:
+Jira and PRs can be refreshed from the dashboard. Mail and calendar cannot, and carry no
+button at all — those cards only show how old their data is.
 
-- `email` and `calendar` → `claude -p "/email"`
-- `jira` and `prs` → `claude -p "/jira"`
+| Report | How it refreshes |
+|---|---|
+| `prs` | `POST /api/pull/prs` — one GitHub GraphQL call, about a second (bolt icon) |
+| `jira` | `POST /api/refresh/jira` — spawns `claude -p "/jira"`, minutes (refresh icon) |
+| `email`, `calendar` | run `/email` in your own Claude Code session |
 
-Both members of a pair are regenerated together, because one skill run writes both
-files. When the run exits 0, the client reloads only the affected reports.
+Mail and calendar read both inboxes through the Chrome extension, and that extension
+attaches only to an interactive session you started — a spawned `claude -p` run has no
+`mcp__claude-in-chrome__*` tools at all and aborts having read nothing. So there is nothing
+for a button to do. Run the skill yourself; when you switch back to the browser tab the
+dashboard reloads and picks up the files it wrote.
 
-A headless `claude -p` run cannot prompt for permission, so the spawn passes an
-explicit `--allowedTools` list (built in `vite.config.ts`). Without it the run exits in
-seconds having fetched nothing.
+A spawned run counts as successful only if it actually rewrote a report file: a skill that
+cannot do its job may still exit 0 after explaining why, so exit status alone would report
+a success that changed nothing.
 
-A run counts as successful only if it actually rewrote a report file. A skill that
-cannot do its job may still exit 0 after explaining why in its output, so exit status
-alone would report a success that changed nothing.
-
-**Mail and calendar hand off to a terminal instead of running headlessly.** `/email` reads
-Gmail and Outlook through the Chrome extension, and that extension attaches only to an
-interactive session — a spawned `claude -p` run has no `mcp__claude-in-chrome__*` tools at
-all and aborts without reading anything. So those two cards show a terminal icon: pressing
-one opens an interactive Claude Code session in this directory with `/email` as its opening
-prompt, you answer its prompts there, and the dashboard reloads the reports when you switch
-back to the browser tab. Repeat presses within a minute are refused so two sessions cannot
-race on the same files.
-
-Which cards behave this way is config, not code: `mode: "handoff"` on a command group in
-`config/reporto.json`. Jira and PRs stay `headless` because `gh` and the Atlassian MCP need
-no browser.
-
-Only one run per command at a time. Pressing the sibling card's button during a run is
-not an error: the client sees the 409, waits for the run to finish, then loads its
-output. Runs get SIGTERM at 15 minutes and SIGKILL ten seconds later, and the request
-always answers even if the child never dies, so the lock cannot wedge. The log tail
-comes back in the response and shows in the button's tooltip on failure.
+Only one run per command at a time; a second request during a run waits for it and then
+loads its output. Runs get SIGTERM at 15 minutes and SIGKILL ten seconds later, and the
+request always answers even if the child never dies, so the lock cannot wedge.
 
 ## Security model
 

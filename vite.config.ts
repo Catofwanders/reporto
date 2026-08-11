@@ -10,13 +10,7 @@ import { pullOpenPrs } from './server/github.mjs'
 interface CommandGroup {
   command: string
   writes: string[]
-  tools: 'mail' | 'jira'
-  /**
-   * headless: spawn `claude -p <command>` and wait for it.
-   * handoff:  open an interactive session in a terminal instead — required for skills
-   *           that need the Chrome extension, which never attaches to a spawned run.
-   */
-  mode?: 'headless' | 'handoff'
+  tools: 'jira'
 }
 
 interface ReportoConfig {
@@ -27,8 +21,6 @@ interface ReportoConfig {
   githubAccount?: string
   /** e.g. https://your-site.atlassian.net/browse — used to link tickets. */
   jiraBrowseUrl?: string
-  /** macOS application to open for handoffs. */
-  terminalApp?: string
   commandGroups: CommandGroup[]
 }
 
@@ -59,18 +51,8 @@ function buildToolLists(githubOrg: string | undefined) {
       'mcp__atlassian__searchJiraIssuesUsingJql',
       'Bash(gh search prs:*)',
       'Bash(gh pr view:*)',
-      // Without an org the deploy-branch compare has no permission — see config.template.
+      // Without an org the compare API has no permission — see config.template.
       ...(githubOrg ? [`Bash(gh api repos/${githubOrg}/*)`] : []),
-    ],
-    mail: [
-      ...reportWrite,
-      'mcp__claude-in-chrome__tabs_context_mcp',
-      'mcp__claude-in-chrome__tabs_create_mcp',
-      'mcp__claude-in-chrome__tabs_close_mcp',
-      'mcp__claude-in-chrome__navigate',
-      'mcp__claude-in-chrome__computer',
-      'mcp__claude-in-chrome__get_page_text',
-      'mcp__claude-in-chrome__read_page',
     ],
   }
 }
@@ -81,7 +63,7 @@ function buildRefreshCommands() {
   const tools = buildToolLists(config.githubOrg)
   const byKind: Record<
     string,
-    { command: string; writes: string[]; allowedTools: string[]; mode: 'headless' | 'handoff' }
+    { command: string; writes: string[]; allowedTools: string[] }
   > = {}
   for (const group of config.commandGroups) {
     for (const kind of group.writes) {
@@ -89,7 +71,6 @@ function buildRefreshCommands() {
         command: group.command,
         writes: group.writes,
         allowedTools: tools[group.tools] ?? tools.jira,
-        mode: group.mode ?? 'headless',
       }
     }
   }
@@ -97,7 +78,6 @@ function buildRefreshCommands() {
 }
 
 const REFRESH_COMMANDS = buildRefreshCommands()
-const TERMINAL_APP = loadConfig().terminalApp ?? 'Terminal'
 
 const RUN_TIMEOUT_MS = 15 * 60 * 1000
 
@@ -140,12 +120,10 @@ function refreshPlugin(): Plugin {
         // covers; without it a sibling card reports its own run as a 409 failure.
         if (req.method === 'GET' && kind === '') {
           const commandOf: Record<string, string> = {}
-          const modeOf: Record<string, string> = {}
           for (const [k, entry] of Object.entries(REFRESH_COMMANDS)) {
             commandOf[k] = entry.command
-            modeOf[k] = entry.mode
           }
-          res.end(JSON.stringify({ running: [...running.keys()], commandOf, modeOf }))
+          res.end(JSON.stringify({ running: [...running.keys()], commandOf }))
           return
         }
 
@@ -165,15 +143,6 @@ function refreshPlugin(): Plugin {
         if (req.method !== 'POST') {
           res.statusCode = 405
           res.end('{"error":"use POST"}')
-          return
-        }
-        if (entry.mode === 'handoff') {
-          res.statusCode = 400
-          res.end(
-            JSON.stringify({
-              error: `${entry.command} cannot run headlessly — use /api/handoff/${kind}`,
-            }),
-          )
           return
         }
         // One run per command, so two cards backed by the same command can't collide.
@@ -267,141 +236,6 @@ function refreshPlugin(): Plugin {
     },
   }
 }
-
-// Handoff API: POST /api/handoff/<kind> opens an interactive Claude Code session in a
-// terminal, in this directory, with the skill's slash command as the opening prompt.
-// Needed because the Chrome extension attaches only to interactive sessions, so the mail
-// and calendar skills can never run from a spawned `claude -p`.
-function handoffPlugin(): Plugin {
-  // Two terminals running the same skill would race on the same report files, and a
-  // double-click is easy. Refuse a repeat launch of the same command for a short while.
-  // Terminal window per command, so a repeat press focuses it rather than spawning.
-  // (Terminal tabs have no id — only windows do, hence window-level tracking.)
-  const openWindows = new Map<string, number>()
-
-  return {
-    name: 'reporto-handoff',
-    configureServer(server) {
-      server.middlewares.use('/api/handoff', (req, res) => {
-        res.setHeader('Content-Type', 'application/json')
-        const kind = (req.url ?? '/').split('?')[0].replace(/^\//, '')
-
-        const blocked = rejectCrossSite(req)
-        if (blocked) {
-          res.statusCode = 403
-          res.end(JSON.stringify({ error: `handoff blocked: ${blocked}` }))
-          return
-        }
-        const entry = REFRESH_COMMANDS[kind]
-        if (!entry) {
-          res.statusCode = 404
-          res.end(JSON.stringify({ error: `unknown report "${kind}"` }))
-          return
-        }
-        if (req.method !== 'POST') {
-          res.statusCode = 405
-          res.end('{"error":"use POST"}')
-          return
-        }
-
-        // Reuse the window instead of stacking up new ones: pressing again focuses the
-        // session that is already open for this command.
-        const openWindow = openWindows.get(entry.command)
-        if (openWindow !== undefined) {
-          const focus = [
-            `tell application ${JSON.stringify(TERMINAL_APP)}`,
-            `  activate`,
-            `  try`,
-            `    set frontmost of window id ${openWindow} to true`,
-            `  on error`,
-            `    return "gone"`,
-            `  end try`,
-            `end tell`,
-            `return "focused"`,
-          ].join('\n')
-          const check = spawn('osascript', ['-e', focus], { stdio: ['ignore', 'pipe', 'pipe'] })
-          let focusOut = ''
-          check.stdout.on('data', (c) => {
-            focusOut += String(c)
-          })
-          check.on('close', () => {
-            // The user may have closed that window; fall through to a fresh launch next
-            // press rather than silently doing nothing.
-            if (focusOut.trim() !== 'focused') openWindows.delete(entry.command)
-            res.end(
-              JSON.stringify({
-                ok: true,
-                kind,
-                command: entry.command,
-                writes: entry.writes,
-                terminal: TERMINAL_APP,
-                reusedWindow: focusOut.trim() === 'focused',
-              }),
-            )
-          })
-          return
-        }
-
-        // The Chrome extension attaches to a session only when the human runs /chrome in
-        // it, and that is a CLI command an agent cannot invoke. So do not auto-submit the
-        // skill — print the two steps and hand over an interactive prompt.
-        const banner = [
-          `echo`,
-          `echo "  reporto — refresh ${entry.command}"`,
-          `echo "  1) /chrome    connect the browser extension to this session"`,
-          `echo "  2) ${entry.command}       read the inboxes and rewrite the reports"`,
-          `echo`,
-        ].join(' && ')
-        // Only the command name reaches the shell, and it comes from config, not the
-        // request — the URL selects a known entry, it never supplies a command.
-        const shell = `cd ${JSON.stringify(__dirname)} && ${banner} && claude`
-        const script = [
-          `tell application ${JSON.stringify(TERMINAL_APP)}`,
-          `  activate`,
-          `  do script ${JSON.stringify(shell)}`,
-          `  return id of front window as text`,
-          `end tell`,
-        ].join('\n')
-
-        // Ask for the tab back so a later press can focus this window instead of opening
-        // another one.
-        const child = spawn('osascript', ['-e', script], { stdio: ['ignore', 'pipe', 'pipe'] })
-        let out = ''
-        child.stdout.on('data', (c) => {
-          out += String(c)
-        })
-        let err = ''
-        child.stderr.on('data', (c) => {
-          err += String(c)
-        })
-        child.on('error', (e) => {
-          res.statusCode = 500
-          res.end(JSON.stringify({ error: `could not open ${TERMINAL_APP}: ${e.message}` }))
-        })
-        child.on('close', (code) => {
-          if (res.writableEnded) return
-          const windowId = Number(out.trim())
-          if (code === 0 && Number.isFinite(windowId)) {
-            openWindows.set(entry.command, windowId)
-          }
-          const ok = code === 0
-          res.statusCode = ok ? 200 : 500
-          res.end(
-            JSON.stringify({
-              ok,
-              kind,
-              command: entry.command,
-              writes: entry.writes,
-              terminal: TERMINAL_APP,
-              error: ok ? undefined : err.trim() || `osascript exited ${code}`,
-            }),
-          )
-        })
-      })
-    },
-  }
-}
-
 
 // Pull API: POST /api/pull/<kind> fetches a report straight from the upstream API, no
 // agent run involved. One GraphQL call replaces the skill's search-plus-per-PR calls, so
@@ -670,5 +504,5 @@ export default defineConfig({
   // Loopback only: the dev server exposes file writes and agent runs, so it must not
   // be reachable from the LAN.
   server: { host: '127.0.0.1' },
-  plugins: [react(), dbPlugin(), refreshPlugin(), handoffPlugin(), pullPlugin()],
+  plugins: [react(), dbPlugin(), refreshPlugin(), pullPlugin()],
 })
