@@ -253,3 +253,76 @@ and the fix is to run `/email` in an interactive session.
 
 Whichever wins, the button should say what it will do rather than implying a refresh that
 cannot happen — a disabled state with a tooltip is better than a run that always fails.
+
+## 7. Pull data from APIs instead of driving a browser — realistic plan
+
+The agent path works but costs minutes per refresh, needs a live Chrome session for mail,
+and gives no control over what is fetched. Direct APIs invert all three. What follows is
+what is actually obtainable, verified on this machine rather than assumed.
+
+### Where the credentials come from
+
+Nothing goes in a file or in chat. Each secret lands in the macOS Keychain, typed by the
+human once:
+
+```bash
+security add-generic-password -s reporto-jira -a you@example.com -w   # prompts for the token
+security find-generic-password -s reporto-jira -w                     # how the server reads it
+```
+
+The dev server shells out to `security find-generic-password`; the values never touch
+`config/`, git, or a log.
+
+### Source by source, in build order
+
+**1. GitHub — no new credential needed.** `gh auth token` already returns a working token
+on this machine, scopes `repo, read:org, admin:public_key, gist`, and `gh api graphql`
+authenticates fine. Shell out to `gh api` (or reuse the token directly) at 5000 req/hour.
+This replaces the whole `prs` report and the deploy-branch ancestry check. GraphQL is
+required for `pullRequest.reviewThreads { isResolved }` — REST cannot express resolution
+state, which is what request 5 needs.
+
+**2. Jira — Atlassian API token, self-service.** Create at
+`id.atlassian.com/manage-profile/security/api-tokens`, no admin involved; authenticate
+with Basic (email + token) against `/rest/api/3/…`. Confirmed the REST host answers (401
+unauthenticated). Covers JQL search, issue detail, comments, and — for request 1 —
+`/transitions` to read and apply status changes.
+
+**3. Google Calendar — no OAuth at all.** Calendar exposes a private "secret address in
+iCal format" per calendar. Fetch that URL, parse the ICS, done: no Cloud project, no
+consent screen, no token refresh. Cheapest possible fix for the half of the calendar the
+dashboard keeps getting wrong.
+
+**4. Outlook Calendar — same trick, if the tenant allows.** Settings → Calendar → Shared
+calendars → Publish a calendar yields an ICS URL. Some tenants disable publishing; that is
+a one-minute check before writing any code.
+
+**5. Gmail — OAuth desktop client, usually works.** Google Cloud project, enable the Gmail
+API, download the client JSON, one browser consent, store the refresh token in the
+Keychain. Scope stays `gmail.readonly` so nothing can send or delete. Risk: a Workspace
+admin can block third-party OAuth apps, and that shows up immediately at the consent
+screen — verify before investing.
+
+**6. Outlook mail — expect an IT ticket.** Basic auth and IMAP are dead at Microsoft, so
+Graph with `Mail.Read` is the only route, and corporate tenants commonly disable user
+consent for mail scopes. Needs an Entra app registration plus admin consent. Until that
+exists this inbox stays on the interactive path — which is fine, because it is the
+smallest of the four sources.
+
+### Shape in the app
+
+- `POST /api/pull/<kind>` beside the existing `/api/refresh/<kind>`, same cross-site guard,
+  returning the same report JSON the skills write — so `types.ts` stays the contract and
+  the UI needs no changes beyond swapping which endpoint the button calls.
+- Keep the agent path as a fallback per kind, chosen by config (`source: "api" | "skill"`),
+  so a broken token degrades to something that still works instead of a dead card.
+- Fetches are fast enough to be synchronous: no command lock, no 15-minute watchdog, no
+  handoff. The whole `mode: "handoff"` mechanism disappears for any kind that moves to an
+  API.
+
+### Order of work
+
+GitHub first, since it needs no new secret and covers the most-used report. Jira second,
+one self-service token. Then the two ICS calendar URLs, which together remove the browser
+dependency from the calendar entirely. Gmail fourth, once the consent screen is known to
+work. Outlook mail last, or never.
