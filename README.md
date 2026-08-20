@@ -28,8 +28,12 @@ Reports are JSON files in `public/reports/`, listed by `index.json`:
 | `jira-<date>.json` | `/jira` skill | active tickets with their PRs |
 | `prs-<date>.json` | `/jira` skill | my open PRs grouped by repo |
 
-The TypeScript types in `src/types.ts` are the schema of record. The skills that
-produce these files live in `~/.claude/docs/email-helper.md` and `jira-helper.md`.
+The TypeScript types in `src/types.ts` are the schema of record, guarded on load by
+`src/reportSchema.ts`. Sanitized copies of the mail skill live in [`skills/`](skills/) —
+the command, its helper, and the HTML report template — so a fresh clone can see what a
+report has to contain and how one gets produced. Install them into your own agent kit and
+fill in the accounts; `.claude/` is gitignored on purpose, so your working copies stay out
+of the repo. `prs` needs no skill: the server pulls it directly.
 
 `db/<date>.json` is a per-day snapshot of the reports plus todo state (checked,
 deleted, checkedAt) so work can be tracked over time. It is written through the API,
@@ -58,15 +62,55 @@ git config user.email "23452775+Catofwanders@users.noreply.github.com"
 cp -r config.template config     # then edit config/reporto.json
 ```
 
-`config/` is gitignored and holds anything specific to you — the GitHub org the Jira
-refresh may query, and which slash command produces which reports. Details in
+`config/` is gitignored and holds anything specific to you — the GitHub org to query, the
+repos pinned to the top of the PR list, and which slash command produces which reports. Details in
 [`config.template/README.md`](config.template/README.md). Without it the committed
 template is used as a fallback.
+
+## What the PR list shows
+
+Each row carries one split pill: review state on the left, deploy-qc state on the right,
+each in its own colour.
+
+GitHub's `reviewDecision` collapses "nobody has looked yet" and "somebody commented and I
+have pushed since" into states that read identically in a list, so `src/prState.ts` derives
+the difference instead:
+
+| State | Meaning |
+|---|---|
+| `awaiting review` | nobody but me has reviewed — waiting on a reviewer |
+| `commented` | reviewed, no commit since — waiting on me |
+| `awaiting re-review` | reviewed, and I pushed after that — waiting on a reviewer again |
+| `approved` / `changes requested` | GitHub's own verdicts, kept as they are |
+
+`commented` counts as waiting on me, so it is excluded from the "awaiting review" count and
+from the copy-links nudge button.
+
+The right half answers "is this branch on `deploy-qc`?" from one aliased ref comparison per
+PR (base `deploy-qc` → head): `aheadBy: 0` means deployed, so both `BEHIND` (QC has moved
+on since) and `IDENTICAL` read as **on QC**. Otherwise it shows **off QC · N**, N being the
+commits QC has not got. No chip renders at all when there is nothing to claim — a repo
+without the branch, a deleted head branch, or a failed comparison — rather than implying a
+PR is off QC.
+
+Jira sits below as compact cards, as many per row as the width allows, summaries clamped to
+two lines.
 
 ## Update buttons
 
 Jira and PRs can be refreshed from the dashboard. Mail and calendar cannot, and carry no
 button at all — those cards only show how old their data is.
+
+Only `prs` has a server-side puller (`PULLERS` in `vite.config.ts`). **`jira` has none: the
+Jira card depends entirely on whatever `/jira` command your own kit defines**, spawned as
+`claude -p`. There is no sanitized copy of it in `skills/` — it leans on personal Atlassian
+and `gh` auth — so on a fresh clone the Jira card stays empty until you supply that command
+and list it in `config/reporto.json` under `commandGroups`.
+
+That command also writes `prs`, per the `writes` list, and a skill-written `prs` report has
+no `lastReviewAt`, `lastCommitAt` or `deployQc` in it. Those rows degrade gracefully — the
+review state falls back to what `reviewDecision` alone can say and the QC half of the pill
+disappears — so press the bolt (`POST /api/pull/prs`) afterwards to get the full pill back.
 
 | Report | How it refreshes |
 |---|---|
@@ -137,13 +181,16 @@ own Chrome and `gh` — N private instances, no auth layer to build.
 
 ```
 config/             your settings (gitignored)
+skills/             sanitized mail skill + report template, and the report contract
 src/emailRows.ts    shared mail-row/todo-id derivation
+src/prState.ts      PR review state + deploy-qc chip derivation
 src/reportSchema.ts report shape guards
 config.template/    committed template to copy
 public/reports/     report JSON + index.json (gitignored)
 db/                 per-day snapshots and todo state (gitignored)
 src/pages/          Home, Email, Jira, Calendar routes
 src/components/     cards, widgets, donut, accordion, refresh button
+server/github.mjs   open-PR pull, deploy-qc comparison, PR state actions
 src/types.ts        report schemas
 src/db.ts           day-file client
 src/refresh.tsx     refresh state + provider
