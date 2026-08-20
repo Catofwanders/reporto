@@ -114,6 +114,23 @@ with no title match also gets one body search of your own PRs, capped at 15 sear
 pull to stay clear of the search API's 30/minute limit; anything skipped is logged rather
 than silently dropped.
 
+## Storybook
+
+```bash
+nvm use            # .nvmrc pins 20.19.5
+npm run storybook  # http://localhost:6006
+```
+
+Every component has stories, driven by **synthetic** fixtures in
+[`src/stories/fixtures.ts`](src/stories/fixtures.ts) — never the real reports, which are
+gitignored precisely because they hold mail subjects and ticket detail. The fixtures are
+built to cover the states that are otherwise hard to reach: each PR review state and its
+deploy-qc pairing, a merged PR dropped from `deploy-qc`, an all-day-only calendar, a report
+written before the puller carried QC data, and empty versions of every panel.
+
+Storybook 10 and Vite 8 both need Node 20.19+, which is why `.nvmrc` exists; the repo
+otherwise runs on whatever `node` you have.
+
 ## Update buttons
 
 Jira and PRs can be refreshed from the dashboard. Mail and calendar cannot, and carry no
@@ -202,6 +219,8 @@ public/reports/     report JSON + index.json (gitignored)
 db/                 per-day snapshots and todo state (gitignored)
 src/pages/          Home, Email, Jira, Calendar routes
 src/components/     cards, widgets, donut, accordion, refresh button
+src/stories/        Storybook stories + synthetic fixtures
+.storybook/         Storybook config; preview stubs the router and refresh context
 server/github.mjs   open-PR pull, deploy-qc comparison, ticket↔PR match, PR actions
 server/jira.mjs     Jira REST pull (JQL → tickets, grouped by status)
 .env.example        Jira credentials to copy to .env (gitignored)

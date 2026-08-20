@@ -38,3 +38,6 @@ config/
 
 # Local agent kit (agents, rules, skills) — personal, not published.
 .claude/
+
+*storybook.log
+storybook-static
