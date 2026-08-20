@@ -33,6 +33,12 @@ export interface Pr {
   url: string;
   state: 'open' | 'merged' | 'closed';
   note?: string;
+  /**
+   * For merged PRs: is the merge commit still reachable from deploy-qc? false means a QC
+   * branch reset dropped it. null / absent means unknown — no deploy-qc branch, or the
+   * comparison could not be made.
+   */
+  inQc?: boolean | null;
 }
 
 export interface Ticket {

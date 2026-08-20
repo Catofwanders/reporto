@@ -1,20 +1,14 @@
 {
   "$comment": "Copy this directory to ./config and edit. ./config is gitignored, so nothing personal or employer-specific reaches the remote.",
   "githubOrg": "your-github-org",
-  "commandGroups": [
-    {
-      "command": "/jira",
-      "writes": [
-        "jira",
-        "prs"
-      ],
-      "tools": "jira"
-    }
-  ],
+  "commandGroups": [],
   "githubAuthor": "your-github-login",
   "githubAccount": "your-github-login",
   "jiraBrowseUrl": "https://your-site.atlassian.net/browse",
   "pinnedRepos": [
     "your-most-important-repo"
-  ]
+  ],
+  "jiraSite": "https://your-site.atlassian.net",
+  "ticketPattern": "\\bPROJ-\\d+\\b",
+  "jiraJql": "assignee = currentUser() AND statusCategory != Done ORDER BY status ASC, updated DESC"
 }

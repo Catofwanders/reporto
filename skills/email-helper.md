@@ -47,29 +47,21 @@ events. A future event cancelled with an organiser note may still matter.
 
 Unsure? A human wrote text addressed to me = include. Pure state-change = exclude.
 
-## Report
+## Report contract — the only output
 
-Copy `email-report-template.html` to the scratchpad as `email-report.html`, fill the
-marked slots, then `open` it. Every row ends with an action column: `<div class="action
-need">…</div>` when something is needed from ME (imperative plus deadline — "Reply about X
-by Friday"), or `<div class="action none">—</div>` when nothing is.
-
-Chip classes: `bad` = action required, `warn` = ping/review, `ok` = info, `na` = FYI. All
-links `target="_blank"`.
-
-Slots, one pair per inbox: `{{DATE}}`, `{{ACCOUNTS}}`, `{{INBOX_A_TITLE}}`,
-`{{INBOX_A_COUNT}}`, `{{INBOX_A_ITEMS}}`, `{{INBOX_B_TITLE}}`, `{{INBOX_B_COUNT}}`,
-`{{INBOX_B_ITEMS}}`, `{{FILTERED_NOTE}}`. The commented-out `.item` block in the template
-is the row shape to repeat — leave the CSS alone.
-
-## Report contract (the dashboard reads these)
-
-Write both files into the reports dir and bump the index, or the dashboard shows nothing:
+The dashboard is the renderer, so a run produces JSON and nothing else: no HTML report, no
+side file. Write both into the reports dir and bump the index, or the dashboard shows
+nothing:
 
 - `email-<YYYY-MM-DD>.json` → `EmailReport` in `src/types.ts`
 - `calendar-<YYYY-MM-DD>.json` → `CalendarReport`
 - `index.json` → set `latest.email` / `latest.calendar` **and** the `history[]` entry for
   that date
+
+Per item: `chip` is `bad` = action required, `warn` = ping/review, `ok` = info, `na` = FYI,
+and `action` is an imperative with a deadline when something is needed from me ("Reply
+about X by Friday") or `null` when nothing is. `refLabel`/`refUrl` carry the PR or ticket
+the item is about; `mailUrl` is the source link, which every item needs.
 
 Stamp `generatedAt` with the real run time (`date -u +%FT%TZ`) — the action bar derives
 "x ago" from it. Event `start`/`end` need a full ISO 8601 string with offset

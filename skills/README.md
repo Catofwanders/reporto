@@ -1,45 +1,35 @@
 # skills
 
-The dashboard renders report files; these skills are what write them. A fresh checkout
-starts empty, so without them there is nothing to look at and no way to know what the
-JSON is supposed to contain.
+Three of the four reports come from the server, straight from an API: `prs` and `jira` are
+pulled by `server/github.mjs` and `server/jira.mjs`, with no agent involved. Nothing to
+install, nothing to prompt.
 
-These copies are **sanitized templates** — no accounts, URLs, or employer names. Fill in
-the placeholders in your own copy. Your working copies live outside this repo (`.claude/`
-is gitignored, deliberately: an agent kit tuned to one person is not publishable), so
-install them wherever your agent looks for commands:
+Mail and calendar are the exception. They are read through the Chrome extension, which
+attaches only to an interactive Claude Code session, so no server-side pull is possible —
+that work needs a skill, and this directory is the sanitized copy of it.
 
 ```bash
-cp skills/email.md                  ~/.claude/commands/email.md
-cp skills/email-helper.md           ~/.claude/docs/email-helper.md
-cp skills/email-report-template.html ~/.claude/docs/email-report-template.html
-# then edit the Accounts table in email-helper.md
+cp skills/email.md        ~/.claude/commands/email.md
+cp skills/email-helper.md ~/.claude/docs/email-helper.md
+# then fill in the Accounts table in email-helper.md
 ```
+
+Placeholders stand where the accounts go; your filled-in copies live outside the repo
+(`.claude/` is gitignored, deliberately — an agent kit tuned to one person is not
+publishable).
 
 | File | What it is |
 |---|---|
-| `email.md` | the `/email` slash command — triages both inboxes, then writes the reports |
-| `email-helper.md` | the constants, reading flow, filter rules, and report contract it follows |
-| `email-report-template.html` | standalone HTML report opened in the browser at the end of a run |
-
-`jira-<date>.json` and `prs-<date>.json` have no skill here. `prs` is pulled by the server
-itself (`server/github.mjs`, one GraphQL call) and needs nothing from you. `jira` is
-different: it has **no** server-side puller, so the Jira card is entirely dependent on a
-`/jira` command your own kit defines and `config/reporto.json` names under
-`commandGroups`. None is shipped here because it leans on personal Atlassian and `gh`
-auth — so write your own to the contract below, or leave the card empty.
-
-If that command also writes `prs` (mine does), note that a skill-written PR report lacks
-`lastReviewAt`, `lastCommitAt` and `deployQc`, so the derived review state falls back to
-`reviewDecision` and the deploy-qc half of the pill vanishes until the server pull runs
-again.
+| `email.md` | the `/email` slash command — triages both inboxes and both calendars |
+| `email-helper.md` | constants, reading flow, filter rules, and the report contract |
 
 ## The contract
 
-Whatever produces a report must satisfy three things, or the dashboard ignores it:
+Output is JSON only — the dashboard is the renderer. Whatever writes a report must satisfy
+three things, or it is ignored:
 
-1. **Shape** — match the interface in [`src/types.ts`](../src/types.ts). `EmailReport` and
-   `CalendarReport` are the two a mail skill writes. That file is the schema of record;
+1. **Shape** — match the interface in [`src/types.ts`](../src/types.ts). A mail run writes
+   `EmailReport` and `CalendarReport`. That file is the schema of record;
    `src/reportSchema.ts` guards what gets loaded.
 2. **Filename** — `public/reports/<kind>-<YYYY-MM-DD>.json`.
 3. **Index** — add the file to `public/reports/index.json` under both `latest.<kind>` and

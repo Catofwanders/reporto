@@ -208,6 +208,213 @@ export async function pullOpenPrs({ author, org, jiraBrowseUrl, account, pinnedR
   }
 }
 
+const TICKET_PRS = (author, org) => `
+{
+  search(query: "is:pr author:${author} org:${org} sort:updated-desc", type: ISSUE, first: 100) {
+    nodes {
+      ... on PullRequest {
+        number title url state isDraft reviewDecision
+        repository { name }
+        mergeCommit { oid }
+      }
+    }
+  }
+}`
+
+/** deploy-qc containment for merged commits, one aliased comparison per PR. */
+const MERGED_IN_QC = (org, prs) => `
+{
+${prs
+  .map(
+    ({ repo, oid }, i) => `  m${i}: repository(owner: "${org}", name: "${repo}") {
+    ref(qualifiedName: "refs/heads/${QC_BRANCH}") {
+      compare(headRef: "${oid}") { aheadBy }
+    }
+  }`,
+  )
+  .join('\n')}
+}`
+
+/** Merge commits for PRs found without one — the fallback search cannot return them. */
+const MERGE_OIDS = (org, prs) => `
+{
+${prs
+  .map(
+    ({ repo, num }, i) => `  o${i}: repository(owner: "${org}", name: "${repo}") {
+    pullRequest(number: ${num}) { mergeCommit { oid } }
+  }`,
+  )
+  .join('\n')}
+}`
+
+/** How many per-ticket fallback searches one pull may spend (search API: 30/min). */
+const FALLBACK_LIMIT = 15
+
+/**
+ * Ticket key → the PRs implementing it, for the Jira report. Matching is by key in the PR
+ * title, which is the convention the branches follow; a PR that omits its key simply does
+ * not get attached rather than being guessed at.
+ *
+ * Closed and merged PRs matter here (a ticket's history is the point), unlike the open-PR
+ * report, so this searches every state and leans on sort:updated-desc for the cap.
+ */
+export async function pullTicketPrs({
+  author,
+  org,
+  ticketPattern,
+  account,
+  fallbackKeys = [],
+}) {
+  const token = await ghToken(account ?? author)
+  const data = await graphql(TICKET_PRS(author, org), token)
+  const nodes = (data.search.nodes ?? []).filter((n) => n && n.number)
+  const byTicket = new Map()
+  const merged = []
+  for (const n of nodes) {
+    const key = new RegExp(ticketPattern, 'i').exec(n.title)?.[0]?.toUpperCase()
+    if (!key) continue
+    const list = byTicket.get(key) ?? []
+    const pr = {
+      repo: n.repository.name,
+      num: n.number,
+      url: n.url,
+      state: n.state.toLowerCase(),
+      // Review state only means something while the PR is open; a closed PR that happened
+      // to be a draft should read as closed, not "draft".
+      note:
+        n.state !== 'OPEN'
+          ? undefined
+          : n.isDraft
+            ? 'draft'
+            : n.reviewDecision === 'APPROVED'
+              ? 'approved'
+              : n.reviewDecision === 'CHANGES_REQUESTED'
+                ? 'changes requested'
+                : undefined,
+    }
+    if (pr.state === 'merged' && n.mergeCommit?.oid) {
+      merged.push({ pr, repo: pr.repo, oid: n.mergeCommit.oid })
+    }
+    list.push(pr)
+    byTicket.set(key, list)
+  }
+
+  const extra = await addFallbackMatches({
+    org,
+    author,
+    ticketPattern,
+    token,
+    byTicket,
+    fallbackKeys,
+  })
+  await markMergedQc(org, [...merged, ...extra], token)
+  return byTicket
+}
+
+/**
+ * Whether each merged commit is still reachable from deploy-qc. This is the check a QC
+ * branch reset breaks silently: the PR stays merged, its work stops being on QC. `aheadBy
+ * 0` means still there; a repo without the branch or an unresolvable commit leaves `inQc`
+ * null rather than claiming it went missing.
+ */
+async function markMergedQc(org, merged, token) {
+  if (!merged.length) return
+  const needOid = merged.filter((m) => !m.oid)
+  if (needOid.length) {
+    try {
+      const oids = await graphql(MERGE_OIDS(org, needOid), token)
+      needOid.forEach((m, i) => {
+        m.oid = oids[`o${i}`]?.pullRequest?.mergeCommit?.oid
+      })
+    } catch (err) {
+      console.warn(`[reporto] merge-commit lookup failed: ${String(err.message ?? err)}`)
+    }
+  }
+  merged = merged.filter((m) => m.oid)
+  if (!merged.length) return
+  let data
+  try {
+    data = await graphql(MERGED_IN_QC(org, merged), token)
+  } catch (err) {
+    console.warn(`[reporto] merged deploy-qc check skipped: ${String(err.message ?? err)}`)
+    return
+  }
+  merged.forEach(({ pr }, i) => {
+    const compare = data[`m${i}`]?.ref?.compare
+    pr.inQc = compare ? compare.aheadBy === 0 : null
+  })
+}
+
+/**
+ * Tickets whose PRs never named them in the title. One search each, title and body, for
+ * the keys the caller says are worth it — capped, because the search API allows 30 calls a
+ * minute and a backlog of unmatched tickets would burn straight through that.
+ */
+async function addFallbackMatches({
+  org,
+  author,
+  ticketPattern,
+  token,
+  byTicket,
+  fallbackKeys,
+}) {
+  const found = []
+  const missing = fallbackKeys.filter((key) => !byTicket.has(key))
+  const budget = missing.slice(0, FALLBACK_LIMIT)
+  if (missing.length > budget.length) {
+    console.warn(
+      `[reporto] ${missing.length - budget.length} ticket(s) left unmatched: fallback search capped at ${FALLBACK_LIMIT}`,
+    )
+  }
+  for (const key of budget) {
+    let found
+    try {
+      const { stdout } = await run(
+        'gh',
+        [
+          'search',
+          'prs',
+          key,
+          '--owner',
+          org,
+          // Body mentions are noisy — a review bot quoting the key would otherwise attach
+          // its own PR to the ticket. Only my PRs can implement my ticket.
+          '--author',
+          author,
+          '--limit',
+          '5',
+          '--json',
+          'number,title,state,repository,url,isDraft',
+        ],
+        { env: { ...process.env, GH_TOKEN: token }, maxBuffer: 2 * 1024 * 1024 },
+      )
+      found = JSON.parse(stdout)
+    } catch (err) {
+      console.warn(`[reporto] fallback search for ${key} failed: ${ghMessage(err)}`)
+      continue
+    }
+    const prs = (found ?? [])
+      // A hit whose title names a *different* ticket belongs to that one, not this one.
+      .filter((n) => {
+        const titled = new RegExp(ticketPattern, 'i').exec(n.title)?.[0]?.toUpperCase()
+        return !titled || titled === key
+      })
+      .map((n) => ({
+        repo: n.repository?.name ?? n.repository?.nameWithOwner?.split('/').pop() ?? '',
+        num: n.number,
+        url: n.url,
+        state: String(n.state).toLowerCase(),
+        note: 'matched by body',
+      }))
+    if (!prs.length) continue
+    byTicket.set(key, prs)
+    for (const pr of prs) {
+      if (pr.state === 'merged') found.push({ pr, repo: pr.repo, num: pr.num })
+    }
+  }
+  return found
+}
+
 const PR_NODE_ID = (owner, repo, num) => `
 {
   repository(owner: "${owner}", name: "${repo}") {

@@ -13,10 +13,21 @@ stays free of employer or account specifics.
 
 | Key | Meaning |
 |---|---|
-| `githubOrg` | GitHub org whose repos the `/jira` refresh may query. Leave empty and the refresh runs without the `gh api repos/<org>/*` permission, so the deploy-branch check will fail. |
-| `commandGroups[].command` | Claude Code slash command that regenerates reports. |
-| `commandGroups[].writes` | Report kinds that command produces (`email`, `calendar`, `jira`, `prs`). Both kinds refresh together when either card's button is pressed. |
-| `commandGroups[].tools` | Which allow-list the headless run gets: `mail` (Chrome MCP, for reading inboxes and calendars) or `jira` (Atlassian search plus specific `gh` commands). The lists themselves live in `vite.config.ts`. |
+| `githubOrg` | GitHub org to search for your PRs. |
+| `githubAuthor` | GitHub login whose PRs the dashboard reports on. |
+| `githubAccount` | `gh` keyring account to pin. Org repos 404 under the wrong active account, so this is worth setting even when it equals `githubAuthor`. |
+| `pinnedRepos` | Repo names sorted to the top of the open-PR list, in the order given. Everything else follows busiest-first. |
+| `jiraSite` | Jira site root, e.g. `https://your-site.atlassian.net`. Required for the Jira pull. |
+| `jiraBrowseUrl` | Base for ticket links. Defaults to `<jiraSite>/browse`. |
+| `jiraJql` | Which tickets the dashboard shows. Defaults to everything assigned to you that is not Done, freshest first. |
+| `ticketPattern` | Regex source matching a ticket key in a PR title, e.g. `\bPROJ-\d+\b`. How PRs get attached to tickets. |
+| `fallbackStatuses` | Statuses where a ticket with no title match is worth one body search of your own PRs. Defaults to in progress / code review / qc ready / blocked — backlog items are not worth the rate limit. |
+| `commandGroups[].command` | Claude Code slash command that regenerates reports, spawned as `claude -p`. Only needed for reports the server cannot pull itself — mail and calendar, which require the Chrome extension. Leave the list empty if you run `/email` by hand. |
+| `commandGroups[].writes` | Report kinds that command produces (`email`, `calendar`, `jira`, `prs`). Kinds in one group refresh together. |
+| `commandGroups[].tools` | Which allow-list the headless run gets: `mail` (Chrome MCP) or `jira` (Atlassian search plus specific `gh` commands). The lists live in `vite.config.ts`. |
 
-Without a `config/` directory the dev server falls back to this template, which means
-update buttons still run but the Jira deploy-branch check lacks permission.
+Jira credentials are **not** in this file — they are secrets. Copy `.env.example` to `.env`
+and put `JIRA_EMAIL` / `JIRA_API_TOKEN` there.
+
+Without a `config/` directory the dev server falls back to this template, so it boots, but
+the pulls query a placeholder org and site and return nothing useful.

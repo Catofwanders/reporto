@@ -1,4 +1,4 @@
-import type { PrsReport } from '../src/types';
+import type { Pr, PrsReport } from '../src/types';
 
 export function pullOpenPrs(options: {
   author: string;
@@ -20,3 +20,13 @@ export function prAction(options: {
   action: PrActionName;
   account?: string;
 }): Promise<{ repo: string; num: number; changed: boolean; isDraft?: boolean; state?: string }>;
+
+export function pullTicketPrs(options: {
+  author: string;
+  org: string;
+  /** Regex source matching a ticket key in a PR title, e.g. "\\bDTP-\\d+\\b". */
+  ticketPattern: string;
+  account?: string;
+  /** Ticket keys worth one body search each when no PR title named them. */
+  fallbackKeys?: string[];
+}): Promise<Map<string, Pr[]>>;

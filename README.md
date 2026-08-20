@@ -23,17 +23,20 @@ Reports are JSON files in `public/reports/`, listed by `index.json`:
 
 | File | Written by | Contents |
 |---|---|---|
-| `email-<date>.json` | `/email` skill | actionable mail from Gmail + Outlook |
+| `email-<date>.json` | `/email` skill | actionable mail from both inboxes |
 | `calendar-<date>.json` | `/email` skill | today's events, upcoming watch-list |
-| `jira-<date>.json` | `/jira` skill | active tickets with their PRs |
-| `prs-<date>.json` | `/jira` skill | my open PRs grouped by repo |
+| `jira-<date>.json` | server, Jira REST API | tickets, their PRs, and merged-PR QC state |
+| `prs-<date>.json` | server, GitHub GraphQL | my open PRs grouped by repo |
 
 The TypeScript types in `src/types.ts` are the schema of record, guarded on load by
-`src/reportSchema.ts`. Sanitized copies of the mail skill live in [`skills/`](skills/) —
-the command, its helper, and the HTML report template — so a fresh clone can see what a
-report has to contain and how one gets produced. Install them into your own agent kit and
-fill in the accounts; `.claude/` is gitignored on purpose, so your working copies stay out
-of the repo. `prs` needs no skill: the server pulls it directly.
+`src/reportSchema.ts`.
+
+Jira and PRs need no agent: the server calls the APIs itself, so those two cards work on a
+fresh clone as soon as credentials exist. Mail and calendar cannot work that way — they are
+read through the Chrome extension, which attaches only to an interactive Claude Code
+session — so they come from a skill. A sanitized copy lives in [`skills/`](skills/) with
+placeholders where the accounts go, alongside the contract any producer must meet.
+Output is JSON only; the dashboard is the renderer.
 
 `db/<date>.json` is a per-day snapshot of the reports plus todo state (checked,
 deleted, checkedAt) so work can be tracked over time. It is written through the API,
@@ -60,7 +63,15 @@ git config user.email "23452775+Catofwanders@users.noreply.github.com"
 
 ```bash
 cp -r config.template config     # then edit config/reporto.json
+cp .env.example .env             # then add your Jira API token
 ```
+
+The Jira pull authenticates with a personal API token
+([create one](https://id.atlassian.com/manage-profile/security/api-tokens)) read from
+`JIRA_EMAIL` and `JIRA_API_TOKEN`; `.env` is gitignored and lifted into the environment by
+`vite.config.ts`. Without them the Jira card's button returns
+`no Jira credentials` and changes nothing. The GitHub side uses your `gh` keyring auth,
+pinned to the account in `githubAccount`.
 
 `config/` is gitignored and holds anything specific to you — the GitHub org to query, the
 repos pinned to the top of the PR list, and which slash command produces which reports. Details in
@@ -94,29 +105,29 @@ without the branch, a deleted head branch, or a failed comparison — rather tha
 PR is off QC.
 
 Jira sits below as compact cards, as many per row as the width allows, summaries clamped to
-two lines.
+two lines. A card whose **merged** PR is no longer reachable from `deploy-qc` gets a red
+chip naming it: a QC branch reset drops merged work silently — the PR still reads as merged
+and the ticket still reads as done — so that is the one state worth shouting about.
+
+PRs attach to tickets by key in the PR title. For statuses in `fallbackStatuses` a ticket
+with no title match also gets one body search of your own PRs, capped at 15 searches per
+pull to stay clear of the search API's 30/minute limit; anything skipped is logged rather
+than silently dropped.
 
 ## Update buttons
 
 Jira and PRs can be refreshed from the dashboard. Mail and calendar cannot, and carry no
 button at all — those cards only show how old their data is.
 
-Only `prs` has a server-side puller (`PULLERS` in `vite.config.ts`). **`jira` has none: the
-Jira card depends entirely on whatever `/jira` command your own kit defines**, spawned as
-`claude -p`. There is no sanitized copy of it in `skills/` — it leans on personal Atlassian
-and `gh` auth — so on a fresh clone the Jira card stays empty until you supply that command
-and list it in `config/reporto.json` under `commandGroups`.
-
-That command also writes `prs`, per the `writes` list, and a skill-written `prs` report has
-no `lastReviewAt`, `lastCommitAt` or `deployQc` in it. Those rows degrade gracefully — the
-review state falls back to what `reviewDecision` alone can say and the QC half of the pill
-disappears — so press the bolt (`POST /api/pull/prs`) afterwards to get the full pill back.
-
 | Report | How it refreshes |
 |---|---|
 | `prs` | `POST /api/pull/prs` — one GitHub GraphQL call, about a second (bolt icon) |
-| `jira` | `POST /api/refresh/jira` — spawns `claude -p "/jira"`, minutes (refresh icon) |
+| `jira` | `POST /api/pull/jira` — one Jira search plus one GitHub search (bolt icon) |
 | `email`, `calendar` | run `/email` in your own Claude Code session |
+
+Both pulls are plain API calls, so they answer in about a second and cost no tokens. The
+agent-spawning path (`POST /api/refresh/<kind>`, `claude -p`) still exists for any command
+you list under `commandGroups`, but nothing needs it out of the box.
 
 Mail and calendar read both inboxes through the Chrome extension, and that extension
 attaches only to an interactive session you started — a spawned `claude -p` run has no
@@ -151,6 +162,8 @@ static server:
   "simple" POST from any page you happen to have open can set neither, which is what
   stops a drive-by request from triggering an agent run.
 - `GET` endpoints are unguarded; they only read local report files.
+- The Jira token lives in `.env` and never reaches the client: pulls run in the dev-server
+  process and only the resulting report is served.
 
 Report data stays out of git (see above), so the repository itself carries no personal
 content — only code. The generated files on your disk are another matter: keep them
@@ -161,11 +174,10 @@ local.
 Report generation runs as *me*, which is the whole reason it needs no integration
 work — and exactly why it does not generalize to other users:
 
-1. **Credentials are the current session's.** `/email` drives my logged-in Chrome
-   (Gmail + Outlook); `/jira` uses my `gh` keyring auth and my OAuth'd Atlassian MCP
-   connection. Serving other people means real per-user OAuth for Google, Microsoft,
-   GitHub, and Jira, with encrypted server-side tokens — and dropping the
-   browser-automation path entirely.
+1. **Credentials are mine.** `/email` drives my logged-in Chrome; the pulls use my `gh`
+   keyring auth and one Jira API token in `.env`. Serving other people means real per-user
+   OAuth for Google, Microsoft, GitHub and Jira, with encrypted server-side tokens — and
+   dropping the browser-automation path entirely.
 2. **Storage is global.** Reports are static files any page load can fetch, and
    `db/<date>.json` has no notion of who is asking. Multi-user needs a datastore
    keyed by user and authorization on every read and write.
@@ -190,7 +202,9 @@ public/reports/     report JSON + index.json (gitignored)
 db/                 per-day snapshots and todo state (gitignored)
 src/pages/          Home, Email, Jira, Calendar routes
 src/components/     cards, widgets, donut, accordion, refresh button
-server/github.mjs   open-PR pull, deploy-qc comparison, PR state actions
+server/github.mjs   open-PR pull, deploy-qc comparison, ticket↔PR match, PR actions
+server/jira.mjs     Jira REST pull (JQL → tickets, grouped by status)
+.env.example        Jira credentials to copy to .env (gitignored)
 src/types.ts        report schemas
 src/db.ts           day-file client
 src/refresh.tsx     refresh state + provider

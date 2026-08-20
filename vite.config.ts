@@ -1,10 +1,11 @@
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import type { PrActionName } from './server/github.mjs'
-import { PR_ACTIONS, prAction, pullOpenPrs } from './server/github.mjs'
+import { PR_ACTIONS, prAction, pullOpenPrs, pullTicketPrs } from './server/github.mjs'
+import { pullJira } from './server/jira.mjs'
 
 // Personal / employer-specific settings live in ./config (gitignored). The committed
 // config.template is the fallback, so a fresh checkout still boots.
@@ -24,8 +25,23 @@ interface ReportoConfig {
   jiraBrowseUrl?: string
   /** Repo names pinned to the top of the open-PR list, in the order given. */
   pinnedRepos?: string[]
+  /** Jira site root, e.g. https://your-site.atlassian.net */
+  jiraSite?: string
+  /** JQL for the tickets the dashboard should show. */
+  jiraJql?: string
+  /** Regex source matching a ticket key in a PR title, e.g. "\\bDTP-\\d+\\b". */
+  ticketPattern?: string
+  /** Statuses worth one extra PR body search when no PR title named the ticket. */
+  fallbackStatuses?: string[]
   commandGroups: CommandGroup[]
 }
+
+/** Where an unmatched ticket is worth a per-ticket PR search; backlog items are not. */
+const DEFAULT_FALLBACK_STATUSES = ['in progress', 'code review', 'qc ready', 'blocked']
+
+/** Everything not Done and not already released, freshest first. */
+const DEFAULT_JQL =
+  'assignee = currentUser() AND statusCategory != Done ORDER BY status ASC, updated DESC'
 
 function loadConfig(): ReportoConfig {
   for (const dir of ['config', 'config.template']) {
@@ -255,6 +271,30 @@ function pullPlugin(): Plugin {
         account: c.githubAccount,
         pinnedRepos: c.pinnedRepos ?? [],
       }),
+    jira: (c) => {
+      const fallbackStatuses = (c.fallbackStatuses ?? DEFAULT_FALLBACK_STATUSES).map((s) =>
+        s.toLowerCase(),
+      )
+      return pullJira({
+        site: c.jiraSite,
+        email: process.env.JIRA_EMAIL,
+        apiToken: process.env.JIRA_API_TOKEN,
+        jql: c.jiraJql ?? DEFAULT_JQL,
+        jiraBrowseUrl: c.jiraBrowseUrl,
+        resolvePrs: c.githubAuthor
+          ? (tickets) =>
+              pullTicketPrs({
+                author: c.githubAuthor ?? '',
+                org: c.githubOrg ?? '',
+                ticketPattern: c.ticketPattern ?? '\\b[A-Z][A-Z0-9]+-\\d+\\b',
+                account: c.githubAccount,
+                fallbackKeys: tickets
+                  .filter((t) => fallbackStatuses.includes(t.status.toLowerCase()))
+                  .map((t) => t.key),
+              })
+          : undefined,
+      })
+    },
   }
 
   return {
@@ -570,9 +610,19 @@ function dbPlugin(): Plugin {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
-  // Loopback only: the dev server exposes file writes and agent runs, so it must not
-  // be reachable from the LAN.
-  server: { host: '127.0.0.1' },
-  plugins: [react(), dbPlugin(), refreshPlugin(), pullPlugin(), prActionPlugin()],
+export default defineConfig(({ mode }) => {
+  // Vite only exposes VITE_-prefixed vars, and only to the client. The pullers run in
+  // this process and need the raw ones, so lift .env into the environment by hand.
+  for (const [key, value] of Object.entries(loadEnv(mode, __dirname, ''))) {
+    // An empty var is as good as unset here: a placeholder line left blank in .env must
+    // not win over a value filled in later, which `??=` would have let it do.
+    if (!process.env[key]) process.env[key] = value
+  }
+
+  return {
+    // Loopback only: the dev server exposes file writes and agent runs, so it must not
+    // be reachable from the LAN.
+    server: { host: '127.0.0.1' },
+    plugins: [react(), dbPlugin(), refreshPlugin(), pullPlugin(), prActionPlugin()],
+  }
 })

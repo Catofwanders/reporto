@@ -14,6 +14,29 @@ const prSummary = (ticket: Ticket) => {
   return [merged && `${merged} merged`, open && `${open} open`].filter(Boolean).join(' · ');
 };
 
+/**
+ * Merged PRs whose commit is no longer reachable from deploy-qc — a QC reset dropped them,
+ * which is invisible everywhere else: the PR still reads as merged and the ticket still
+ * reads as done. `inQc` is undefined when unknown, so only an explicit false counts.
+ */
+const droppedFromQc = (ticket: Ticket) =>
+  ticket.prs.filter((pr) => pr.state === 'merged' && pr.inQc === false);
+
+const QcWarning = ({ ticket }: { ticket: Ticket }) => {
+  const dropped = droppedFromQc(ticket);
+  if (dropped.length === 0) return null;
+  return (
+    <span
+      className="ticket-card-qc"
+      title={`Merged but missing from deploy-qc: ${dropped
+        .map((pr) => `${pr.repo}#${pr.num}`)
+        .join(', ')}`}
+    >
+      <Chip tone="bad">not on deploy-qc: {dropped.map((pr) => `#${pr.num}`).join(' ')}</Chip>
+    </span>
+  );
+};
+
 export const JiraActiveList = ({ report }: { report: JiraReport }) => {
   const tickets = report.groups
     // Umbrella tickets carry no PR of their own — the child tickets below them do.
@@ -48,6 +71,7 @@ export const JiraActiveList = ({ report }: { report: JiraReport }) => {
               {ticket.summary}
             </p>
             <span className="time">{prSummary(ticket)}</span>
+            <QcWarning ticket={ticket} />
           </article>
         ))}
       </div>
