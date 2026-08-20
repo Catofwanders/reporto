@@ -10,6 +10,9 @@
   --open-bg: #eef1fb; --open-ink: #3a56b8; --open-line: #d3dbf4;
   --na-bg: #eef0f3; --na-ink: #6a7280; --na-line: #dde1e7;
   --warn-bg: #fff7e8; --warn-ink: #8a5a00; --warn-line: #f0dfb6;
+  /* deploy-qc is its own dimension, so it gets hues nothing else uses */
+  --qc-bg: #e2f1fa; --qc-ink: #0e6f96; --qc-line: #bcdfef;
+  --qcout-bg: #f1ecfd; --qcout-ink: #6d40c4; --qcout-line: #ddd0f7;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,6 +28,8 @@
     --open-bg: #1c2338; --open-ink: #9db1f5; --open-line: #2c3a5e;
     --na-bg: #20242c; --na-ink: #8b94a3; --na-line: #2e3440;
     --warn-bg: #332a13; --warn-ink: #e6b95c; --warn-line: #4d3f1c;
+    --qc-bg: #0d2b36; --qc-ink: #57c8ea; --qc-line: #17475a;
+    --qcout-bg: #241d38; --qcout-ink: #b39cf0; --qcout-line: #3a2e5c;
   }
 }
 
@@ -125,6 +130,8 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .chip-open { background: var(--open-bg); color: var(--open-ink); border-color: var(--open-line); }
 .chip-na { background: var(--na-bg); color: var(--na-ink); border-color: var(--na-line); }
 .chip-warn { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--warn-line); }
+.chip-qc { background: var(--qc-bg); color: var(--qc-ink); border-color: var(--qc-line); }
+.chip-qcout { background: var(--qcout-bg); color: var(--qcout-ink); border-color: var(--qcout-line); }
 
 .banner { border: 1px solid; border-radius: .55rem; padding: .6rem .9rem; font-size: .85rem; font-weight: 600; margin: .9rem 0 0; }
 .banner-ok { background: var(--ok-bg); color: var(--ok-ink); border-color: var(--ok-line); }
@@ -174,6 +181,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .pr-count { font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .pr-count-ok { color: var(--ok-ink); }
 .pr-count-warn { color: var(--warn-ink); }
+.pr-count-open { color: var(--open-ink); }
 .pr-count-bad { color: var(--bad-ink); }
 .pr-count-na { color: var(--na-ink); }
 .pr-count-label { color: var(--ink-2); font-size: .78rem; }
@@ -184,9 +192,25 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   font: 500 .76rem/1.5 ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
-/* open PRs: repo groups side by side when there's room */
-.pr-groups { display: grid; gap: .7rem; margin-top: 1rem; align-items: start; }
-@media (min-width: 1150px) { .pr-groups { grid-template-columns: 1fr 1fr; } }
+/* Jira: compact cards, as many per row as fit — the panel is a scan surface, so a
+   full-width row per ticket wasted most of the width. */
+.ticket-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: .55rem; margin-top: 1rem;
+}
+.ticket-card {
+  display: flex; flex-direction: column; gap: .3rem;
+  border: 1px solid var(--line); border-radius: .55rem; padding: .55rem .65rem;
+}
+.ticket-card-top { display: flex; align-items: center; gap: .5rem; justify-content: space-between; }
+.ticket-card-top .chip { font-size: .62rem; padding: .16rem .4rem; }
+.ticket-card-summary {
+  margin: 0; font-size: .82rem; line-height: 1.3;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+
+/* open PRs: one full-width column of repo groups, PR status in each row's right corner */
+.pr-groups { display: grid; gap: .7rem; margin-top: 1rem; }
 .pr-groups .MuiAccordion-root + .MuiAccordion-root { margin-top: 0; }
 
 .widget { background: var(--panel); border: 1px solid var(--line); border-radius: .7rem; padding: 1rem 1.1rem 1.1rem; }
@@ -223,8 +247,17 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .donut-legend-value { font-weight: 600; }
 .card-meta { margin: .9rem 0 0; color: var(--ink-2); font-size: .78rem; }
 .ticket-list { margin-top: 1rem; }
-.chip-status { flex: none; width: 7.4rem; }
+.chip-status { flex: none; width: 8.9rem; display: flex; margin-left: auto; }
 .chip-status .chip {
-  display: block; text-align: center; overflow: hidden; text-overflow: ellipsis;
+  flex: 1 1 0; min-width: 0;
+  text-align: center; overflow: hidden; text-overflow: ellipsis;
   font-size: .66rem; letter-spacing: .02em;
 }
+/* One pill, two halves: review state left in its own colour, deploy-qc state right in
+   its own. The shared edge drops its radius and the right half its left border, so the
+   two colours meet flush instead of reading as two chips. */
+.chip-status-split { width: 11.4rem; }
+.chip-status-split .chip { font-size: .63rem; padding: .2rem .35rem; }
+/* review labels run longer than the QC ones, so the left half gets the wider share */
+.chip-status-split .chip:first-child { flex: 1.3 1 0; border-radius: 99px 0 0 99px; }
+.chip-status-split .chip:last-child { border-radius: 0 99px 99px 0; border-left-width: 0; }

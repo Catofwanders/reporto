@@ -1,4 +1,4 @@
-export type Chip = 'bad' | 'warn' | 'ok' | 'na' | 'open';
+export type Chip = 'bad' | 'warn' | 'ok' | 'na' | 'open' | 'qc' | 'qcout';
 
 export interface EmailItem {
   chip: Chip;
@@ -87,6 +87,15 @@ export type ReviewDecision =
   | 'COMMENTED'
   | 'NONE';
 
+/** deploy-qc containment for a PR head, as reported by GitHub's ref comparison. */
+export interface DeployQcState {
+  status: 'IDENTICAL' | 'BEHIND' | 'AHEAD' | 'DIVERGED';
+  /** Commits on the PR head that deploy-qc has not got. Zero means it is deployed there. */
+  aheadBy: number;
+  /** Commits deploy-qc has that the PR head has not. */
+  behindBy: number;
+}
+
 export interface OpenPr {
   num: number;
   title: string;
@@ -98,6 +107,12 @@ export interface OpenPr {
   updatedAt: string;
   /** Unresolved inline review threads. Only set by the API puller. */
   unresolvedThreads?: number;
+  /** Last review submitted by somebody other than the author. Only set by the API puller. */
+  lastReviewAt?: string | null;
+  /** Tip commit of the branch. Only set by the API puller. */
+  lastCommitAt?: string | null;
+  /** null when the repo has no deploy-qc branch, or the comparison could not be made. */
+  deployQc?: DeployQcState | null;
 }
 
 export interface PrRepoGroup {

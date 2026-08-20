@@ -1,23 +1,10 @@
-import type { OpenPr, PrsReport, ReviewDecision } from '../types';
+import type { OpenPr, PrsReport } from '../types';
+import { PR_STATE_LABEL, PR_STATE_TONE, prState, qcChip } from '../prState';
 import { Chip } from './Chip';
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
 import { PrSummary } from './PrSummary';
 import { PrRowActions } from './PrRowActions';
-
-const REVIEW_LABEL: Record<ReviewDecision, string> = {
-  APPROVED: 'approved',
-  CHANGES_REQUESTED: 'changes requested',
-  REVIEW_REQUIRED: 'awaiting review',
-  COMMENTED: 'commented',
-  NONE: 'no review',
-};
-
-const reviewTone = (review: ReviewDecision) => {
-  if (review === 'APPROVED') return 'ok';
-  if (review === 'CHANGES_REQUESTED' || review === 'COMMENTED') return 'bad';
-  return 'open';
-};
 
 const staleDays = (iso: string) =>
   Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -30,11 +17,10 @@ interface PrRowProps {
 
 const PrRow = ({ repo, pr, onChanged }: PrRowProps) => {
   const days = staleDays(pr.updatedAt);
+  const state = prState(pr);
+  const qc = qcChip(pr.deployQc);
   return (
     <article className="item">
-      <span className="chip-status">
-        <Chip tone={reviewTone(pr.review)}>{REVIEW_LABEL[pr.review]}</Chip>
-      </span>
       <div className="item-body">
         <div className="item-top">
           <a className="ref" href={pr.url} target="_blank" rel="noopener noreferrer">
@@ -59,6 +45,19 @@ const PrRow = ({ repo, pr, onChanged }: PrRowProps) => {
           </a>
         </p>
       </div>
+      <span className={`chip-status${qc ? ' chip-status-split' : ''}`}>
+        <span
+          className={`chip chip-${PR_STATE_TONE[state]}`}
+          title={PR_STATE_LABEL[state]}
+        >
+          {PR_STATE_LABEL[state]}
+        </span>
+        {qc && (
+          <span className={`chip chip-${qc.tone}`} title={qc.title}>
+            {qc.label}
+          </span>
+        )}
+      </span>
       <PrRowActions repo={repo} pr={pr} onChanged={onChanged} />
     </article>
   );

@@ -1,15 +1,9 @@
 import { useState } from 'react';
 import Button from '@mui/material/Button';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import type { OpenPr, PrsReport } from '../types';
+import type { PrsReport } from '../types';
+import { awaitingOthers, prState } from '../prState';
 import { copyText } from '../copyText';
-
-/**
- * "Awaiting review" means waiting on somebody else. Drafts cannot be reviewed at all, and
- * CHANGES_REQUESTED is waiting on me — chasing either would be noise in a nudge message.
- */
-const awaitingOthers = (pr: OpenPr) =>
-  !pr.draft && pr.review !== 'APPROVED' && pr.review !== 'CHANGES_REQUESTED';
 
 interface PrSummaryProps {
   report: PrsReport;
@@ -21,14 +15,14 @@ export const PrSummary = ({ report }: PrSummaryProps) => {
 
   const all = report.repos.flatMap((group) => group.prs);
   const waiting = all.filter(awaitingOthers);
+  const inState = (state: ReturnType<typeof prState>) =>
+    all.filter((p) => prState(p) === state).length;
   const counts = [
-    { label: 'awaiting review', value: waiting.length, tone: 'warn' },
-    { label: 'approved', value: all.filter((p) => p.review === 'APPROVED').length, tone: 'ok' },
-    {
-      label: 'changes requested',
-      value: all.filter((p) => p.review === 'CHANGES_REQUESTED').length,
-      tone: 'bad',
-    },
+    { label: 'awaiting review', value: inState('awaiting-review'), tone: 'open' },
+    { label: 'awaiting re-review', value: inState('awaiting-re-review'), tone: 'warn' },
+    { label: 'commented', value: inState('commented'), tone: 'bad' },
+    { label: 'approved', value: inState('approved'), tone: 'ok' },
+    { label: 'changes requested', value: inState('changes-requested'), tone: 'bad' },
     { label: 'drafts', value: all.filter((p) => p.draft).length, tone: 'na' },
   ];
 

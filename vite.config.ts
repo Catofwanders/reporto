@@ -22,6 +22,8 @@ interface ReportoConfig {
   githubAccount?: string
   /** e.g. https://your-site.atlassian.net/browse — used to link tickets. */
   jiraBrowseUrl?: string
+  /** Repo names pinned to the top of the open-PR list, in the order given. */
+  pinnedRepos?: string[]
   commandGroups: CommandGroup[]
 }
 
@@ -251,6 +253,7 @@ function pullPlugin(): Plugin {
         org: c.githubOrg ?? '',
         jiraBrowseUrl: c.jiraBrowseUrl ?? '',
         account: c.githubAccount,
+        pinnedRepos: c.pinnedRepos ?? [],
       }),
   }
 

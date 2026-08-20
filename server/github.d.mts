@@ -5,6 +5,8 @@ export function pullOpenPrs(options: {
   org: string;
   jiraBrowseUrl: string;
   account?: string;
+  /** Repo names to sort ahead of the busiest-first order, in the order given. */
+  pinnedRepos?: string[];
 }): Promise<PrsReport>;
 
 export type PrActionName = 'ready' | 'draft' | 'close' | 'reopen';

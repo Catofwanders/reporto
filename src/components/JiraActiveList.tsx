@@ -33,26 +33,23 @@ export const JiraActiveList = ({ report }: { report: JiraReport }) => {
         </span>
       </div>
 
-      <div className="list ticket-list">
-        {tickets.length === 0 && <div className="empty">No active tickets.</div>}
-        {tickets.map((ticket) => {
-          return (
-            <article key={ticket.key} className="item">
-              <span className="chip-status">
-                <Chip tone={ticket.chip}>{ticket.status}</Chip>
-              </span>
-              <div className="item-body">
-                <div className="item-top">
-                  <a className="key" href={ticket.url} target="_blank" rel="noopener noreferrer">
-                    {ticket.key}
-                  </a>
-                  <span className="time">{prSummary(ticket)}</span>
-                </div>
-                <p className="subj">{ticket.summary}</p>
-              </div>
-            </article>
-          );
-        })}
+      {tickets.length === 0 && <div className="empty">No active tickets.</div>}
+      <div className="ticket-cards">
+        {tickets.map((ticket) => (
+          <article key={ticket.key} className="ticket-card">
+            <div className="ticket-card-top">
+              <a className="key" href={ticket.url} target="_blank" rel="noopener noreferrer">
+                {ticket.key}
+              </a>
+              <Chip tone={ticket.chip}>{ticket.status}</Chip>
+            </div>
+            {/* Two lines keeps every card the same height; the rest is one hover away. */}
+            <p className="ticket-card-summary" title={ticket.summary}>
+              {ticket.summary}
+            </p>
+            <span className="time">{prSummary(ticket)}</span>
+          </article>
+        ))}
       </div>
     </section>
   );
