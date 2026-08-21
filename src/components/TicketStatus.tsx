@@ -4,7 +4,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Tooltip from '@mui/material/Tooltip';
 import type { Ticket } from '../types';
-import { statusTone } from '../jiraStatus';
+import { formatStatus, statusTone } from '../jiraStatus';
 import { applyTransition, fetchTransitions, type JiraTransition } from '../jiraActions';
 import { Chip } from './Chip';
 
@@ -56,7 +56,7 @@ export const TicketStatus = ({ ticket, onChanged }: TicketStatusProps) => {
     }
   };
 
-  if (readOnly) return <Chip tone={statusTone(ticket)}>{ticket.status}</Chip>;
+  if (readOnly) return <Chip tone={statusTone(ticket)}>{formatStatus(ticket.status)}</Chip>;
 
   return (
     <>
@@ -72,7 +72,7 @@ export const TicketStatus = ({ ticket, onChanged }: TicketStatusProps) => {
             <CircularProgress size={9} sx={{ color: 'inherit' }} />
           ) : (
             <>
-              {ticket.status}
+              {formatStatus(ticket.status)}
               {/* The caret is what says "this opens something" — without it the chip reads
                   as a label, and nobody clicks a label. */}
               <span className="chip-caret" aria-hidden="true">
@@ -92,8 +92,8 @@ export const TicketStatus = ({ ticket, onChanged }: TicketStatusProps) => {
             {/* Jira names transitions inconsistently ("Start work" vs "In Progress"), so
                 show the target status when it differs from the transition's own name. */}
             {transition.name === transition.to
-              ? transition.name
-              : `${transition.name} → ${transition.to}`}
+              ? formatStatus(transition.name)
+              : `${formatStatus(transition.name)} → ${formatStatus(transition.to)}`}
           </MenuItem>
         ))}
       </Menu>

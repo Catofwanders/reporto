@@ -141,8 +141,8 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .chip-button:hover .chip-caret { opacity: 1; }
 .chip-button:disabled { cursor: progress; opacity: .7; }
 .chip-caret { font-size: .62em; line-height: 1; opacity: .65; }
-/* Under the title, aligned with it rather than hugging the row edge. */
-.pr-draft-toggle { flex: none; white-space: nowrap; margin-top: .4rem; }
+/* Last item on the meta line, after the idle stamp. */
+.pr-draft-toggle { flex: none; white-space: nowrap; }
 
 .banner { border: 1px solid; border-radius: .55rem; padding: .6rem .9rem; font-size: .85rem; font-weight: 600; margin: .9rem 0 0; }
 .banner-ok { background: var(--ok-bg); color: var(--ok-ink); border-color: var(--ok-line); }

@@ -1,4 +1,5 @@
 import type { JiraReport, Pr } from '../types';
+import { formatStatus } from '../jiraStatus';
 import { TicketStatus } from './TicketStatus';
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
@@ -28,7 +29,7 @@ export const JiraReportView = ({ report, onChanged }: JiraReportViewProps) => (
     {report.groups.map((group) => (
       <ReportAccordion
         key={group.title}
-        title={group.title}
+        title={formatStatus(group.title)}
         count={group.tickets.length}
       >
         <div className="list">

@@ -30,3 +30,31 @@ export const statusTone = (ticket: Pick<Ticket, 'status' | 'chip'>): Chip => {
   for (const [pattern, tone] of STATUS_TONE) if (pattern.test(ticket.status.trim())) return tone;
   return ticket.chip;
 };
+
+/** Acronyms that must not be title-cased into "Qc" / "Cs". */
+const ACRONYMS = new Set(['QC', 'CS', 'PM', 'UI', 'UX', 'API', 'NL', 'ID', 'SEO']);
+
+/** Words title case leaves lower, unless they open the status. */
+const MINOR = new Set(['to', 'by', 'of', 'in', 'on', 'for', 'and', 'or', 'the', 'a', 'an', 'with']);
+
+/**
+ * Jira statuses arrive in whatever case each workflow author typed: "QC READY" shouts,
+ * "In Progress" does not, and "CODE REVIEW" and "Backlog" sit side by side in the same
+ * list. Normalise to title case so a column of chips reads as one set, keeping acronyms
+ * upper — "QC Ready", not "Qc Ready".
+ */
+export const formatStatus = (status: string): string =>
+  status
+    .trim()
+    .split(/(\s+|[-/])/)
+    .map((part, i) => {
+      if (/^(\s+|[-/])$/.test(part)) return part;
+      const upper = part.toUpperCase();
+      if (ACRONYMS.has(upper)) return upper;
+      const lower = part.toLowerCase();
+      // "Released to Production", not "Released To Production" — but a status that opens
+      // with one of these keeps its capital.
+      if (i > 0 && MINOR.has(lower)) return lower;
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+    })
+    .join('');

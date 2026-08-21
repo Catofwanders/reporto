@@ -39,13 +39,13 @@ const PrRow = ({ repo, pr, onChanged }: PrRowProps) => {
             </a>
           )}
           <span className="time">{days === 0 ? 'today' : `${days}d idle`}</span>
+          <PrDraftToggle repo={repo} pr={pr} onChanged={onChanged} />
         </div>
         <p className="subj">
           <a href={pr.url} target="_blank" rel="noopener noreferrer">
             {pr.title}
           </a>
         </p>
-        <PrDraftToggle repo={repo} pr={pr} onChanged={onChanged} />
       </div>
       <span className={`chip-status${qc ? ' chip-status-split' : ''}`}>
         <span
