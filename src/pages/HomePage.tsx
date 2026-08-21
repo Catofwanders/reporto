@@ -41,7 +41,7 @@ export const HomePage = ({ email, jira, calendar, prs }: HomePageProps) => {
     <main className="home">
       <div className="home-content">
         {prs && <OpenPrList report={prs} onChanged={() => void run('prs')} />}
-        {jira && <JiraActiveList report={jira} />}
+        {jira && <JiraActiveList report={jira} onChanged={() => void run('jira')} />}
       </div>
 
       <div className="home-widgets">

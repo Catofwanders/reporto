@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { JiraReport, Ticket } from '../types';
-import { statusTone } from '../jiraStatus';
 import { Chip } from './Chip';
+import { TicketStatus } from './TicketStatus';
 import { RefreshButton } from './RefreshButton';
 
 const ACTIVE_STATUSES = ['in progress', 'code review', 'qc ready'];
@@ -38,7 +38,13 @@ const QcWarning = ({ ticket }: { ticket: Ticket }) => {
   );
 };
 
-export const JiraActiveList = ({ report }: { report: JiraReport }) => {
+interface JiraActiveListProps {
+  report: JiraReport;
+  /** Refetch after a status change, so the card stops showing the old one. */
+  onChanged?: () => void;
+}
+
+export const JiraActiveList = ({ report, onChanged }: JiraActiveListProps) => {
   const tickets = report.groups
     // Umbrella tickets carry no PR of their own — the child tickets below them do.
     .filter((group) => !group.title.toLowerCase().startsWith('umbrella'))
@@ -65,7 +71,7 @@ export const JiraActiveList = ({ report }: { report: JiraReport }) => {
               <a className="key" href={ticket.url} target="_blank" rel="noopener noreferrer">
                 {ticket.key}
               </a>
-              <Chip tone={statusTone(ticket)}>{ticket.status}</Chip>
+              <TicketStatus ticket={ticket} onChanged={onChanged} />
             </div>
             {/* Two lines keeps every card the same height; the rest is one hover away. */}
             <p className="ticket-card-summary" title={ticket.summary}>

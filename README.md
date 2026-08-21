@@ -216,6 +216,23 @@ puller, behind the same cross-site guard. The action must be one of four the ser
 **merging is not one of them and never will be.** Closing asks for confirmation first,
 naming the repo, number and title, since it is the only one that discards work.
 
+## Changing a ticket's status
+
+The status chip on a Jira card is also the control: click it and the menu lists what the
+workflow allows for that ticket right now, fetched then rather than with the report —
+options depend on the current status and differ per project, and asking for thirty tickets
+up front would be thirty round trips for a menu that usually stays shut.
+
+`GET /api/jira/<KEY>/transitions` lists them; `POST /api/jira/<KEY>/transition` applies one,
+behind the same cross-site guard as the other writes. The key must match a ticket-key shape
+and the id must be one Jira just returned, so the request never names a status string. After
+it lands the report is refetched rather than patched locally, because a workflow can land
+somewhere other than the transition's advertised target.
+
+Jira answers 400 when a transition is no longer valid from the current status — which means
+the board moved under you — and that surfaces as "refresh and try again" rather than a raw
+error.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive

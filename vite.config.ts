@@ -5,7 +5,7 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import type { PrActionName } from './server/github.mjs'
 import { PR_ACTIONS, prAction, pullOpenPrs, pullTicketPrs } from './server/github.mjs'
-import { pullJira } from './server/jira.mjs'
+import { jiraTransition, jiraTransitions, pullJira } from './server/jira.mjs'
 import { pullGoogleCalendar } from './server/googleCalendar.mjs'
 
 // Personal / employer-specific settings live in ./config (gitignored). The committed
@@ -417,6 +417,85 @@ function pullPlugin(): Plugin {
   }
 }
 
+// Jira transition API: GET /api/jira/<KEY>/transitions lists what the workflow allows now,
+// POST /api/jira/<KEY>/transition applies one. This writes to a shared board, so the key
+// is validated against the configured ticket pattern and the transition id comes from the
+// list Jira itself just returned — the request never names a status string.
+function jiraTransitionPlugin(): Plugin {
+  const KEY = /^[A-Z][A-Z0-9]*-\d+$/
+
+  return {
+    name: 'reporto-jira-transition',
+    configureServer(server) {
+      server.middlewares.use('/api/jira', (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        const parts = (req.url ?? '/').split('?')[0].replace(/^\//, '').split('/')
+        const [key, verb] = parts
+        if (!key || !KEY.test(key)) {
+          res.statusCode = 400
+          res.end('{"error":"expected /api/jira/<TICKET-KEY>/transitions"}')
+          return
+        }
+
+        const config = loadConfig()
+        const creds = {
+          site: config.jiraSite,
+          email: process.env.JIRA_EMAIL,
+          apiToken: process.env.JIRA_API_TOKEN,
+          key,
+        }
+
+        if (req.method === 'GET' && verb === 'transitions') {
+          void jiraTransitions(creds).then(
+            (transitions) => res.end(JSON.stringify({ ok: true, key, transitions })),
+            (err: Error) => {
+              res.statusCode = 500
+              res.end(JSON.stringify({ ok: false, key, error: err.message }))
+            },
+          )
+          return
+        }
+
+        if (req.method !== 'POST' || verb !== 'transition') {
+          res.statusCode = 405
+          res.end('{"error":"use GET <key>/transitions or POST <key>/transition"}')
+          return
+        }
+
+        const blocked = rejectCrossSite(req)
+        if (blocked) {
+          res.statusCode = 403
+          res.end(JSON.stringify({ error: `transition blocked: ${blocked}` }))
+          return
+        }
+
+        readBody(req, (body) => {
+          let transitionId: string
+          try {
+            transitionId = String((JSON.parse(body || '{}') as { transitionId?: string }).transitionId ?? '')
+          } catch {
+            res.statusCode = 400
+            res.end('{"error":"body must be JSON"}')
+            return
+          }
+          if (!/^\d+$/.test(transitionId)) {
+            res.statusCode = 400
+            res.end('{"error":"transitionId must be one of the ids from <key>/transitions"}')
+            return
+          }
+          void jiraTransition({ ...creds, transitionId }).then(
+            (result) => res.end(JSON.stringify({ ok: true, ...result })),
+            (err: Error) => {
+              res.statusCode = 500
+              res.end(JSON.stringify({ ok: false, key, error: err.message }))
+            },
+          )
+        })
+      })
+    },
+  }
+}
+
 // PR action API: POST /api/pr/<repo>/<num>/<action> flips one pull request's state.
 // Write actions on someone's real repository, so the URL selects a known action from a
 // fixed list and the org comes from config — the request never names a command.
@@ -668,6 +747,13 @@ export default defineConfig(({ mode }) => {
     // Loopback only: the dev server exposes file writes and agent runs, so it must not
     // be reachable from the LAN.
     server: { host: '127.0.0.1' },
-    plugins: [react(), dbPlugin(), refreshPlugin(), pullPlugin(), prActionPlugin()],
+    plugins: [
+      react(),
+      dbPlugin(),
+      refreshPlugin(),
+      pullPlugin(),
+      prActionPlugin(),
+      jiraTransitionPlugin(),
+    ],
   }
 })

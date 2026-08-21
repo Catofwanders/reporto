@@ -1,16 +1,17 @@
 import type { JiraReport, Pr } from '../types';
-import { statusTone } from '../jiraStatus';
-import { Chip } from './Chip';
+import { TicketStatus } from './TicketStatus';
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
 
 interface JiraReportViewProps {
   report: JiraReport;
+  /** Refetch after a status change, so the list stops showing the old one. */
+  onChanged?: () => void;
 }
 
 const prLabel = (pr: Pr) => `${pr.repo.split('/').pop()}#${pr.num}`;
 
-export const JiraReportView = ({ report }: JiraReportViewProps) => (
+export const JiraReportView = ({ report, onChanged }: JiraReportViewProps) => (
   <section className="panel">
     <div className="panel-head">
       <h2>🎫 Jira</h2>
@@ -34,7 +35,7 @@ export const JiraReportView = ({ report }: JiraReportViewProps) => (
           {group.tickets.map((ticket) => (
             <article key={ticket.key} className="item">
               <span className="chip-status">
-                <Chip tone={statusTone(ticket)}>{ticket.status}</Chip>
+                <TicketStatus ticket={ticket} onChanged={onChanged} />
               </span>
               <div className="item-body">
                 <div className="item-top">

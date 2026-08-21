@@ -99,6 +99,59 @@ function groupByStatus(tickets) {
   return [...groups.entries()].map(([title, list]) => ({ title, tickets: list }))
 }
 
+/** Jira credentials, resolved once per call site. */
+function requireAuth({ site, email, apiToken }) {
+  if (!site) throw new Error('no Jira site configured — set jiraSite in config/reporto.json')
+  if (!email || !apiToken) {
+    throw new Error('no Jira credentials — set JIRA_EMAIL and JIRA_API_TOKEN')
+  }
+  return { base: site.replace(/\/$/, ''), auth: authHeader(email, apiToken) }
+}
+
+/**
+ * The transitions Jira will accept for this issue right now. Workflows differ per project
+ * and per current status, so the list has to come from Jira rather than a table here — and
+ * it is fetched lazily, per ticket, because asking for 30 tickets up front would cost 30
+ * round trips for a menu nobody may open.
+ */
+export async function jiraTransitions({ site, email, apiToken, key }) {
+  const { base, auth } = requireAuth({ site, email, apiToken })
+  const res = await fetch(`${base}/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, {
+    headers: { Authorization: auth, Accept: 'application/json' },
+  })
+  if (!res.ok) {
+    throw new Error(`Jira transitions for ${key} failed: ${res.status} ${res.statusText}`)
+  }
+  const body = await res.json()
+  return (body.transitions ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    to: t.to?.name ?? t.name,
+  }))
+}
+
+/**
+ * Apply one transition. Jira answers 204 with no body on success, and 400 when the
+ * transition is not valid from the current status — which happens when the board moved
+ * under us, so the message says to reload rather than blaming the click.
+ */
+export async function jiraTransition({ site, email, apiToken, key, transitionId }) {
+  const { base, auth } = requireAuth({ site, email, apiToken })
+  const res = await fetch(`${base}/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, {
+    method: 'POST',
+    headers: { Authorization: auth, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ transition: { id: String(transitionId) } }),
+  })
+  if (res.status === 204 || res.ok) return { key, transitionId }
+  const text = await res.text()
+  if (res.status === 400) {
+    throw new Error(
+      `Jira refused that transition for ${key} — the status may have changed since this was loaded. Refresh and try again. (${text.slice(0, 160)})`,
+    )
+  }
+  throw new Error(`Jira transition for ${key} failed: ${res.status} ${text.slice(0, 200)}`)
+}
+
 export async function pullJira({ site, email, apiToken, jql, jiraBrowseUrl, resolvePrs }) {
   if (!site) throw new Error('no Jira site configured — set jiraSite in config/reporto.json')
   if (!email || !apiToken) {

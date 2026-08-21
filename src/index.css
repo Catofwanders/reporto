@@ -132,6 +132,10 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .chip-warn { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--warn-line); }
 .chip-qc { background: var(--qc-bg); color: var(--qc-ink); border-color: var(--qc-line); }
 .chip-qcout { background: var(--qcout-bg); color: var(--qcout-ink); border-color: var(--qcout-line); }
+/* A chip that is also a control: same pill, but clickable and clearly so. */
+.chip-button { font: inherit; font-size: .68rem; font-weight: 600; cursor: pointer; }
+.chip-button:hover { filter: brightness(1.25); }
+.chip-button:disabled { cursor: progress; opacity: .7; }
 
 .banner { border: 1px solid; border-radius: .55rem; padding: .6rem .9rem; font-size: .85rem; font-weight: 600; margin: .9rem 0 0; }
 .banner-ok { background: var(--ok-bg); color: var(--ok-ink); border-color: var(--ok-line); }
