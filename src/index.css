@@ -1,18 +1,34 @@
+/*
+ * Tokens come in three layers:
+ *   1. neutrals (bg, panel, ink, line) — per palette, per light/dark
+ *   2. status inks — per palette, per light/dark
+ *   3. chip surfaces — derived from the ink with color-mix, once, for every palette
+ *
+ * Layer 3 is why a palette is short: custom properties resolve lazily, so a palette that
+ * overrides --ok-ink automatically gets a matching --ok-bg and --ok-line without repeating
+ * them. Adding a palette means declaring eight hues, not twenty-four.
+ */
 :root {
+  color-scheme: light dark;
+
   --bg: #f5f6f8;
   --panel: #ffffff;
   --ink: #171a21;
   --ink-2: #5c6472;
   --line: #e3e6ec;
   --accent: #2f54c9;
-  --ok-bg: #e2f3e8; --ok-ink: #1c7a3d; --ok-line: #bfe3cc;
-  --bad-bg: #fdeaea; --bad-ink: #c02626; --bad-line: #f3c6c6;
-  --open-bg: #eef1fb; --open-ink: #3a56b8; --open-line: #d3dbf4;
-  --na-bg: #eef0f3; --na-ink: #6a7280; --na-line: #dde1e7;
-  --warn-bg: #fff7e8; --warn-ink: #8a5a00; --warn-line: #f0dfb6;
+
+  --ok-ink: #1c7a3d;
+  --bad-ink: #c02626;
+  --open-ink: #3a56b8;
+  --na-ink: #6a7280;
+  --warn-ink: #8a5a00;
   /* deploy-qc is its own dimension, so it gets hues nothing else uses */
-  --qc-bg: #e2f1fa; --qc-ink: #0e6f96; --qc-line: #bcdfef;
-  --qcout-bg: #f1ecfd; --qcout-ink: #6d40c4; --qcout-line: #ddd0f7;
+  --qc-ink: #0e6f96;
+  --qcout-ink: #6d40c4;
+
+  --chip-fill: 12%;
+  --chip-edge: 32%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,14 +39,104 @@
     --ink-2: #98a0af;
     --line: #2a2f3a;
     --accent: #8fa8ff;
-    --ok-bg: #12301d; --ok-ink: #63cf8b; --ok-line: #1e4a2d;
-    --bad-bg: #3a1717; --bad-ink: #ff8a8a; --bad-line: #5a2424;
-    --open-bg: #1c2338; --open-ink: #9db1f5; --open-line: #2c3a5e;
-    --na-bg: #20242c; --na-ink: #8b94a3; --na-line: #2e3440;
-    --warn-bg: #332a13; --warn-ink: #e6b95c; --warn-line: #4d3f1c;
-    --qc-bg: #0d2b36; --qc-ink: #57c8ea; --qc-line: #17475a;
-    --qcout-bg: #241d38; --qcout-ink: #b39cf0; --qcout-line: #3a2e5c;
+
+    --ok-ink: #63cf8b;
+    --bad-ink: #ff8a8a;
+    --open-ink: #9db1f5;
+    --na-ink: #8b94a3;
+    --warn-ink: #e6b95c;
+    --qc-ink: #57c8ea;
+    --qcout-ink: #b39cf0;
+
+    --chip-fill: 16%;
+    --chip-edge: 34%;
   }
+}
+
+/* Palette: nord — cool blue-grey, lower chroma */
+:root[data-palette='nord'] {
+  --bg: #eceff4; --panel: #ffffff; --ink: #2e3440; --ink-2: #5b6779; --line: #dde3ec;
+  --accent: #4a6f9b;
+  --ok-ink: #4a7a52; --bad-ink: #a8474f; --open-ink: #4a6f9b; --na-ink: #6b7688;
+  --warn-ink: #8a6a33; --qc-ink: #3f7d8c; --qcout-ink: #6a5f9b;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette='nord'] {
+    --bg: #2e3440; --panel: #343b48; --ink: #e5e9f0; --ink-2: #9aa5b7; --line: #414a5a;
+    --accent: #88c0d0;
+    --ok-ink: #a3be8c; --bad-ink: #bf616a; --open-ink: #81a1c1; --na-ink: #9aa5b7;
+    --warn-ink: #ebcb8b; --qc-ink: #88c0d0; --qcout-ink: #b48ead;
+  }
+}
+
+/* Palette: terracotta — warm neutrals, earthy status hues */
+:root[data-palette='terracotta'] {
+  --bg: #f7f3ee; --panel: #fffcf8; --ink: #2d2521; --ink-2: #6b5d54; --line: #e8ded2;
+  --accent: #b4552d;
+  --ok-ink: #5c7148; --bad-ink: #b23b2e; --open-ink: #8a6a3a; --na-ink: #7d7069;
+  --warn-ink: #a06a10; --qc-ink: #3f7069; --qcout-ink: #8a5070;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette='terracotta'] {
+    --bg: #1c1714; --panel: #241e1a; --ink: #f0e7df; --ink-2: #b0a096; --line: #3a302a;
+    --accent: #e08a5c;
+    --ok-ink: #a8c08a; --bad-ink: #ef8a7a; --open-ink: #d8b070; --na-ink: #a89a90;
+    --warn-ink: #e8b45c; --qc-ink: #78bdb0; --qcout-ink: #d095b4;
+  }
+}
+
+/* Palette: mono — one accent, status carried by lightness and shape */
+:root[data-palette='mono'] {
+  --bg: #f4f5f6; --panel: #ffffff; --ink: #14171a; --ink-2: #5f6874; --line: #e2e5e9;
+  --accent: #2b6cb0;
+  --ok-ink: #2f6f4f; --bad-ink: #8f2f2f; --open-ink: #2b6cb0; --na-ink: #6a7280;
+  --warn-ink: #6f5a2a; --qc-ink: #35708a; --qcout-ink: #55506e;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette='mono'] {
+    --bg: #0f1113; --panel: #171a1d; --ink: #e8eaec; --ink-2: #9aa2ab; --line: #272b30;
+    --accent: #7fb3e0;
+    --ok-ink: #86c2a1; --bad-ink: #e39292; --open-ink: #7fb3e0; --na-ink: #98a0a8;
+    --warn-ink: #cbb178; --qc-ink: #8fc0d4; --qcout-ink: #a8a2c8;
+  }
+}
+
+/* Palette: contrast — maximum separation, for bright rooms and tired eyes */
+:root[data-palette='contrast'] {
+  --bg: #ffffff; --panel: #ffffff; --ink: #000000; --ink-2: #3d4450; --line: #b9c0cc;
+  --accent: #0b46d0;
+  --ok-ink: #0a6b2f; --bad-ink: #b00016; --open-ink: #0b46d0; --na-ink: #4a5261;
+  --warn-ink: #7a4a00; --qc-ink: #005f7d; --qcout-ink: #5c1fb0;
+  --chip-fill: 16%;
+  --chip-edge: 46%;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette='contrast'] {
+    --bg: #000000; --panel: #0b0d10; --ink: #ffffff; --ink-2: #c3cad6; --line: #48505d;
+    --accent: #9fc0ff;
+    --ok-ink: #6ff0a0; --bad-ink: #ff9d9d; --open-ink: #9fc0ff; --na-ink: #b8c0cc;
+    --warn-ink: #ffd479; --qc-ink: #79dcff; --qcout-ink: #cdb0ff;
+    --chip-fill: 22%;
+    --chip-edge: 52%;
+  }
+}
+
+/* Layer 3: every chip surface, mixed from its own ink against the panel behind it. */
+:root {
+  --ok-bg: color-mix(in oklab, var(--ok-ink) var(--chip-fill), var(--panel));
+  --ok-line: color-mix(in oklab, var(--ok-ink) var(--chip-edge), var(--panel));
+  --bad-bg: color-mix(in oklab, var(--bad-ink) var(--chip-fill), var(--panel));
+  --bad-line: color-mix(in oklab, var(--bad-ink) var(--chip-edge), var(--panel));
+  --open-bg: color-mix(in oklab, var(--open-ink) var(--chip-fill), var(--panel));
+  --open-line: color-mix(in oklab, var(--open-ink) var(--chip-edge), var(--panel));
+  --na-bg: color-mix(in oklab, var(--na-ink) var(--chip-fill), var(--panel));
+  --na-line: color-mix(in oklab, var(--na-ink) var(--chip-edge), var(--panel));
+  --warn-bg: color-mix(in oklab, var(--warn-ink) var(--chip-fill), var(--panel));
+  --warn-line: color-mix(in oklab, var(--warn-ink) var(--chip-edge), var(--panel));
+  --qc-bg: color-mix(in oklab, var(--qc-ink) var(--chip-fill), var(--panel));
+  --qc-line: color-mix(in oklab, var(--qc-ink) var(--chip-edge), var(--panel));
+  --qcout-bg: color-mix(in oklab, var(--qcout-ink) var(--chip-fill), var(--panel));
+  --qcout-line: color-mix(in oklab, var(--qcout-ink) var(--chip-edge), var(--panel));
 }
 
 * { box-sizing: border-box; }
@@ -43,6 +149,30 @@ body {
 }
 
 .wrap { max-width: 82rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+/* settings */
+.app-settings {
+  margin-left: .3rem; font-size: 1rem; line-height: 1; text-decoration: none;
+  color: var(--ink-2); opacity: .8;
+}
+.app-settings:hover { color: var(--accent); opacity: 1; }
+.palette-grid {
+  display: grid; gap: .7rem; margin-top: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+}
+.palette-card {
+  display: flex; flex-direction: column; gap: .4rem; text-align: left; cursor: pointer;
+  background: var(--panel); color: var(--ink);
+  border: 1px solid var(--line); border-radius: .6rem; padding: .8rem .9rem;
+  font: inherit;
+}
+.palette-card:hover { border-color: var(--accent); }
+.palette-card.is-current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.palette-swatch { display: flex; gap: .25rem; }
+.palette-swatch > span { width: 1.5rem; height: 1.5rem; border-radius: .3rem; border: 1px solid var(--line); }
+.palette-name { font-weight: 600; font-size: .92rem; display: flex; align-items: baseline; gap: .5rem; }
+.palette-current { font-size: .68rem; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+.palette-note { color: var(--ink-2); font-size: .8rem; }
 
 .app-head {
   display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .8rem; margin-bottom: 1.4rem;

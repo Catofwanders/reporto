@@ -17,6 +17,7 @@ import { HomePage } from './pages/HomePage';
 import { EmailPage } from './pages/EmailPage';
 import { JiraPage } from './pages/JiraPage';
 import { CalendarPage } from './pages/CalendarPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 const BASE = `${import.meta.env.BASE_URL}reports/`;
 
@@ -161,6 +162,9 @@ export const App = () => {
               </Link>
             </h1>
             <span className="app-sub">email + jira + calendar dashboard</span>
+            <Link to="/settings" className="app-settings" title="Settings">
+              ⚙
+            </Link>
             <ActionBar generatedAt={generatedAt} />
           </header>
 
@@ -192,6 +196,7 @@ export const App = () => {
                 />
                 <Route path="/jira" element={<JiraPage report={reports.jira} />} />
                 <Route path="/calendar" element={<CalendarPage report={reports.calendar} />} />
+                <Route path="/settings" element={<SettingsPage />} />
               </Routes>
             </ErrorBoundary>
           )}

@@ -241,6 +241,26 @@ Jira answers 400 when a transition is no longer valid from the current status �
 the board moved under you — and that surfaces as "refresh and try again" rather than a raw
 error.
 
+## Palettes
+
+`/settings` (the ⚙ beside the title) switches the palette; the choice is saved per browser
+in `localStorage` and applied in `main.tsx` before the first render, so it never flashes the
+default first. Five ship: Default, Nord, Terracotta, Mono and High contrast.
+
+Tokens are layered so a palette stays short:
+
+1. neutrals — `--bg`, `--panel`, `--ink`, `--ink-2`, `--line`, `--accent`
+2. status inks — `--ok-ink`, `--bad-ink`, `--open-ink`, `--na-ink`, `--warn-ink`, `--qc-ink`, `--qcout-ink`
+3. chip surfaces — **derived**, `color-mix(in oklab, var(--ok-ink) var(--chip-fill), var(--panel))`
+
+Layer 3 is declared once for every palette. Custom properties resolve lazily, so overriding
+`--ok-ink` in a `[data-palette]` block gives you a matching background and border for free —
+a new palette means eight hues per mode, not twenty-four. `--chip-fill` / `--chip-edge` let a
+palette push its chips louder or quieter, which is what High contrast does.
+
+Light and dark both come from the palette, selected by `prefers-color-scheme`; there is no
+in-app light/dark switch.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive
