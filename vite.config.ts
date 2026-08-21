@@ -6,6 +6,7 @@ import react from '@vitejs/plugin-react'
 import type { PrActionName } from './server/github.mjs'
 import { PR_ACTIONS, prAction, pullOpenPrs, pullTicketPrs } from './server/github.mjs'
 import { pullJira } from './server/jira.mjs'
+import { pullGoogleCalendar } from './server/googleCalendar.mjs'
 
 // Personal / employer-specific settings live in ./config (gitignored). The committed
 // config.template is the fallback, so a fresh checkout still boots.
@@ -33,6 +34,14 @@ interface ReportoConfig {
   ticketPattern?: string
   /** Statuses worth one extra PR body search when no PR title named the ticket. */
   fallbackStatuses?: string[]
+  /** Calendar addresses to read. A service account needs these; it cannot enumerate. */
+  calendarIds?: string[]
+  /** Calendar names to pull; empty means every calendar the account can read. */
+  calendars?: string[]
+  /** Calendar names to skip — birthdays, holidays, anything that is noise. */
+  calendarsExcluded?: string[]
+  /** How far the calendar watch-list looks ahead. */
+  upcomingDays?: number
   commandGroups: CommandGroup[]
 }
 
@@ -262,6 +271,25 @@ function refreshPlugin(): Plugin {
 function pullPlugin(): Plugin {
   const reportsDir = path.resolve(__dirname, 'public/reports')
 
+  /** The report currently on disk for a kind, or null when there is none to carry over. */
+  const readReport = (kind: string) => {
+    try {
+      const indexFile = path.join(reportsDir, 'index.json')
+      if (!fs.existsSync(indexFile)) return null
+      const index = JSON.parse(fs.readFileSync(indexFile, 'utf8')) as {
+        latest?: Record<string, string>
+      }
+      const file = index.latest?.[kind]
+      if (!file) return null
+      const at = path.join(reportsDir, file)
+      if (!fs.existsSync(at)) return null
+      return JSON.parse(fs.readFileSync(at, 'utf8')) as { events?: never[] }
+    } catch {
+      // A report we cannot read is one we cannot carry over; the pull still runs.
+      return null
+    }
+  }
+
   const PULLERS: Record<string, (c: ReportoConfig) => Promise<{ date: string }>> = {
     prs: (c) =>
       pullOpenPrs({
@@ -271,6 +299,23 @@ function pullPlugin(): Plugin {
         account: c.githubAccount,
         pinnedRepos: c.pinnedRepos ?? [],
       }),
+    calendar: (c) => {
+      // Outlook is only readable through the Chrome extension, so whatever the last /email
+      // run put in the report is read back and carried over — otherwise a calendar pull
+      // would drop the stand-up that lives only there.
+      const previous = readReport('calendar')
+      return pullGoogleCalendar({
+        serviceAccount: process.env.GOOGLE_SERVICE_ACCOUNT_KEY,
+        calendarIds: c.calendarIds ?? [],
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+        include: c.calendars ?? [],
+        exclude: c.calendarsExcluded ?? [],
+        upcomingDays: c.upcomingDays ?? 7,
+        keepEvents: previous?.events ?? [],
+      })
+    },
     jira: (c) => {
       const fallbackStatuses = (c.fallbackStatuses ?? DEFAULT_FALLBACK_STATUSES).map((s) =>
         s.toLowerCase(),

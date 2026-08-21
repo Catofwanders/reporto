@@ -22,6 +22,10 @@ stays free of employer or account specifics.
 | `jiraJql` | Which tickets the dashboard shows. Defaults to everything assigned to you that is not Done, freshest first. |
 | `ticketPattern` | Regex source matching a ticket key in a PR title, e.g. `\bPROJ-\d+\b`. How PRs get attached to tickets. |
 | `fallbackStatuses` | Statuses where a ticket with no title match is worth one body search of your own PRs. Defaults to in progress / code review / qc ready / blocked — backlog items are not worth the rate limit. |
+| `calendarIds` | Calendar addresses to read, e.g. `you@example.com` or `…@group.calendar.google.com` (Calendar settings → Integrate calendar → Calendar ID). Required with a service account, which cannot enumerate calendars. |
+| `calendars` | Calendar names to pull. Empty means every calendar the Google account can read. |
+| `calendarsExcluded` | Calendar names to skip — birthdays, holidays, task lists. |
+| `upcomingDays` | How far the calendar watch-list looks ahead. Defaults to 7. |
 | `commandGroups[].command` | Claude Code slash command that regenerates reports, spawned as `claude -p`. Only needed for reports the server cannot pull itself — mail and calendar, which require the Chrome extension. Leave the list empty if you run `/email` by hand. |
 | `commandGroups[].writes` | Report kinds that command produces (`email`, `calendar`, `jira`, `prs`). Kinds in one group refresh together. |
 | `commandGroups[].tools` | Which allow-list the headless run gets: `mail` (Chrome MCP) or `jira` (Atlassian search plus specific `gh` commands). The lists live in `vite.config.ts`. |

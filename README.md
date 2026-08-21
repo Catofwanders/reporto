@@ -24,7 +24,7 @@ Reports are JSON files in `public/reports/`, listed by `index.json`:
 | File | Written by | Contents |
 |---|---|---|
 | `email-<date>.json` | `/email` skill | actionable mail from both inboxes |
-| `calendar-<date>.json` | `/email` skill | today's events, upcoming watch-list |
+| `calendar-<date>.json` | server, Google Calendar API (+ skill for Outlook) | today's events, upcoming watch-list |
 | `jira-<date>.json` | server, Jira REST API | tickets, their PRs, and merged-PR QC state |
 | `prs-<date>.json` | server, GitHub GraphQL | my open PRs grouped by repo |
 
@@ -65,6 +65,45 @@ git config user.email "23452775+Catofwanders@users.noreply.github.com"
 cp -r config.template config     # then edit config/reporto.json
 cp .env.example .env             # then add your Jira API token
 ```
+
+### Google Calendar
+
+Two ways in. A plain API key is not one of them: Google accepts keys only for public data.
+
+**Service account (no browser, no expiry).** Cloud console → enable the Google Calendar API →
+create a service account → download its JSON key. Keep the key outside this repo
+(`~/.config/reporto/google-sa.json`, `chmod 600`) and point `GOOGLE_SERVICE_ACCOUNT_KEY` at
+it. Then, for each calendar: Calendar settings → Share with specific people → add the
+service account's `client_email` with "See all event details".
+
+A service account **cannot enumerate calendars** — sharing grants access but does not add
+the calendar to its `calendarList`, which stays empty. So `calendarIds` in
+`config/reporto.json` must name each calendar address explicitly. An id it cannot read is
+logged and skipped rather than failing the pull.
+
+That limitation bites on calendars you do not control: a team calendar you were merely
+invited to cannot be shared onward unless you have "make changes and manage sharing", so
+its entries stay missing until the owner shares it with the service account.
+
+**Installed-app OAuth (reads everything you can read).** Use it when the above is blocked:
+
+```bash
+npm run google-auth   # one-time browser consent; writes GOOGLE_REFRESH_TOKEN to .env
+```
+
+Needs a Desktop-app OAuth client with `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in `.env`
+first; scope `calendar.readonly`. This path uses your own `calendarList`, so subscribed
+calendars come along without anyone sharing anything.
+
+**Set that consent screen to Internal (Workspace) or In production.** Left in "Testing", Google
+expires the refresh token after seven days and the pull starts failing with `invalid_grant` —
+the error message says so, but it is worth avoiding.
+
+Recurring events are expanded by Google (`singleEvents=true`), so the stand-up and kick-offs
+arrive as concrete instances and no iCal parsing is needed. Declined invitations are dropped,
+and conferencing links come through the API — the thing the browser path could never read.
+
+### Jira
 
 The Jira pull authenticates with a personal API token
 ([create one](https://id.atlassian.com/manage-profile/security/api-tokens)) read from
@@ -140,7 +179,14 @@ button at all — those cards only show how old their data is.
 |---|---|
 | `prs` | `POST /api/pull/prs` — one GitHub GraphQL call, about a second (bolt icon) |
 | `jira` | `POST /api/pull/jira` — one Jira search plus one GitHub search (bolt icon) |
-| `email`, `calendar` | run `/email` in your own Claude Code session |
+| `calendar` | `POST /api/pull/calendar` — Google Calendar API (bolt icon) |
+| `email` | run `/email` in your own Claude Code session |
+
+The calendar pull covers **Google only**. Outlook is readable only through the Chrome
+extension, so the `/email` skill remains the only thing that can see it — and a pull would
+otherwise drop the stand-up that lives there. The puller therefore reads the report already
+on disk and carries over every event whose `source` is not `google`, so pressing the bolt
+refreshes the Google half and leaves the Outlook half standing.
 
 Both pulls are plain API calls, so they answer in about a second and cost no tokens. The
 agent-spawning path (`POST /api/refresh/<kind>`, `claude -p`) still exists for any command
@@ -223,6 +269,8 @@ src/stories/        Storybook stories + synthetic fixtures
 .storybook/         Storybook config; preview stubs the router and refresh context
 server/github.mjs   open-PR pull, deploy-qc comparison, ticket↔PR match, PR actions
 server/jira.mjs     Jira REST pull (JQL → tickets, grouped by status)
+server/googleCalendar.mjs  Google Calendar pull; carries over Outlook events
+scripts/google-auth.mjs    one-time OAuth consent → refresh token in .env
 .env.example        Jira credentials to copy to .env (gitignored)
 src/types.ts        report schemas
 src/db.ts           day-file client

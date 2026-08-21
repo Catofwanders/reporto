@@ -10,5 +10,13 @@
   ],
   "jiraSite": "https://your-site.atlassian.net",
   "ticketPattern": "\\bPROJ-\\d+\\b",
-  "jiraJql": "assignee = currentUser() AND statusCategory != Done ORDER BY status ASC, updated DESC"
+  "jiraJql": "assignee = currentUser() AND statusCategory != Done ORDER BY status ASC, updated DESC",
+  "calendarsExcluded": [
+    "Birthdays",
+    "Tasks"
+  ],
+  "upcomingDays": 7,
+  "calendarIds": [
+    "you@example.com"
+  ]
 }
