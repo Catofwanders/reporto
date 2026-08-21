@@ -20,9 +20,17 @@ import { CalendarPage } from './pages/CalendarPage';
 
 const BASE = `${import.meta.env.BASE_URL}reports/`;
 
+/**
+ * `res.ok` is not enough: the dev server's SPA fallback answers a missing report with
+ * `200 text/html`, so a stale index entry used to surface as "Unexpected token '<'"
+ * from JSON.parse. Check what came back before trusting it.
+ */
 async function fetchJson<T>(file: string): Promise<T> {
   const res = await fetch(`${BASE}${file}`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
+  if (!res.headers.get('content-type')?.includes('json')) {
+    throw new Error(`${file}: missing — the server returned the app shell, not JSON`);
+  }
   return res.json() as Promise<T>;
 }
 
@@ -37,6 +45,7 @@ async function fetchIndex(): Promise<ReportIndex> {
   const res = await fetch(`${BASE}index.json`, { cache: 'no-store' });
   if (res.status === 404) return EMPTY_INDEX;
   if (!res.ok) throw new Error(`index.json: HTTP ${res.status}`);
+  if (!res.headers.get('content-type')?.includes('json')) return EMPTY_INDEX;
   return (await res.json()) as ReportIndex;
 }
 
@@ -51,12 +60,30 @@ const EMPTY: Reports = { email: null, jira: null, calendar: null, prs: null };
 
 type KindErrors = Partial<Record<ReportKind, string>>;
 
+/**
+ * Newest first: `latest`, then each day in `history` that names this kind. A pointer to a
+ * report that is gone — deleted by hand, or written on a machine whose reports never came
+ * across — then costs yesterday's data rather than the whole card.
+ */
+function candidates(index: ReportIndex, kind: ReportKind): string[] {
+  const files = [index.latest[kind], ...index.history.map((day) => day[kind])];
+  return [...new Set(files.filter((file): file is string => Boolean(file)))];
+}
+
 async function fetchKind(index: ReportIndex, kind: ReportKind) {
-  const file = index.latest[kind];
-  if (!file) return null;
-  const value = await fetchJson<unknown>(file);
-  assertReport(kind, value);
-  return value as EmailReport | JiraReport | CalendarReport | PrsReport;
+  const files = candidates(index, kind);
+  if (files.length === 0) return null;
+  let firstError: unknown;
+  for (const file of files) {
+    try {
+      const value = await fetchJson<unknown>(file);
+      assertReport(kind, value);
+      return value as EmailReport | JiraReport | CalendarReport | PrsReport;
+    } catch (err) {
+      firstError ??= err;
+    }
+  }
+  throw firstError;
 }
 
 export const App = () => {
