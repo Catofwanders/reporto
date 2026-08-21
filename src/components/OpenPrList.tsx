@@ -45,6 +45,7 @@ const PrRow = ({ repo, pr, onChanged }: PrRowProps) => {
             {pr.title}
           </a>
         </p>
+        <PrDraftToggle repo={repo} pr={pr} onChanged={onChanged} />
       </div>
       <span className={`chip-status${qc ? ' chip-status-split' : ''}`}>
         <span
@@ -59,7 +60,6 @@ const PrRow = ({ repo, pr, onChanged }: PrRowProps) => {
           </span>
         )}
       </span>
-      <PrDraftToggle repo={repo} pr={pr} onChanged={onChanged} />
       <PrRowActions repo={repo} pr={pr} onChanged={onChanged} />
     </article>
   );
