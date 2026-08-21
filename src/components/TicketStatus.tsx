@@ -68,7 +68,18 @@ export const TicketStatus = ({ ticket, onChanged }: TicketStatusProps) => {
           disabled={busy}
           aria-label={`change status of ${ticket.key}, currently ${ticket.status}`}
         >
-          {busy ? <CircularProgress size={9} sx={{ color: 'inherit' }} /> : ticket.status}
+          {busy ? (
+            <CircularProgress size={9} sx={{ color: 'inherit' }} />
+          ) : (
+            <>
+              {ticket.status}
+              {/* The caret is what says "this opens something" — without it the chip reads
+                  as a label, and nobody clicks a label. */}
+              <span className="chip-caret" aria-hidden="true">
+                ▾
+              </span>
+            </>
+          )}
         </button>
       </Tooltip>
 

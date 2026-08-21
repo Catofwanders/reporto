@@ -218,10 +218,16 @@ naming the repo, number and title, since it is the only one that discards work.
 
 ## Changing a ticket's status
 
-The status chip on a Jira card is also the control: click it and the menu lists what the
-workflow allows for that ticket right now, fetched then rather than with the report —
-options depend on the current status and differ per project, and asking for thirty tickets
-up front would be thirty round trips for a menu that usually stays shut.
+The status chip on a Jira card is also the control — it carries a caret to say so. Click it
+and the menu lists the statuses `statusChoices` allows, fetched then rather than with the
+report: options depend on the current status and differ per project, and asking for thirty
+tickets up front would be thirty round trips for a menu that usually stays shut.
+
+Jira offers the entire workflow, which here is twenty-odd statuses including several nobody
+moves a ticket to by hand. `statusChoices` in `config/reporto.json` narrows that to the ones
+in daily use, matched on a transition's **target status** rather than its name, since Jira
+names transitions inconsistently. The filter is applied server-side and re-checked when a
+transition is applied, so a stale page cannot reach an excluded status.
 
 `GET /api/jira/<KEY>/transitions` lists them; `POST /api/jira/<KEY>/transition` applies one,
 behind the same cross-site guard as the other writes. The key must match a ticket-key shape

@@ -18,5 +18,10 @@
   "upcomingDays": 7,
   "calendarIds": [
     "you@example.com"
+  ],
+  "statusChoices": [
+    "In Progress",
+    "In Review",
+    "Done"
   ]
 }

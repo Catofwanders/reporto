@@ -42,6 +42,8 @@ interface ReportoConfig {
   calendarsExcluded?: string[]
   /** How far the calendar watch-list looks ahead. */
   upcomingDays?: number
+  /** Statuses the dashboard offers when changing a ticket. Empty means the whole workflow. */
+  statusChoices?: string[]
   commandGroups: CommandGroup[]
 }
 
@@ -443,6 +445,7 @@ function jiraTransitionPlugin(): Plugin {
           email: process.env.JIRA_EMAIL,
           apiToken: process.env.JIRA_API_TOKEN,
           key,
+          allow: config.statusChoices ?? [],
         }
 
         if (req.method === 'GET' && verb === 'transitions') {

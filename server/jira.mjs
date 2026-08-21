@@ -114,7 +114,7 @@ function requireAuth({ site, email, apiToken }) {
  * it is fetched lazily, per ticket, because asking for 30 tickets up front would cost 30
  * round trips for a menu nobody may open.
  */
-export async function jiraTransitions({ site, email, apiToken, key }) {
+export async function jiraTransitions({ site, email, apiToken, key, allow = [] }) {
   const { base, auth } = requireAuth({ site, email, apiToken })
   const res = await fetch(`${base}/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, {
     headers: { Authorization: auth, Accept: 'application/json' },
@@ -123,11 +123,13 @@ export async function jiraTransitions({ site, email, apiToken, key }) {
     throw new Error(`Jira transitions for ${key} failed: ${res.status} ${res.statusText}`)
   }
   const body = await res.json()
-  return (body.transitions ?? []).map((t) => ({
-    id: t.id,
-    name: t.name,
-    to: t.to?.name ?? t.name,
-  }))
+  // Jira offers the whole workflow — twenty-odd statuses including several nobody moves a
+  // ticket to by hand. Filter to the ones actually used, by target status rather than by
+  // transition name, since Jira names those inconsistently.
+  const wanted = allow.map((status) => status.toLowerCase())
+  return (body.transitions ?? [])
+    .map((t) => ({ id: t.id, name: t.name, to: t.to?.name ?? t.name }))
+    .filter((t) => (wanted.length ? wanted.includes(t.to.toLowerCase()) : true))
 }
 
 /**
@@ -135,8 +137,18 @@ export async function jiraTransitions({ site, email, apiToken, key }) {
  * transition is not valid from the current status — which happens when the board moved
  * under us, so the message says to reload rather than blaming the click.
  */
-export async function jiraTransition({ site, email, apiToken, key, transitionId }) {
+export async function jiraTransition({ site, email, apiToken, key, transitionId, allow = [] }) {
   const { base, auth } = requireAuth({ site, email, apiToken })
+  // Check the id against the same filtered list the menu was built from, so a stale page
+  // or a hand-made request cannot reach a status the config excludes.
+  if (allow.length) {
+    const offered = await jiraTransitions({ site, email, apiToken, key, allow })
+    if (!offered.some((t) => t.id === String(transitionId))) {
+      throw new Error(
+        `transition ${transitionId} is not one of the statuses reporto offers for ${key} (${allow.join(', ')})`,
+      )
+    }
+  }
   const res = await fetch(`${base}/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, {
     method: 'POST',
     headers: { Authorization: auth, 'Content-Type': 'application/json', Accept: 'application/json' },

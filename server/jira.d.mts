@@ -22,6 +22,8 @@ export function jiraTransitions(options: {
   email: string | undefined;
   apiToken: string | undefined;
   key: string;
+  /** Target statuses to offer. Empty means the whole workflow. */
+  allow?: string[];
 }): Promise<JiraTransition[]>;
 
 export function jiraTransition(options: {
@@ -30,4 +32,6 @@ export function jiraTransition(options: {
   apiToken: string | undefined;
   key: string;
   transitionId: string;
+  /** Same allow-list the menu was built from; the id is rejected if it is not in it. */
+  allow?: string[];
 }): Promise<{ key: string; transitionId: string }>;

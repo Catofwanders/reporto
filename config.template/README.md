@@ -25,6 +25,7 @@ stays free of employer or account specifics.
 | `calendarIds` | Calendar addresses to read, e.g. `you@example.com` or `…@group.calendar.google.com` (Calendar settings → Integrate calendar → Calendar ID). Required with a service account, which cannot enumerate calendars. |
 | `calendars` | Calendar names to pull. Empty means every calendar the Google account can read. |
 | `calendarsExcluded` | Calendar names to skip — birthdays, holidays, task lists. |
+| `statusChoices` | Statuses offered when changing a ticket from the dashboard, matched against a transition's target status. Empty means Jira's whole workflow, which is usually far more than anyone moves a ticket to by hand. |
 | `upcomingDays` | How far the calendar watch-list looks ahead. Defaults to 7. |
 | `commandGroups[].command` | Claude Code slash command that regenerates reports, spawned as `claude -p`. Only needed for reports the server cannot pull itself — mail and calendar, which require the Chrome extension. Leave the list empty if you run `/email` by hand. |
 | `commandGroups[].writes` | Report kinds that command produces (`email`, `calendar`, `jira`, `prs`). Kinds in one group refresh together. |
