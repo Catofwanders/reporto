@@ -6,6 +6,13 @@ pull requests, each rendered from a JSON report on disk.
 **This is a single-user, local-only app by design.** See
 [Why it stays local](#why-it-stays-local) before considering deploying it anywhere.
 
+![The dashboard: open PRs with review and deploy-qc state, Jira tickets, mail and calendar
+widgets](docs/home.jpg)
+
+Rendered from the synthetic fixtures in `src/stories/fixtures.ts` via the `Pages/Home`
+story, not from real reports — those hold mail subjects and ticket detail and never leave
+your disk. The same story in the Nord palette: [docs/home-nord.jpg](docs/home-nord.jpg).
+
 ## Running it
 
 ```bash
