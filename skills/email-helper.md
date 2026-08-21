@@ -68,17 +68,29 @@ Stamp `generatedAt` with the real run time (`date -u +%FT%TZ`) — the action ba
 (`2026-08-20T11:00:00+03:00`); a bare `"11:00"` renders as `Invalid Date`. All-day items
 use `null` and carry their dates in `note`.
 
-## Calendar (part of an /email run)
+## Calendar — the half no API can reach
 
-Read TODAY from **both** calendars — neither alone is complete, and skipping one silently
-loses recurring meetings that live only there. Day view for today, then week view
-(`get_page_text`) for the rest of the week's recurrences and for who is on leave.
+Google Calendar is pulled by the server (`POST /api/pull/calendar`). Do NOT read it here.
+Read only the calendar that has no API path — for me that is Outlook, which the Chrome
+extension is still the only way into.
+
+Day view for today, then week view (`get_page_text`) for the rest of the week's
+recurrences; a week view often prints the conferencing URL inline, which is the cheapest
+way to get a join link.
+
+**Merge, never overwrite.** Read the existing `calendar-<YYYY-MM-DD>.json` first, keep every
+event whose `source` is `"google"` exactly as it is, and replace only the ones from your own
+source. The server's pull does the mirror — it keeps every non-Google event — so whichever
+side runs last, neither deletes the other's half. Writing the file from scratch drops
+today's API-pulled events until the next bolt press.
+
+If there is no report for today yet, write one with just what you read; the pull fills in
+the rest.
 
 Collect meetings, kickoffs and activities, plus all-day items (leave = who is out). Put
 today's in `events`, and anything worth watching later — rescheduled meetings from mail,
 upcoming leave of people blocking you — in `upcoming`.
 
-Join links: a week view often prints the conferencing URL inline in `get_page_text`, which
-is the cheapest way to get one. The extension blocks reading hrefs and ids carrying base64
-or query-string data, so some join URLs are unreachable; fall back to the event permalink
-from the URL bar, or a day-view URL (`.../day/YYYY/M/D`). Every event needs some `url`.
+The extension blocks reading hrefs and ids carrying base64 or query-string data, so some
+join URLs are unreachable; fall back to the event permalink from the URL bar, or a day-view
+URL. Every event needs some `url`.

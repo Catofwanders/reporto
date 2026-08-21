@@ -24,7 +24,7 @@ Reports are JSON files in `public/reports/`, listed by `index.json`:
 | File | Written by | Contents |
 |---|---|---|
 | `email-<date>.json` | `/email` skill | actionable mail from both inboxes |
-| `calendar-<date>.json` | server, Google Calendar API (+ skill for Outlook) | today's events, upcoming watch-list |
+| `calendar-<date>.json` | server, Google Calendar API; `/email` skill adds Outlook | today's events, upcoming watch-list |
 | `jira-<date>.json` | server, Jira REST API | tickets, their PRs, and merged-PR QC state |
 | `prs-<date>.json` | server, GitHub GraphQL | my open PRs grouped by repo |
 
@@ -184,9 +184,11 @@ button at all — those cards only show how old their data is.
 
 The calendar pull covers **Google only**. Outlook is readable only through the Chrome
 extension, so the `/email` skill remains the only thing that can see it — and a pull would
-otherwise drop the stand-up that lives there. The puller therefore reads the report already
-on disk and carries over every event whose `source` is not `google`, so pressing the bolt
-refreshes the Google half and leaves the Outlook half standing.
+otherwise drop the stand-up that lives there.
+
+Both sides therefore merge instead of overwriting: the puller keeps every event whose
+`source` is not `google`, and the skill keeps the Google ones and no longer reads Google
+Calendar at all. Whichever runs last, neither half deletes the other.
 
 Both pulls are plain API calls, so they answer in about a second and cost no tokens. The
 agent-spawning path (`POST /api/refresh/<kind>`, `claude -p`) still exists for any command

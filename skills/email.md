@@ -15,7 +15,9 @@ report contract. Follow it exactly; don't rediscover.
 3. Classify per helper INCLUDE/EXCLUDE rules. When unsure whether something is "spam
    status noise" vs "ping at me": a human wrote text addressed to me = include;
    pure state-change notification = exclude.
-4. Read today from both calendars per helper.
+4. Read today from the calendar that has no API path (Outlook, for me) — the dashboard
+   pulls Google Calendar itself. Merge rather than overwrite: keep the `"google"` events
+   already in the report and replace only your own source's.
 5. Write `email-<date>.json` and `calendar-<date>.json` into the dashboard's
    `public/reports/`, then bump `index.json` — see the report contract in the helper.
 6. Give a 3-line terminal summary, most urgent first, and say which files were written.

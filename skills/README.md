@@ -1,12 +1,16 @@
 # skills
 
-Three of the four reports come from the server, straight from an API: `prs` and `jira` are
-pulled by `server/github.mjs` and `server/jira.mjs`, with no agent involved. Nothing to
-install, nothing to prompt.
+Most of the dashboard comes from the server, straight from an API, with no agent involved:
+`prs` from `server/github.mjs`, `jira` from `server/jira.mjs`, and the Google half of
+`calendar` from `server/googleCalendar.mjs`. Nothing to install, nothing to prompt.
 
-Mail and calendar are the exception. They are read through the Chrome extension, which
-attaches only to an interactive Claude Code session, so no server-side pull is possible —
-that work needs a skill, and this directory is the sanitized copy of it.
+Mail is the exception, and so is any calendar without an API — both are read through the
+Chrome extension, which attaches only to an interactive Claude Code session. That work
+needs a skill, and this directory is the sanitized copy of it.
+
+Where the two overlap — the calendar report — each side keeps the other's events instead of
+overwriting the file: the server's pull preserves non-Google events, and the skill preserves
+the Google ones.
 
 ```bash
 cp skills/email.md        ~/.claude/commands/email.md
