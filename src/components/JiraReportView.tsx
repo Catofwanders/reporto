@@ -1,4 +1,5 @@
 import type { JiraReport, Pr } from '../types';
+import { statusTone } from '../jiraStatus';
 import { Chip } from './Chip';
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
@@ -33,7 +34,7 @@ export const JiraReportView = ({ report }: JiraReportViewProps) => (
           {group.tickets.map((ticket) => (
             <article key={ticket.key} className="item">
               <span className="chip-status">
-                <Chip tone={ticket.chip}>{ticket.status}</Chip>
+                <Chip tone={statusTone(ticket)}>{ticket.status}</Chip>
               </span>
               <div className="item-body">
                 <div className="item-top">

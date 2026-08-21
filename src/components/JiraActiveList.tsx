@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { JiraReport, Ticket } from '../types';
+import { statusTone } from '../jiraStatus';
 import { Chip } from './Chip';
 import { RefreshButton } from './RefreshButton';
 
@@ -64,7 +65,7 @@ export const JiraActiveList = ({ report }: { report: JiraReport }) => {
               <a className="key" href={ticket.url} target="_blank" rel="noopener noreferrer">
                 {ticket.key}
               </a>
-              <Chip tone={ticket.chip}>{ticket.status}</Chip>
+              <Chip tone={statusTone(ticket)}>{ticket.status}</Chip>
             </div>
             {/* Two lines keeps every card the same height; the rest is one hover away. */}
             <p className="ticket-card-summary" title={ticket.summary}>
