@@ -210,7 +210,9 @@ request always answers even if the child never dies, so the lock cannot wedge.
 
 ## PR actions
 
-Each row in "My open PRs" has a menu — mark ready for review, convert to draft, or close.
+Each row in "My open PRs" carries a **Ready for review** / **Convert to draft** button —
+labelled with the outcome rather than the state, so it reads like GitHub's own button — and a
+menu for what has no button of its own.
 `POST /api/pr/<repo>/<num>/<action>` applies it with the same pinned GitHub token as the
 puller, behind the same cross-site guard. The action must be one of four the server knows;
 **merging is not one of them and never will be.** Closing asks for confirmation first,

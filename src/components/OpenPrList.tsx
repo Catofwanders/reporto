@@ -4,6 +4,7 @@ import { Chip } from './Chip';
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
 import { PrSummary } from './PrSummary';
+import { PrDraftToggle } from './PrDraftToggle';
 import { PrRowActions } from './PrRowActions';
 
 const staleDays = (iso: string) =>
@@ -58,6 +59,7 @@ const PrRow = ({ repo, pr, onChanged }: PrRowProps) => {
           </span>
         )}
       </span>
+      <PrDraftToggle repo={repo} pr={pr} onChanged={onChanged} />
       <PrRowActions repo={repo} pr={pr} onChanged={onChanged} />
     </article>
   );

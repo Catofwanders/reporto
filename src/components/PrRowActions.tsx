@@ -54,12 +54,8 @@ export const PrRowActions = ({ repo, pr, onChanged }: PrRowActionsProps) => {
         <MoreVertIcon fontSize="small" />
       </IconButton>
 
+      {/* Draft ⇄ ready has its own button in the row now; the menu keeps what does not. */}
       <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
-        {pr.draft ? (
-          <MenuItem onClick={() => void apply('ready')}>Mark ready for review</MenuItem>
-        ) : (
-          <MenuItem onClick={() => void apply('draft')}>Convert to draft</MenuItem>
-        )}
         <MenuItem
           onClick={() => {
             setAnchor(null);
