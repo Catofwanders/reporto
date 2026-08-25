@@ -276,3 +276,92 @@ Two things learned while building it:
 
 Still to do here: the `jira` puller, which needs the Atlassian token. The report also wants
 the deploy-branch ancestry check, which is GitHub-side and can reuse the same token.
+
+## 6. Command palette (⌘K)
+
+Jump anywhere by typing: a ticket key, a PR number, a repo, a command from `/commands`, or
+a report to refresh. Today every one of those is a click path through the sidebar, and the
+app has no search at all — the top bar deliberately has no search box because a box that
+searched nothing would be set dressing. A palette is the version that can actually answer.
+
+**Shape**
+
+- ⌘K anywhere opens it; Esc closes; ↑↓ and Enter drive it without the mouse.
+- Sources, in priority order: tickets from the Jira report (key and summary), PRs from the
+  PR report (number, title, repo), pages, refresh actions, and the entries `/api/kit`
+  already returns.
+- Selecting a ticket or PR opens it on the board or in the lane it lives in, not in a new
+  tab — the dashboard should be able to answer without leaving.
+
+**Mechanics**
+
+Everything needed is already loaded client-side: `reports.jira`, `reports.prs`, and
+`/api/kit`. No new endpoint. Matching wants to be fuzzy enough that `14648` finds
+`DTP-14648` and `stf` finds `bln-storefront-client`; a small scored substring match is
+probably enough before reaching for a library.
+
+**Open questions**
+
+- Does selecting a *command* copy the invocation or do something more? The app cannot run
+  a slash command — that happens in a Claude session — so copy is the honest action.
+- Whether ⌘K should also accept `>` for actions only, the way editors do. Probably later.
+
+## 7. Ticket detail drawer
+
+Click a board card and read the ticket in place: description, comments, the PRs on it, and
+the transitions the workflow allows. Today the board shows key, summary, PR chips and
+status, and anything more means a round trip to Jira in the browser.
+
+**Shape**
+
+- A drawer over the board rather than a route, so the board stays behind it and Esc returns
+  to exactly where you were.
+- Description and the last few comments, rendered from Jira's ADF (the REST API returns
+  Atlassian Document Format, not markdown — that conversion is the bulk of the work).
+- The PRs on the ticket with their review state, reusing the lane logic already in
+  `prLanes.ts` rather than a second rendering of PR state.
+- The status control that is already on the card, so a transition can be made from the
+  drawer.
+
+**Mechanics**
+
+`GET /api/jira/<KEY>` in the shape of the existing transition endpoints, returning the
+fields the drawer needs. Comments are a second call (`/comment`) and are worth a limit — the
+last five, newest first. ADF → React needs a small renderer for the node types that actually
+appear: paragraph, text with marks, lists, code blocks, links, and `mediaSingle` (which
+should degrade to a link rather than trying to fetch an attachment).
+
+**Open questions**
+
+- Whether to allow commenting from the drawer. That is a write to a shared board with no
+  undo, so it wants the same confirmation the PR close action got.
+- Attachments and images: probably a link out, since the drawer has no auth to fetch them.
+
+## 8. Ticket aging digest
+
+The PR lanes now say "no review yet — 6 days, chase it". Tickets have no equivalent: a
+ticket can sit in CODE REVIEW for a week and the board looks the same on day one and day
+seven.
+
+**Shape**
+
+- Per ticket: how long it has been in its current status, and a nudge when that exceeds what
+  is normal for that status.
+- Surfaced where it is actionable — the aging pill on a board card, and a line in the
+  stand-up note's blockers.
+
+**Mechanics**
+
+Time-in-status needs the changelog, which is one request per ticket — the same cost the
+cycle-time median already pays in `server/stats.mjs`. Two options, and the choice matters:
+
+- Pull the changelog for the tickets on the board at refresh time and store `statusSince`
+  per ticket in the Jira report. Costs ~25 requests per refresh, and makes the report shape
+  carry it, so every view gets it for free.
+- Derive it from the day snapshots already on disk. Free, but the snapshots have gaps
+  (weekends, days the puller did not run), so "7 days in CODE REVIEW" would be a guess. The
+  statistics page already refuses to do this for exactly this reason.
+
+The first is the honest one. What has to be settled first is the threshold per status —
+"normal" for CODE REVIEW is not "normal" for QC READY, and a fixed number of days would cry
+wolf on the statuses that are meant to be slow.
