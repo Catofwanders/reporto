@@ -6,6 +6,7 @@ import type { Chip, Ticket } from './types';
  *
  *   qc     QC READY        — the QC dimension, matching the "on QC" half of the PR pill
  *   warn   CODE REVIEW     — waiting on somebody, like "awaiting re-review"
+ *   warn   CS APPROVED     — approved, waiting on a merge; also waiting on somebody
  *   open   In Progress     — live work, like "awaiting review"
  *   bad    BLOCKED         — stuck, like "changes requested"
  *   qcout  On Hold         — parked rather than broken, so distinct from BLOCKED
@@ -19,6 +20,7 @@ import type { Chip, Ticket } from './types';
 const STATUS_TONE: [RegExp, Chip][] = [
   [/^qc[\s-]?ready$/i, 'qc'],
   [/^(code review|in review|review)$/i, 'warn'],
+  [/^cs approved$/i, 'warn'],
   [/^(in progress|in development|doing)$/i, 'open'],
   [/^blocked$/i, 'bad'],
   [/^on hold$/i, 'qcout'],

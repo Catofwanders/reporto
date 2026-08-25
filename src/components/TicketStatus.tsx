@@ -10,8 +10,12 @@ import { Chip } from './Chip';
 
 interface TicketStatusProps {
   ticket: Ticket;
-  /** Called after a transition lands, so the report can be refetched. */
-  onChanged?: () => void;
+  /**
+   * Called after a transition lands, so the report can be refetched. Gets the status the
+   * transition advertised as its target, which is all a caller has to go on until the pull
+   * comes back — enough to drop a card that no longer belongs in a filtered list.
+   */
+  onChanged?: (nextStatus: string) => void;
 }
 
 /**
@@ -48,7 +52,7 @@ export const TicketStatus = ({ ticket, onChanged }: TicketStatusProps) => {
       // The new status comes from the next pull, not from guessing it here: a workflow can
       // land somewhere other than the transition's advertised target.
       setTransitions(null);
-      onChanged?.();
+      onChanged?.(transition.to);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
