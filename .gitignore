@@ -23,9 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
-# Personal report data — generated locally by the /email and /jira skills.
-# Never committed: contains mail subjects, meeting join links, and ticket detail.
+# Personal report data — generated locally by the pullers and the /email skill.
+# Never committed: contains meeting join links and ticket detail.
 public/reports/
+# Leftover day files from the removed mail views; kept ignored so they cannot be committed.
 db/
 
 # Your own settings — copy config.template to config and edit.

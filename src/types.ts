@@ -1,32 +1,5 @@
 export type Chip = 'bad' | 'warn' | 'ok' | 'na' | 'open' | 'qc' | 'qcout';
 
-export interface EmailItem {
-  chip: Chip;
-  chipLabel: string;
-  from: string;
-  time: string;
-  subject: string;
-  mailUrl: string;
-  refLabel?: string;
-  refUrl?: string;
-  note?: string;
-  action: string | null;
-}
-
-export interface EmailSection {
-  title: string;
-  account: string;
-  items: EmailItem[];
-}
-
-export interface EmailReport {
-  type: 'email';
-  date: string;
-  generatedAt: string;
-  sections: EmailSection[];
-  filteredOut: string;
-}
-
 export interface Pr {
   repo: string;
   num: number;
@@ -135,6 +108,6 @@ export interface PrsReport {
 }
 
 export interface ReportIndex {
-  latest: { email?: string; jira?: string; calendar?: string; prs?: string };
-  history: { date: string; email?: string; jira?: string; calendar?: string; prs?: string }[];
+  latest: { jira?: string; calendar?: string; prs?: string };
+  history: { date: string; jira?: string; calendar?: string; prs?: string }[];
 }

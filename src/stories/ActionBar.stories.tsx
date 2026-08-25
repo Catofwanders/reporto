@@ -8,7 +8,6 @@ const meta = {
   component: ActionBar,
   args: {
     generatedAt: {
-      email: minutesAgo(12),
       calendar: minutesAgo(12),
       jira: minutesAgo(90),
       prs: minutesAgo(0),
@@ -28,7 +27,6 @@ export const NoData: Story = { args: { generatedAt: {} } };
 export const Stale: Story = {
   args: {
     generatedAt: {
-      email: minutesAgo(60 * 26),
       calendar: minutesAgo(60 * 26),
       jira: minutesAgo(60 * 24 * 9),
       prs: minutesAgo(45),

@@ -1,16 +1,16 @@
 # reporto
 
-A personal dashboard for daily work triage: mail, calendar, Jira tickets, and my open
-pull requests, each rendered from a JSON report on disk.
+A personal dashboard for daily work triage: Jira tickets, my open pull requests and the
+calendar, each rendered from a JSON report on disk.
 
 **This is a single-user, local-only app by design.** See
 [Why it stays local](#why-it-stays-local) before considering deploying it anywhere.
 
-![The dashboard: open PRs with review and deploy-qc state, Jira tickets, mail and calendar
-widgets](docs/home.jpg)
+![The dashboard: open PRs with review and deploy-qc state, Jira tickets and the calendar
+widget](docs/home.jpg)
 
 Rendered from the synthetic fixtures in `src/stories/fixtures.ts` via the `Pages/Home`
-story, not from real reports — those hold mail subjects and ticket detail and never leave
+story, not from real reports — those hold meeting links and ticket detail and never leave
 your disk. The same story in the Nord palette: [docs/home-nord.jpg](docs/home-nord.jpg).
 
 ## Running it
@@ -22,7 +22,7 @@ npm run dev          # http://127.0.0.1:5173
 
 Use `npm run dev`, not `npm run preview`. The write and refresh APIs live in a Vite
 dev-server plugin (`vite.config.ts`), so a production build is a static site with no
-API: no refresh buttons that work, no todo persistence.
+API: no refresh buttons that work, no Jira transitions, no PR actions.
 
 ## How data gets in
 
@@ -30,7 +30,6 @@ Reports are JSON files in `public/reports/`, listed by `index.json`:
 
 | File | Written by | Contents |
 |---|---|---|
-| `email-<date>.json` | `/email` skill | actionable mail from both inboxes |
 | `calendar-<date>.json` | server, Google Calendar API; `/email` skill adds Outlook | today's events, upcoming watch-list |
 | `jira-<date>.json` | server, Jira REST API | tickets, their PRs, and merged-PR QC state |
 | `prs-<date>.json` | server, GitHub GraphQL | my open PRs grouped by repo |
@@ -39,19 +38,15 @@ The TypeScript types in `src/types.ts` are the schema of record, guarded on load
 `src/reportSchema.ts`.
 
 Jira and PRs need no agent: the server calls the APIs itself, so those two cards work on a
-fresh clone as soon as credentials exist. Mail and calendar cannot work that way — they are
-read through the Chrome extension, which attaches only to an interactive Claude Code
-session — so they come from a skill. A sanitized copy lives in [`skills/`](skills/) with
+fresh clone as soon as credentials exist. The Outlook half of the calendar cannot work that
+way — it is read through the Chrome extension, which attaches only to an interactive Claude
+Code session — so it comes from a skill. A sanitized copy lives in [`skills/`](skills/) with
 placeholders where the accounts go, alongside the contract any producer must meet.
 Output is JSON only; the dashboard is the renderer.
 
-`db/<date>.json` is a per-day snapshot of the reports plus todo state (checked,
-deleted, checkedAt) so work can be tracked over time. It is written through the API,
-never by hand.
-
-**Neither `public/reports/` nor `db/` is committed** — both are gitignored. They hold
-mail subjects, meeting join links (some with embedded passwords), and ticket detail,
-which has no business in a git remote. A fresh checkout therefore starts with no data:
+**`public/reports/` is not committed** — it is gitignored. The files hold meeting join
+links (some with embedded passwords) and ticket detail, which has no business in a git
+remote. A fresh checkout therefore starts with no data:
 the cards stay hidden and the action bar reads "never" until you press an update
 button.
 
@@ -169,7 +164,7 @@ npm run storybook  # http://localhost:6006
 
 Every component has stories, driven by **synthetic** fixtures in
 [`src/stories/fixtures.ts`](src/stories/fixtures.ts) — never the real reports, which are
-gitignored precisely because they hold mail subjects and ticket detail. The fixtures are
+gitignored precisely because they hold meeting links and ticket detail. The fixtures are
 built to cover the states that are otherwise hard to reach: each PR review state and its
 deploy-qc pairing, a merged PR dropped from `deploy-qc`, an all-day-only calendar, a report
 written before the puller carried QC data, and empty versions of every panel.
@@ -179,15 +174,14 @@ otherwise runs on whatever `node` you have.
 
 ## Update buttons
 
-Jira and PRs can be refreshed from the dashboard. Mail and calendar cannot, and carry no
-button at all — those cards only show how old their data is.
+Every card can be refreshed from the dashboard; the calendar's Outlook half is the one
+thing a button cannot fetch (see below).
 
 | Report | How it refreshes |
 |---|---|
 | `prs` | `POST /api/pull/prs` — one GitHub GraphQL call, about a second (bolt icon) |
 | `jira` | `POST /api/pull/jira` — one Jira search plus one GitHub search (bolt icon) |
 | `calendar` | `POST /api/pull/calendar` — Google Calendar API (bolt icon) |
-| `email` | run `/email` in your own Claude Code session |
 
 The calendar pull covers **Google only**. Outlook is readable only through the Chrome
 extension, so the `/email` skill remains the only thing that can see it — and a pull would
@@ -208,11 +202,11 @@ All the pulls are plain API calls, so they answer in about a second and cost no 
 agent-spawning path (`POST /api/refresh/<kind>`, `claude -p`) still exists for any command
 you list under `commandGroups`, but nothing needs it out of the box.
 
-Mail and calendar read both inboxes through the Chrome extension, and that extension
-attaches only to an interactive session you started — a spawned `claude -p` run has no
-`mcp__claude-in-chrome__*` tools at all and aborts having read nothing. So there is nothing
-for a button to do. Run the skill yourself; when you switch back to the browser tab the
-dashboard reloads and picks up the files it wrote.
+Outlook is read through the Chrome extension, and that extension attaches only to an
+interactive session you started — a spawned `claude -p` run has no
+`mcp__claude-in-chrome__*` tools at all and aborts having read nothing. So no button can
+fetch it. Run the skill yourself; when you switch back to the browser tab the dashboard
+reloads and picks up the files it wrote.
 
 A spawned run counts as successful only if it actually rewrote a report file: a skill that
 cannot do its job may still exit 0 after explaining why, so exit status alone would report
@@ -281,7 +275,8 @@ The dev server can write files and start agent processes, so it is not a passive
 static server:
 
 - Bound to `127.0.0.1` only — never reachable from the LAN.
-- Every state-changing request to `/api/db` and `/api/refresh` must have an `Origin`
+- Every state-changing request to `/api/refresh`, `/api/pull`, `/api/pr` and
+  `/api/jira` must have an `Origin`
   matching the server's host **and** an `X-Reporto-Write: 1` header. A cross-origin
   "simple" POST from any page you happen to have open can set neither, which is what
   stops a drive-by request from triggering an agent run.
@@ -298,13 +293,14 @@ local.
 Report generation runs as *me*, which is the whole reason it needs no integration
 work — and exactly why it does not generalize to other users:
 
-1. **Credentials are mine.** `/email` drives my logged-in Chrome; the pulls use my `gh`
+1. **Credentials are mine.** The `/email` skill drives my logged-in Chrome for Outlook
+   events; the pulls use my `gh`
    keyring auth and one Jira API token in `.env`. Serving other people means real per-user
    OAuth for Google, Microsoft, GitHub and Jira, with encrypted server-side tokens — and
    dropping the browser-automation path entirely.
-2. **Storage is global.** Reports are static files any page load can fetch, and
-   `db/<date>.json` has no notion of who is asking. Multi-user needs a datastore
-   keyed by user and authorization on every read and write.
+2. **Storage is global.** Reports are static files any page load can fetch, with no
+   notion of who is asking. Multi-user needs a datastore keyed by user and
+   authorization on every read and write.
 3. **There is no server or auth.** The API only exists in dev mode.
 4. **Job execution is a single in-memory lock.** Fine for one person; N users need
    per-user queued jobs with status and concurrency limits.
@@ -318,14 +314,12 @@ own Chrome and `gh` — N private instances, no auth layer to build.
 ```
 config/             your settings (gitignored)
 skills/             sanitized mail skill + report template, and the report contract
-src/emailRows.ts    shared mail-row/todo-id derivation
 src/prState.ts      PR review state + deploy-qc chip derivation
 src/reportSchema.ts report shape guards
 config.template/    committed template to copy
 public/reports/     report JSON + index.json (gitignored)
-db/                 per-day snapshots and todo state (gitignored)
-src/pages/          Home, Email, Jira, Calendar routes
-src/components/     cards, widgets, donut, accordion, refresh button
+src/pages/          Home, Jira, Calendar, Settings routes
+src/components/     cards, widgets, accordion, refresh button
 src/stories/        Storybook stories + synthetic fixtures
 .storybook/         Storybook config; preview stubs the router and refresh context
 server/github.mjs   open-PR pull, deploy-qc comparison, ticket↔PR match, PR actions
@@ -334,9 +328,8 @@ server/googleCalendar.mjs  Google Calendar pull; carries over Outlook events
 scripts/google-auth.mjs    one-time OAuth consent → refresh token in .env
 .env.example        Jira credentials to copy to .env (gitignored)
 src/types.ts        report schemas
-src/db.ts           day-file client
 src/refresh.tsx     refresh state + provider
-vite.config.ts      db API, refresh API, cross-site guard
+vite.config.ts      refresh + pull APIs, PR and Jira actions, cross-site guard
 ```
 
 ## Notes

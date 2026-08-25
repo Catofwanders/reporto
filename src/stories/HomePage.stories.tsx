@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Link } from 'react-router-dom';
 import { ActionBar } from '../components/ActionBar';
 import { HomePage } from '../pages/HomePage';
-import { calendarReport, emailReport, jiraReport, prsReport } from './fixtures';
+import { calendarReport, jiraReport, prsReport } from './fixtures';
 
 const minutesAgo = (mins: number) => new Date(Date.now() - mins * 60_000).toISOString();
 
@@ -22,7 +22,6 @@ const meta = {
   title: 'Pages/Home',
   component: HomePage,
   args: {
-    email: emailReport,
     jira: jiraReport,
     calendar: calendarReport,
     prs: freshPrs,
@@ -39,10 +38,9 @@ const meta = {
               reporto
             </Link>
           </h1>
-          <span className="app-sub">email + jira + calendar dashboard</span>
+          <span className="app-sub">jira + PRs + calendar dashboard</span>
           <ActionBar
             generatedAt={{
-              email: minutesAgo(14),
               calendar: minutesAgo(14),
               jira: minutesAgo(3),
               prs: minutesAgo(1),
@@ -63,5 +61,5 @@ export const Default: Story = {};
 
 /** A fresh checkout, before any report has been written. */
 export const NoReports: Story = {
-  args: { email: null, jira: null, calendar: null, prs: null },
+  args: { jira: null, calendar: null, prs: null },
 };

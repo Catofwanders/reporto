@@ -391,15 +391,6 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   font-weight: 600; background: var(--bad-bg); color: var(--bad-ink); border: 1px solid var(--bad-line);
 }
 
-/* donut */
-.donut-wrap { display: flex; align-items: center; gap: 1.4rem; margin-top: 1rem; flex-wrap: wrap; }
-.donut-center-value { font-size: 1.7rem; font-weight: 600; }
-.donut-center-label { font-size: .6rem; }
-.donut-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: .45rem; }
-.donut-legend li { display: flex; align-items: center; gap: .5rem; font-size: .84rem; }
-.donut-legend .dot { margin-top: 0; }
-.donut-legend-label { color: var(--ink-2); }
-.donut-legend-value { font-weight: 600; }
 .card-meta { margin: .9rem 0 0; color: var(--ink-2); font-size: .78rem; }
 .ticket-list { margin-top: 1rem; }
 .chip-status { flex: none; width: 8.9rem; display: flex; margin-left: auto; }

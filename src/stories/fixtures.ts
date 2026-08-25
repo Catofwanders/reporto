@@ -1,114 +1,18 @@
 /**
- * Synthetic reports for Storybook. Deliberately invented: the real ones hold mail
- * subjects, meeting links and ticket detail, and are gitignored for that reason — a story
- * file that imported them would put all of it back into the repo.
+ * Synthetic reports for Storybook. Deliberately invented: the real ones hold meeting
+ * links and ticket detail, and are gitignored for that reason — a story file that
+ * imported them would put all of it back into the repo.
  */
 import type {
   CalendarReport,
-  EmailReport,
   JiraReport,
   OpenPr,
   PrsReport,
   ReviewDecision,
 } from '../types';
-import type { Todo } from '../db';
-import { emailRows } from '../emailRows';
 
 const DATE = '2026-05-14';
 const AT = (hhmm: string) => `${DATE}T${hhmm}:00+02:00`;
-
-export const emailReport: EmailReport = {
-  type: 'email',
-  date: DATE,
-  generatedAt: AT('08:20'),
-  sections: [
-    {
-      title: 'Personal — inbox A',
-      account: 'you@example.com',
-      items: [
-        {
-          chip: 'bad',
-          chipLabel: 'action',
-          from: 'Dana Whitlock',
-          time: 'Wed 4:12 PM',
-          subject: 'Reindex job keeps timing out on the staging shard',
-          mailUrl: 'https://mail.example.com/thread/1',
-          refLabel: 'search-service#412',
-          refUrl: 'https://github.com/example/search-service/pull/412',
-          note: 'Asks whether to raise the batch size or shard the job; blocked on your answer.',
-          action: 'Reply with the batching call before Friday',
-        },
-        {
-          chip: 'warn',
-          chipLabel: 'review',
-          from: 'Ola Berg',
-          time: 'Wed 11:03 AM',
-          subject: 'PROJ-812: cache the tenant lookup',
-          mailUrl: 'https://mail.example.com/thread/2',
-          refLabel: 'billing-api#77',
-          refUrl: 'https://github.com/example/billing-api/pull/77',
-          note: 'Review requested; one bot comment about a missing null guard.',
-          action: 'Review PR #77',
-        },
-        {
-          chip: 'ok',
-          chipLabel: 'info',
-          from: 'Release bot',
-          time: 'Wed 9:00 AM',
-          subject: 'PROJ-790 shipped to production',
-          mailUrl: 'https://mail.example.com/thread/3',
-          note: 'Nothing needed — recorded so the ticket board matches reality.',
-          action: null,
-        },
-      ],
-    },
-    {
-      title: 'Work — inbox B',
-      account: 'you@employer.com',
-      items: [
-        {
-          chip: 'bad',
-          chipLabel: 'policy',
-          from: 'Facilities',
-          time: 'Wed 6:04 PM',
-          subject: 'Badge renewal closes at the end of the month',
-          mailUrl: 'https://outlook.example.com/mail/1',
-          note: 'Renewal is in person at reception; the old badge stops working on the 1st.',
-          action: 'Renew the badge before the 31st',
-        },
-        {
-          chip: 'na',
-          chipLabel: 'fyi',
-          from: 'Learning team',
-          time: 'Wed 10:05 AM',
-          subject: 'Free certification prep tracks, autumn cohort',
-          mailUrl: 'https://outlook.example.com/mail/2',
-          note: 'Optional. Sessions start in September, vouchers last while supplies do.',
-          action: null,
-        },
-      ],
-    },
-  ],
-  filteredOut:
-    '14 CI failure notices, three bot approvals, two newsletters and a townhall recap.',
-};
-
-/**
- * Ids must come from emailRows, not be written by hand: it derives them from section title
- * plus subject with an occurrence counter, and a mismatched id silently ticks nothing.
- */
-const reviewRow = emailRows(emailReport).find((row) => row.item.chipLabel === 'review');
-
-export const todos: Todo[] = [
-  {
-    id: reviewRow?.id ?? '',
-    label: reviewRow?.item.subject ?? '',
-    action: reviewRow?.item.action ?? null,
-    checked: true,
-    deleted: false,
-    checkedAt: AT('09:40'),
-  },
-];
 
 export const calendarReport: CalendarReport = {
   type: 'calendar',

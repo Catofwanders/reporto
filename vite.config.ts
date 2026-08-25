@@ -587,153 +587,11 @@ function readBody(
   })
 }
 
-// A crash mid-write would leave a truncated day file, so write beside it and rename.
+// A crash mid-write would leave a truncated report file, so write beside it and rename.
 function writeJsonAtomic(file: string, value: unknown) {
   const tmp = `${file}.tmp`
   fs.writeFileSync(tmp, JSON.stringify(value, null, 2))
   fs.renameSync(tmp, file)
-}
-
-// Tiny file-backed API so the client can persist daily report DBs to db/<date>.json.
-// Dev-server only: production build has no write API.
-function dbPlugin(): Plugin {
-  const dbDir = path.resolve(__dirname, 'db')
-  return {
-    name: 'reporto-db',
-    configureServer(server) {
-      fs.mkdirSync(dbDir, { recursive: true })
-      server.middlewares.use('/api/db', (req, res) => {
-        const name = (req.url ?? '/').split('?')[0].replace(/^\//, '')
-        res.setHeader('Content-Type', 'application/json')
-
-        const blocked = rejectCrossSite(req)
-        if (blocked) {
-          res.statusCode = 403
-          res.end(JSON.stringify({ error: `write blocked: ${blocked}` }))
-          return
-        }
-
-        if (req.method === 'GET' && name === '') {
-          const days = fs
-            .readdirSync(dbDir)
-            .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
-            .map((f) => f.replace('.json', ''))
-            .sort()
-          res.end(JSON.stringify(days))
-          return
-        }
-
-        // POST /api/db/<date>/reconcile — add rows for report items that have no todo
-        // yet (a same-day mail refresh brings new items), never touching existing flags.
-        const reconcileMatch = name.match(/^(\d{4}-\d{2}-\d{2})\/reconcile$/)
-        if (reconcileMatch && req.method === 'POST') {
-          const file = path.join(dbDir, `${reconcileMatch[1]}.json`)
-          if (!fs.existsSync(file)) {
-            res.statusCode = 404
-            res.end('{"error":"day not found"}')
-            return
-          }
-          readBody(req, (body) => {
-            try {
-              const incoming = JSON.parse(body) as {
-                todos: { id: string; label: string; action: string | null }[]
-              }
-              const db = JSON.parse(fs.readFileSync(file, 'utf8'))
-              db.todos = db.todos ?? []
-              const known = new Set(db.todos.map((t: { id: string }) => t.id))
-              let added = 0
-              for (const row of incoming.todos ?? []) {
-                if (known.has(row.id)) continue
-                db.todos.push({ ...row, checked: false, deleted: false, checkedAt: null })
-                known.add(row.id)
-                added++
-              }
-              if (added) writeJsonAtomic(file, db)
-              res.end(JSON.stringify({ added, todos: db.todos }))
-            } catch (err) {
-              res.statusCode = 400
-              res.end(JSON.stringify({ error: `invalid reconcile body: ${String(err)}` }))
-            }
-          })
-          return
-        }
-
-        // POST /api/db/<date>/todo — merge one todo patch into the day file
-        // (whole-doc PUT from a stale tab must never clobber other todos)
-        const todoMatch = name.match(/^(\d{4}-\d{2}-\d{2})\/todo$/)
-        if (todoMatch && req.method === 'POST') {
-          const file = path.join(dbDir, `${todoMatch[1]}.json`)
-          if (!fs.existsSync(file)) {
-            res.statusCode = 404
-            res.end('{"error":"day not found"}')
-            return
-          }
-          readBody(req, (body) => {
-            try {
-              const patch = JSON.parse(body) as {
-                id: string
-                checked?: boolean
-                deleted?: boolean
-                checkedAt?: string | null
-              }
-              const db = JSON.parse(fs.readFileSync(file, 'utf8'))
-              const todo = (db.todos ?? []).find((t: { id: string }) => t.id === patch.id)
-              if (!todo) {
-                res.statusCode = 404
-                res.end('{"error":"todo not found"}')
-                return
-              }
-              if (patch.checked !== undefined) todo.checked = patch.checked
-              if (patch.deleted !== undefined) todo.deleted = patch.deleted
-              if (patch.checkedAt !== undefined) todo.checkedAt = patch.checkedAt
-              writeJsonAtomic(file, db)
-              res.end(JSON.stringify(todo))
-            } catch {
-              res.statusCode = 400
-              res.end('{"error":"invalid json"}')
-            }
-          })
-          return
-        }
-
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(name)) {
-          res.statusCode = 400
-          res.end('{"error":"expected /api/db/<YYYY-MM-DD>"}')
-          return
-        }
-        const file = path.join(dbDir, `${name}.json`)
-
-        if (req.method === 'GET') {
-          if (!fs.existsSync(file)) {
-            res.statusCode = 404
-            res.end('{"error":"not found"}')
-            return
-          }
-          res.end(fs.readFileSync(file, 'utf8'))
-          return
-        }
-
-        if (req.method === 'PUT') {
-          readBody(req, (body) => {
-            let parsed: unknown
-            try {
-              parsed = JSON.parse(body)
-            } catch {
-              res.statusCode = 400
-              res.end('{"error":"invalid json"}')
-              return
-            }
-            writeJsonAtomic(file, parsed)
-            res.end('{"ok":true}')
-          })
-          return
-        }
-
-        res.statusCode = 405
-        res.end('{"error":"method not allowed"}')
-      })
-    },
-  }
 }
 
 // https://vite.dev/config/
@@ -752,7 +610,6 @@ export default defineConfig(({ mode }) => {
     server: { host: '127.0.0.1' },
     plugins: [
       react(),
-      dbPlugin(),
       refreshPlugin(),
       pullPlugin(),
       prActionPlugin(),

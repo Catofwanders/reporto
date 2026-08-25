@@ -13,7 +13,7 @@ import '../src/index.css';
 const refreshStub: RefreshStatus = {
   running: new Set<ReportKind>(),
   errors: {},
-  commandOf: { email: '/email', calendar: '/email' },
+  commandOf: { calendar: '/email' },
   apiKinds: new Set<ReportKind>(['jira', 'prs']),
   canRefresh: (kind) => kind === 'jira' || kind === 'prs',
   run: () => Promise.resolve(),

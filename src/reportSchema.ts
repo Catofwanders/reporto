@@ -1,4 +1,4 @@
-import type { CalendarReport, EmailReport, JiraReport, PrsReport } from './types';
+import type { CalendarReport, JiraReport, PrsReport } from './types';
 import type { ReportKind } from './reportKinds';
 
 /**
@@ -10,11 +10,6 @@ import type { ReportKind } from './reportKinds';
 const isArray = (v: unknown): v is unknown[] => Array.isArray(v);
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null;
-
-function validEmail(v: unknown): v is EmailReport {
-  if (!isObject(v) || typeof v.date !== 'string' || !isArray(v.sections)) return false;
-  return v.sections.every((s) => isObject(s) && typeof s.title === 'string' && isArray(s.items));
-}
 
 function validJira(v: unknown): v is JiraReport {
   if (!isObject(v) || typeof v.date !== 'string' || !isArray(v.groups)) return false;
@@ -39,7 +34,6 @@ function validPrs(v: unknown): v is PrsReport {
 }
 
 const VALIDATORS: Record<ReportKind, (v: unknown) => boolean> = {
-  email: validEmail,
   jira: validJira,
   calendar: validCalendar,
   prs: validPrs,

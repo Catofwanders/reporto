@@ -6,7 +6,7 @@ import { RefreshButton } from '../components/RefreshButton';
 const base: RefreshStatus = {
   running: new Set<ReportKind>(),
   errors: {},
-  commandOf: { email: '/email' },
+  commandOf: { calendar: '/calendar' },
   apiKinds: new Set<ReportKind>(['jira', 'prs']),
   canRefresh: (kind) => kind === 'jira' || kind === 'prs',
   run: () => Promise.resolve(),
@@ -34,7 +34,7 @@ export const ApiPull: Story = {};
 
 /** A kind produced by a slash command gets the circular-arrow icon instead. */
 export const AgentRun: Story = {
-  args: { kind: 'email' },
+  args: { kind: 'calendar' },
   decorators: [withStatus({ canRefresh: () => true, apiKinds: new Set<ReportKind>() })],
 };
 
@@ -47,7 +47,7 @@ export const Failed: Story = {
 };
 
 /**
- * Mail cannot be refreshed from the app at all — reading the inbox needs the Chrome
- * extension — so the button renders nothing rather than offering a guaranteed failure.
+ * A kind with neither a puller nor a configured command cannot be refreshed from the app
+ * at all, so the button renders nothing rather than offering a guaranteed failure.
  */
-export const NotRefreshable: Story = { args: { kind: 'email' } };
+export const NotRefreshable: Story = { args: { kind: 'calendar' } };
