@@ -816,3 +816,17 @@ body { background: var(--canvas); }
 /* The path is the answer to "where do I edit this", so it stays visible rather than hidden
    behind a hover. */
 .kit-path { margin-left: auto; font-size: .66rem; color: var(--ink-2); opacity: .8; }
+
+/* Flow checks: where Jira and GitHub disagree. */
+.flow-list { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .5rem; }
+.flow-item {
+  border: 1px solid var(--line); border-left-width: 3px; border-radius: .5rem;
+  padding: .55rem .7rem; display: grid; gap: .2rem;
+}
+.flow-bad { border-left-color: var(--bad-ink); background: color-mix(in oklab, var(--bad-ink) 4%, var(--panel)); }
+.flow-warn { border-left-color: var(--warn-ink); background: color-mix(in oklab, var(--warn-ink) 4%, var(--panel)); }
+.flow-item-head { display: flex; align-items: baseline; gap: .5rem; }
+.flow-title { margin: 0; font-size: .84rem; font-weight: 600; }
+.flow-item-head .key { margin-left: auto; font-size: .74rem; }
+.flow-detail { margin: 0; font-size: .76rem; color: var(--ink-2); }
+.flow-prs { display: flex; flex-wrap: wrap; gap: .5rem; margin: .1rem 0 0; font-size: .72rem; }

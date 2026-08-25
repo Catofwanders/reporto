@@ -1,6 +1,7 @@
 import type { CalendarReport, JiraReport, PrsReport, StatsReport } from '../types';
 import { useRefresh } from '../refreshContext';
 import { CalendarWidget } from '../components/CalendarWidget';
+import { FlowChecks } from '../components/FlowChecks';
 import { HomeKpis } from '../components/HomeKpis';
 import { JiraActiveList } from '../components/JiraActiveList';
 import { PrLanes } from '../components/PrLanes';
@@ -23,6 +24,8 @@ export const HomePage = ({ jira, calendar, prs, stats }: HomePageProps) => {
     <main className="home">
       <div className="home-split">
         <div className="home-content">
+          {/* Contradictions first: they are the only thing here that is silently wrong. */}
+          <FlowChecks jira={jira} prs={prs} />
           {jira && <JiraActiveList report={jira} onChanged={() => void run('jira')} />}
           {prs && <PrLanes report={prs} onChanged={() => void run('prs')} />}
         </div>
