@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom';
-import type { CalendarReport, JiraReport, PrsReport, ReportIndex } from './types';
+import type { CalendarReport, JiraReport, PrsReport, ReportIndex, StatsReport } from './types';
 import type { ReportKind } from './reportKinds';
 import { REPORT_KINDS } from './reportKinds';
 import { RefreshProvider } from './refresh';
@@ -9,6 +9,7 @@ import { ActionBar } from './components/ActionBar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { HomePage } from './pages/HomePage';
 import { JiraPage } from './pages/JiraPage';
+import { StatsPage } from './pages/StatsPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -45,11 +46,12 @@ async function fetchIndex(): Promise<ReportIndex> {
 
 interface Reports {
   jira: JiraReport | null;
+  stats: StatsReport | null;
   calendar: CalendarReport | null;
   prs: PrsReport | null;
 }
 
-const EMPTY: Reports = { jira: null, calendar: null, prs: null };
+const EMPTY: Reports = { jira: null, calendar: null, prs: null, stats: null };
 
 type KindErrors = Partial<Record<ReportKind, string>>;
 
@@ -71,7 +73,7 @@ async function fetchKind(index: ReportIndex, kind: ReportKind) {
     try {
       const value = await fetchJson<unknown>(file);
       assertReport(kind, value);
-      return value as JiraReport | CalendarReport | PrsReport;
+      return value as JiraReport | CalendarReport | PrsReport | StatsReport;
     } catch (err) {
       firstError ??= err;
     }
@@ -135,6 +137,7 @@ export const App = () => {
   }, [load]);
 
   const generatedAt = {
+    stats: reports.stats?.generatedAt,
     jira: reports.jira?.generatedAt,
     calendar: reports.calendar?.generatedAt,
     prs: reports.prs?.generatedAt,
@@ -174,6 +177,7 @@ export const App = () => {
                   path="/"
                   element={
                     <HomePage
+                      stats={reports.stats}
                       jira={reports.jira}
                       calendar={reports.calendar}
                       prs={reports.prs}
@@ -182,6 +186,7 @@ export const App = () => {
                 />
                 <Route path="/jira" element={<JiraPage report={reports.jira} />} />
                 <Route path="/calendar" element={<CalendarPage report={reports.calendar} />} />
+                <Route path="/stats" element={<StatsPage report={reports.stats} />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 {/* /email was a route until the mail views were removed; a bookmark to it
                     lands on the dashboard rather than on a blank page. */}

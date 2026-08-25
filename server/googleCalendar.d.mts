@@ -17,3 +17,15 @@ export function pullGoogleCalendar(options: {
   /** Non-Google events from the previous report, carried over instead of dropped. */
   keepEvents?: CalendarEvent[];
 }): Promise<CalendarReport>;
+
+export function pullMeetingLoad(options: {
+  serviceAccount?: string;
+  calendarIds?: string[];
+  clientId?: string;
+  clientSecret?: string;
+  refreshToken?: string;
+  include?: string[];
+  exclude?: string[];
+  /** One entry per month, with inclusive ISO date bounds. */
+  ranges?: { month: string; from: string; to: string }[];
+}): Promise<{ month: string; hours: number; count: number }[]>;

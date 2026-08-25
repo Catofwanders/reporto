@@ -35,3 +35,24 @@ export function jiraTransition(options: {
   /** Same allow-list the menu was built from; the id is rejected if it is not in it. */
   allow?: string[];
 }): Promise<{ key: string; transitionId: string }>;
+
+export function jiraSearchKeys(options: {
+  site: string | undefined;
+  email: string | undefined;
+  apiToken: string | undefined;
+  jql: string;
+}): Promise<string[]>;
+
+export interface JiraStatusChange {
+  /** ISO timestamp of the transition. */
+  at: string;
+  from: string | null;
+  to: string | null;
+}
+
+export function jiraStatusHistory(options: {
+  site: string | undefined;
+  email: string | undefined;
+  apiToken: string | undefined;
+  key: string;
+}): Promise<JiraStatusChange[]>;

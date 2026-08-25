@@ -33,6 +33,7 @@ Reports are JSON files in `public/reports/`, listed by `index.json`:
 | `calendar-<date>.json` | server, Google Calendar API; `/email` skill adds Outlook | today's events, upcoming watch-list |
 | `jira-<date>.json` | server, Jira REST API | tickets, their PRs, and merged-PR QC state |
 | `prs-<date>.json` | server, GitHub GraphQL | my open PRs grouped by repo |
+| `stats-<date>.json` | server, Jira REST + GitHub GraphQL + Google Calendar | six months of monthly counts, medians and meeting hours |
 
 The TypeScript types in `src/types.ts` are the schema of record, guarded on load by
 `src/reportSchema.ts`.
@@ -182,6 +183,7 @@ thing a button cannot fetch (see below).
 | `prs` | `POST /api/pull/prs` — one GitHub GraphQL call, about a second (bolt icon) |
 | `jira` | `POST /api/pull/jira` — one Jira search plus one GitHub search (bolt icon) |
 | `calendar` | `POST /api/pull/calendar` — Google Calendar API (bolt icon) |
+| `stats` | `POST /api/pull/stats` — Jira, GitHub and Calendar for six months (bolt icon) |
 
 The calendar pull covers **Google only**. Outlook is readable only through the Chrome
 extension, so the `/email` skill remains the only thing that can see it — and a pull would
@@ -269,6 +271,30 @@ palette push its chips louder or quieter, which is what High contrast does.
 Light and dark both come from the palette, selected by `prefers-color-scheme`; there is no
 in-app light/dark switch.
 
+## Monthly statistics
+
+`/stats` answers "what did last month look like" from the APIs, not from the daily report
+files. Those files are day snapshots with gaps — weekends, days off, any day a pull did not
+run — so diffing them would invent ticket transitions that never happened and miss the ones
+that happened twice between two snapshots.
+
+| Metric | Where it comes from |
+|---|---|
+| Deployed, release ready, QC failed, assigned | Jira JQL `status changed to "<status>" DURING (month)` for tickets assigned to me |
+| Cycle time | per-ticket changelog: last `In Progress` before the ticket reached release ready |
+| PRs merged / opened / abandoned | GitHub search, one query per month |
+| To first review, to merge | medians over the month's merged PRs; only reviews by somebody else count |
+| PRs I reviewed | GitHub `reviewed-by:` — dated by when the PR last moved, which is the only thing search can answer |
+| Meeting hours | Google Calendar, timed events only, declined ones excluded |
+
+The status names are this workflow's; a different Jira names them differently, so they are
+config (`statsStatuses`), not constants.
+
+Six months live in one file, and a month that has ended is never recomputed: cycle time
+costs one changelog request per ticket, so a refresh only pays for the current month.
+Whatever a source could not answer is recorded in `notes` and shown on the page — a missing
+number reads as missing, never as zero.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive
@@ -315,6 +341,7 @@ own Chrome and `gh` — N private instances, no auth layer to build.
 config/             your settings (gitignored)
 skills/             sanitized mail skill + report template, and the report contract
 src/prState.ts      PR review state + deploy-qc chip derivation
+src/statsMetrics.ts monthly metric definitions, deltas and formatting
 src/reportSchema.ts report shape guards
 config.template/    committed template to copy
 public/reports/     report JSON + index.json (gitignored)
@@ -325,6 +352,7 @@ src/stories/        Storybook stories + synthetic fixtures
 server/github.mjs   open-PR pull, deploy-qc comparison, ticket↔PR match, PR actions
 server/jira.mjs     Jira REST pull (JQL → tickets, grouped by status)
 server/googleCalendar.mjs  Google Calendar pull; carries over Outlook events
+server/stats.mjs    monthly statistics: Jira transitions, PR timings, meeting hours
 scripts/google-auth.mjs    one-time OAuth consent → refresh token in .env
 .env.example        Jira credentials to copy to .env (gitignored)
 src/types.ts        report schemas

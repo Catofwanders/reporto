@@ -23,5 +23,14 @@
     "In Progress",
     "In Review",
     "Done"
-  ]
+  ],
+  "jiraStatsJql": "assignee = currentUser()",
+  "statsStatuses": {
+    "releaseReady": "RELEASE READY",
+    "deployed": "Released to Production",
+    "qcReady": "QC READY",
+    "qcFailed": "QC Failed",
+    "inProgress": "In Progress"
+  },
+  "statsMonths": 6
 }

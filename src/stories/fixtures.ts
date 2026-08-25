@@ -9,6 +9,8 @@ import type {
   OpenPr,
   PrsReport,
   ReviewDecision,
+  StatsMonth,
+  StatsReport,
 } from '../types';
 
 const DATE = '2026-05-14';
@@ -234,4 +236,53 @@ export const prsReport: PrsReport = {
       ],
     },
   ],
+};
+
+/**
+ * Six months of invented statistics. The shape is what matters for the stories: one month
+ * with a missing source, one with no cycle-time sample, and a trend that is not monotonic
+ * so the deltas have something to point at.
+ */
+const statsMonth = (
+  month: string,
+  deployed: number,
+  releaseReady: number,
+  qcFailed: number,
+  cycleDays: number | null,
+  merged: number,
+  hours: number,
+): StatsMonth => ({
+  month,
+  jira: { releaseReady, deployed, qcReady: releaseReady + 1, qcFailed, created: deployed + 2 },
+  cycle: { releaseReadyDays: cycleDays, sampled: cycleDays === null ? 0 : releaseReady },
+  prs: {
+    merged,
+    opened: merged + 3,
+    abandoned: 1,
+    reviewsGiven: Math.round(merged / 2),
+    byRepo: [
+      { repo: 'billing-api', merged: Math.max(1, merged - 4) },
+      { repo: 'web-client', merged: Math.min(4, merged) },
+    ],
+    medianHoursToFirstReview: 6.4,
+    medianHoursToMerge: 52.5,
+  },
+  meetings: { hours, count: Math.round(hours * 1.6) },
+  missing: [],
+});
+
+export const statsReport: StatsReport = {
+  type: 'stats',
+  date: DATE,
+  generatedAt: AT('08:20'),
+  months: [
+    statsMonth('2026-05', 9, 12, 1, 5.5, 14, 8.5),
+    statsMonth('2026-04', 12, 10, 3, 7.1, 11, 11),
+    statsMonth('2026-03', 7, 8, 0, 6.2, 9, 9.5),
+    statsMonth('2026-02', 10, 9, 2, 8.4, 12, 12),
+    { ...statsMonth('2026-01', 4, 5, 1, null, 6, 10), meetings: null, missing: ['meeting hours unavailable: no Google credentials'] },
+    statsMonth('2025-12', 3, 4, 0, 9.9, 4, 6),
+  ],
+  statuses: { releaseReady: 'RELEASE READY', deployed: 'Released to Production' },
+  notes: [],
 };

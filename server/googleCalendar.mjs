@@ -262,3 +262,59 @@ export async function pullGoogleCalendar({
       `; ${upcoming.length} in the next ${upcomingDays} days.`,
   }
 }
+
+/**
+ * Time actually spent in meetings, per month range. All-day entries are skipped: a
+ * week-long "vacation" block is not eight hours a day of meetings, and counting it would
+ * swamp every real number. Declined invitations are skipped for the same reason they are
+ * skipped in the day report — declining says it was not your meeting.
+ *
+ * Google is asked once per calendar per range, so keep the range list short.
+ */
+export async function pullMeetingLoad({
+  serviceAccount,
+  calendarIds,
+  clientId,
+  clientSecret,
+  refreshToken,
+  include,
+  exclude,
+  ranges = [],
+}) {
+  const token = serviceAccount
+    ? await serviceAccountToken(serviceAccount)
+    : clientId && clientSecret && refreshToken
+      ? await refreshedToken({ clientId, clientSecret, refreshToken })
+      : null
+  if (!token) throw new Error('no Google credentials for the meeting load')
+
+  const cals = await calendars(token, { ids: calendarIds ?? [], include, exclude })
+  if (cals.length === 0) throw new Error('no readable calendars for the meeting load')
+
+  const out = []
+  for (const range of ranges) {
+    let hours = 0
+    let count = 0
+    for (const cal of cals) {
+      const { items = [] } = await api(`/calendars/${encodeURIComponent(cal.id)}/events`, token, {
+        timeMin: new Date(`${range.from}T00:00:00Z`).toISOString(),
+        timeMax: new Date(`${range.to}T23:59:59Z`).toISOString(),
+        singleEvents: 'true',
+        orderBy: 'startTime',
+        maxResults: 2500,
+      })
+      for (const item of items) {
+        if (item.status === 'cancelled' || isAllDay(item)) continue
+        const me = item.attendees?.find((a) => a.self)
+        if (me?.responseStatus === 'declined') continue
+        const start = item.start?.dateTime
+        const end = item.end?.dateTime
+        if (!start || !end) continue
+        hours += (new Date(end).getTime() - new Date(start).getTime()) / 3_600_000
+        count += 1
+      }
+    }
+    out.push({ month: range.month, hours: Math.round(hours * 10) / 10, count })
+  }
+  return out
+}

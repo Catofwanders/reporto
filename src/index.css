@@ -407,3 +407,62 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 /* review labels run longer than the QC ones, so the left half gets the wider share */
 .chip-status-split .chip:first-child { flex: 1.3 1 0; border-radius: 99px 0 0 99px; }
 .chip-status-split .chip:last-child { border-radius: 0 99px 99px 0; border-left-width: 0; }
+
+/* stats: tiles, per-month bars, per-repo bars */
+.ink-ok { color: var(--ok-ink); }
+.ink-bad { color: var(--bad-ink); }
+.ink-warn { color: var(--warn-ink); }
+.ink-open { color: var(--open-ink); }
+.ink-na { color: var(--na-ink); }
+.ink-qc { color: var(--qc-ink); }
+.ink-qcout { color: var(--qcout-ink); }
+
+.stat-tiles { list-style: none; margin: .9rem 0 0; padding: 0; display: grid; gap: .9rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stat-tiles-wide { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+.stat-tiles li { display: grid; gap: .1rem; }
+.stat-tile-value { font-size: 1.55rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
+/* The hue lives on a mark beside the number, never on the number itself. */
+.stat-tile-mark { width: 1.6rem; height: 4px; border-radius: 2px; }
+.stat-tile-mark.bar-ok { background: var(--ok-ink); }
+.stat-tile-mark.bar-bad { background: var(--bad-ink); }
+.stat-tile-mark.bar-warn { background: var(--warn-ink); }
+.stat-tile-mark.bar-open { background: var(--open-ink); }
+.stat-tile-mark.bar-na { background: var(--na-ink); }
+.stat-tile-mark.bar-qc { background: var(--qc-ink); }
+.stat-tile-mark.bar-qcout { background: var(--qcout-ink); }
+.stat-tile-label { font-size: .78rem; color: var(--ink-2); }
+.stat-tile-delta { font-size: .7rem; color: var(--ink-2); }
+.stat-tile-delta.is-better { color: var(--ok-ink); }
+.stat-tile-delta.is-worse { color: var(--bad-ink); }
+
+.stats-charts { display: grid; gap: 1.4rem 1.6rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); margin-top: 1rem; }
+.month-bars { margin: 0; }
+.month-bars figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
+.month-bars-label { font-size: .8rem; color: var(--ink-2); }
+.month-bars-value { font-size: 1.05rem; font-weight: 600; color: var(--ink); }
+.month-bars-plot { width: 100%; max-width: 10.5rem; height: auto; margin-top: .45rem; overflow: visible; }
+.month-bars-baseline { stroke: var(--line); stroke-width: 1; }
+/* One series per chart, so the fill is the metric's own status ink. */
+.month-bars .bar-ok { fill: var(--ok-ink); }
+.month-bars .bar-bad { fill: var(--bad-ink); }
+.month-bars .bar-warn { fill: var(--warn-ink); }
+.month-bars .bar-open { fill: var(--open-ink); }
+.month-bars .bar-na { fill: var(--na-ink); }
+.month-bars .bar-qc { fill: var(--qc-ink); }
+.month-bars .bar-qcout { fill: var(--qcout-ink); }
+.month-bars .bar { opacity: .55; transition: opacity .12s ease; }
+.month-bars .is-newest .bar { opacity: 1; }
+.month-bars-col:hover .bar { opacity: 1; }
+.month-bars .bar-empty { fill: var(--line); opacity: 1; }
+.month-bars-tick { fill: var(--ink-2); font-size: 7px; text-anchor: middle; }
+.month-bars-hint { margin: .5rem 0 0; font-size: .68rem; color: var(--ink-2); line-height: 1.35; }
+
+.repo-bars { list-style: none; margin: .9rem 0 0; padding: 0; display: grid; gap: .5rem; }
+.repo-bars li { display: grid; grid-template-columns: minmax(6rem, 11rem) minmax(0, 1fr) 2rem; align-items: center; gap: .6rem; font-size: .82rem; }
+.repo-bars-name { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.repo-bars-track { background: var(--line); border-radius: 4px; height: 10px; }
+.repo-bars-fill { display: block; height: 100%; border-radius: 4px; background: var(--open-ink); }
+.repo-bars-value { text-align: right; font-weight: 600; }
+
+.stats-caveats ul { margin: .8rem 0 0; padding-left: 1.1rem; display: grid; gap: .35rem; font-size: .78rem; color: var(--ink-2); line-height: 1.4; }
+.stats-notes li { color: var(--bad-ink); }

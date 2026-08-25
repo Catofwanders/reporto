@@ -1,16 +1,18 @@
-import type { CalendarReport, JiraReport, PrsReport } from '../types';
+import type { CalendarReport, JiraReport, PrsReport, StatsReport } from '../types';
 import { useRefresh } from '../refreshContext';
 import { CalendarWidget } from '../components/CalendarWidget';
+import { StatsWidget } from '../components/StatsWidget';
 import { JiraActiveList } from '../components/JiraActiveList';
 import { OpenPrList } from '../components/OpenPrList';
 
 interface HomePageProps {
   jira: JiraReport | null;
+  stats: StatsReport | null;
   calendar: CalendarReport | null;
   prs: PrsReport | null;
 }
 
-export const HomePage = ({ jira, calendar, prs }: HomePageProps) => {
+export const HomePage = ({ jira, calendar, prs, stats }: HomePageProps) => {
   const { run } = useRefresh();
 
   return (
@@ -20,7 +22,10 @@ export const HomePage = ({ jira, calendar, prs }: HomePageProps) => {
         {jira && <JiraActiveList report={jira} onChanged={() => void run('jira')} />}
       </div>
 
-      <div className="home-widgets">{calendar && <CalendarWidget report={calendar} />}</div>
+      <div className="home-widgets">
+        {stats && <StatsWidget report={stats} />}
+        {calendar && <CalendarWidget report={calendar} />}
+      </div>
     </main>
   );
 };

@@ -25,6 +25,9 @@ stays free of employer or account specifics.
 | `calendarIds` | Calendar addresses to read, e.g. `you@example.com` or `…@group.calendar.google.com` (Calendar settings → Integrate calendar → Calendar ID). Required with a service account, which cannot enumerate calendars. |
 | `calendars` | Calendar names to pull. Empty means every calendar the Google account can read. |
 | `calendarsExcluded` | Calendar names to skip — birthdays, holidays, task lists. |
+| `jiraStatsJql` | JQL prefix the monthly statistics are built on. Defaults to `assignee = currentUser()`. |
+| `statsStatuses` | Status names the statistics count transitions into: `releaseReady`, `deployed`, `qcReady`, `qcFailed`, `inProgress`. Defaults suit a QC-then-release workflow; set them to whatever your board calls those columns. |
+| `statsMonths` | How many months the statistics file carries, newest first. Defaults to 6. |
 | `statusChoices` | Statuses offered when changing a ticket from the dashboard, matched against a transition's target status. Empty means Jira's whole workflow, which is usually far more than anyone moves a ticket to by hand. |
 | `upcomingDays` | How far the calendar watch-list looks ahead. Defaults to 7. |
 | `commandGroups[].command` | Claude Code slash command that regenerates reports, spawned as `claude -p`. Only needed for reports the server cannot pull itself — the Outlook half of the calendar, which requires the Chrome extension. Leave the list empty if you run `/email` by hand. |

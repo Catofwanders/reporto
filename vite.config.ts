@@ -6,6 +6,7 @@ import react from '@vitejs/plugin-react'
 import type { PrActionName } from './server/github.mjs'
 import { PR_ACTIONS, prAction, pullOpenPrs, pullTicketPrs } from './server/github.mjs'
 import { jiraTransition, jiraTransitions, pullJira } from './server/jira.mjs'
+import { pullStats } from './server/stats.mjs'
 import { pullGoogleCalendar } from './server/googleCalendar.mjs'
 
 // Personal / employer-specific settings live in ./config (gitignored). The committed
@@ -44,6 +45,18 @@ interface ReportoConfig {
   upcomingDays?: number
   /** Statuses the dashboard offers when changing a ticket. Empty means the whole workflow. */
   statusChoices?: string[]
+  /** JQL prefix the monthly stats are built on. Defaults to `assignee = currentUser()`. */
+  jiraStatsJql?: string
+  /** Status names the stats count transitions into, when this site names them differently. */
+  statsStatuses?: {
+    releaseReady?: string
+    deployed?: string
+    qcReady?: string
+    qcFailed?: string
+    inProgress?: string
+  }
+  /** How many months the stats report carries, newest first. Defaults to 6. */
+  statsMonths?: number
   commandGroups: CommandGroup[]
 }
 
@@ -293,6 +306,31 @@ function pullPlugin(): Plugin {
   }
 
   const PULLERS: Record<string, (c: ReportoConfig) => Promise<{ date: string }>> = {
+    // Settled months are read back from the last report instead of being recomputed: the
+    // cycle-time medians cost one changelog request per ticket, and a month that has ended
+    // cannot change.
+    stats: (c) =>
+      pullStats({
+        jiraSite: c.jiraSite,
+        jiraEmail: process.env.JIRA_EMAIL,
+        jiraApiToken: process.env.JIRA_API_TOKEN,
+        jiraStatsJql: c.jiraStatsJql,
+        statsStatuses: c.statsStatuses,
+        githubAuthor: c.githubAuthor ?? '',
+        githubOrg: c.githubOrg ?? '',
+        githubAccount: c.githubAccount,
+        calendar: {
+          serviceAccount: process.env.GOOGLE_SERVICE_ACCOUNT_KEY,
+          calendarIds: c.calendarIds ?? [],
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+          include: c.calendars ?? [],
+          exclude: c.calendarsExcluded ?? [],
+        },
+        months: c.statsMonths ?? 6,
+        previous: readReport('stats') as Parameters<typeof pullStats>[0]['previous'],
+      }),
     prs: (c) =>
       pullOpenPrs({
         author: c.githubAuthor ?? '',

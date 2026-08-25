@@ -211,3 +211,57 @@ export async function pullJira({ site, email, apiToken, jql, jiraBrowseUrl, reso
       `${me.displayName ?? email} from JQL, PRs matched by key in title.`,
   }
 }
+
+/**
+ * Issue keys matching a JQL query, paginated. Used for month counts, where the only thing
+ * wanted is "how many" — the search endpoint reports no total, so the pages are counted.
+ */
+export async function jiraSearchKeys({ site, email, apiToken, jql }) {
+  const { base, auth } = requireAuth({ site, email, apiToken })
+  const keys = []
+  let nextPageToken
+  do {
+    const res = await fetch(`${base}/rest/api/3/search/jql`, {
+      method: 'POST',
+      headers: { Authorization: auth, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        jql,
+        fields: ['key'],
+        maxResults: 100,
+        ...(nextPageToken ? { nextPageToken } : {}),
+      }),
+    })
+    if (!res.ok) {
+      const body = await res.text()
+      throw new Error(`Jira search failed: ${res.status} ${res.statusText} — ${body.slice(0, 300)}`)
+    }
+    const page = await res.json()
+    keys.push(...(page.issues ?? []).map((issue) => issue.key))
+    nextPageToken = page.nextPageToken
+  } while (nextPageToken)
+  return keys
+}
+
+/**
+ * Every status change on one issue, oldest first. The search endpoint rejects
+ * `expand: ["changelog"]`, so the history has to be asked for per issue — which is why
+ * callers should sample rather than walk a whole quarter.
+ */
+export async function jiraStatusHistory({ site, email, apiToken, key }) {
+  const { base, auth } = requireAuth({ site, email, apiToken })
+  const res = await fetch(
+    `${base}/rest/api/3/issue/${encodeURIComponent(key)}/changelog?maxResults=100`,
+    { headers: { Authorization: auth, Accept: 'application/json' } },
+  )
+  if (!res.ok) {
+    throw new Error(`Jira changelog for ${key} failed: ${res.status} ${res.statusText}`)
+  }
+  const body = await res.json()
+  return (body.values ?? [])
+    .flatMap((entry) =>
+      (entry.items ?? [])
+        .filter((item) => item.field === 'status')
+        .map((item) => ({ at: entry.created, from: item.fromString, to: item.toString })),
+    )
+    .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+}

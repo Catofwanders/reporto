@@ -30,3 +30,24 @@ export function pullTicketPrs(options: {
   /** Ticket keys worth one body search each when no PR title named them. */
   fallbackKeys?: string[];
 }): Promise<Map<string, Pr[]>>;
+
+export interface PrStats {
+  merged: number;
+  opened: number;
+  abandoned: number;
+  reviewsGiven: number;
+  byRepo: { repo: string; merged: number }[];
+  /** Hours from open to the first review by somebody else, one entry per merged PR. */
+  hoursToFirstReview: number[];
+  /** Hours from open to merge, one entry per merged PR. */
+  hoursToMerge: number[];
+}
+
+export function pullPrStats(options: {
+  author: string;
+  org: string;
+  account?: string;
+  /** Inclusive ISO dates bounding the month, e.g. "2026-08-01" and "2026-08-31". */
+  from: string;
+  to: string;
+}): Promise<PrStats>;

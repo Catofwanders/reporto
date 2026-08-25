@@ -476,3 +476,73 @@ export async function prAction({ owner, repo, num, action, account }) {
   }
   return { repo, num, changed: true, state }
 }
+
+/**
+ * One month of PR activity for a month range, as four search counts plus the merged PRs
+ * themselves — the nodes are what the medians and the per-repo split are computed from.
+ *
+ * `reviewed-by` is dated by `updated`, not by when the review was submitted: GitHub's
+ * search has no "reviewed during" qualifier, so that one count is "PRs I reviewed that
+ * moved this month" rather than "reviews I left this month". Close enough to read as
+ * review load, and the only thing the search API can answer.
+ */
+export async function pullPrStats({ author, org, account, from, to }) {
+  const token = await ghToken(account)
+  const scope = `org:${org} author:${author}`
+  const range = `${from}..${to}`
+  const data = await graphql(
+    `query {
+      merged: search(query: "is:pr ${scope} merged:${range}", type: ISSUE, first: 100) {
+        issueCount
+        nodes {
+          ... on PullRequest {
+            number
+            createdAt
+            mergedAt
+            repository { name }
+            reviews(first: 20) { nodes { submittedAt author { login } } }
+          }
+        }
+      }
+      opened: search(query: "is:pr ${scope} created:${range}", type: ISSUE, first: 1) { issueCount }
+      abandoned: search(query: "is:pr ${scope} is:unmerged closed:${range}", type: ISSUE, first: 1) {
+        issueCount
+      }
+      reviewed: search(query: "is:pr org:${org} reviewed-by:${author} -author:${author} updated:${range}", type: ISSUE, first: 1) {
+        issueCount
+      }
+    }`,
+    token,
+  )
+
+  const merged = (data.merged?.nodes ?? []).filter((pr) => pr && pr.mergedAt)
+  const byRepo = new Map()
+  for (const pr of merged) {
+    const repo = pr.repository?.name ?? 'unknown'
+    byRepo.set(repo, (byRepo.get(repo) ?? 0) + 1)
+  }
+
+  const hours = (from, to) => (new Date(to).getTime() - new Date(from).getTime()) / 3_600_000
+
+  return {
+    merged: data.merged?.issueCount ?? 0,
+    opened: data.opened?.issueCount ?? 0,
+    abandoned: data.abandoned?.issueCount ?? 0,
+    reviewsGiven: data.reviewed?.issueCount ?? 0,
+    byRepo: [...byRepo.entries()]
+      .map(([repo, count]) => ({ repo, merged: count }))
+      .sort((a, b) => b.merged - a.merged),
+    // Only reviews by somebody else count as "reviewed": self-reviews and the author's own
+    // review comments would otherwise report a turnaround nobody waited for.
+    hoursToFirstReview: merged
+      .map((pr) => {
+        const first = (pr.reviews?.nodes ?? [])
+          .filter((r) => r?.submittedAt && r.author?.login !== author)
+          .map((r) => r.submittedAt)
+          .sort()[0]
+        return first ? hours(pr.createdAt, first) : null
+      })
+      .filter((v) => v !== null),
+    hoursToMerge: merged.map((pr) => hours(pr.createdAt, pr.mergedAt)),
+  }
+}

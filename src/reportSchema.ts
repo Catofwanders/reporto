@@ -1,4 +1,4 @@
-import type { CalendarReport, JiraReport, PrsReport } from './types';
+import type { CalendarReport, JiraReport, PrsReport, StatsReport } from './types';
 import type { ReportKind } from './reportKinds';
 
 /**
@@ -33,10 +33,16 @@ function validPrs(v: unknown): v is PrsReport {
   return v.repos.every((r) => isObject(r) && typeof r.repo === 'string' && isArray(r.prs));
 }
 
+function validStats(v: unknown): v is StatsReport {
+  if (!isObject(v) || !isArray(v.months)) return false;
+  return v.months.every((m) => isObject(m) && typeof m.month === 'string');
+}
+
 const VALIDATORS: Record<ReportKind, (v: unknown) => boolean> = {
   jira: validJira,
   calendar: validCalendar,
   prs: validPrs,
+  stats: validStats,
 };
 
 /** Throws with a readable reason when the file does not match its kind. */

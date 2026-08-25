@@ -107,7 +107,49 @@ export interface PrsReport {
   repos: PrRepoGroup[];
 }
 
+/** Counts for one month. Any source that failed leaves its half null rather than zero. */
+export interface StatsMonth {
+  /** `2026-08`. */
+  month: string;
+  jira: {
+    releaseReady: number;
+    deployed: number;
+    qcReady: number;
+    qcFailed: number;
+    created: number;
+  } | null;
+  cycle: {
+    /** Median days from the last In Progress to Release Ready. */
+    releaseReadyDays: number | null;
+    /** Tickets the median is built from — small samples are worth showing as such. */
+    sampled: number;
+  } | null;
+  prs: {
+    merged: number;
+    opened: number;
+    abandoned: number;
+    reviewsGiven: number;
+    byRepo: { repo: string; merged: number }[];
+    medianHoursToFirstReview: number | null;
+    medianHoursToMerge: number | null;
+  } | null;
+  meetings: { hours: number; count: number } | null;
+  /** Per-source failures for this month, as readable sentences. */
+  missing: string[];
+}
+
+export interface StatsReport {
+  type: 'stats';
+  date: string;
+  generatedAt: string;
+  /** Newest month first. */
+  months: StatsMonth[];
+  /** The status names the counts were built from, so the page can label them honestly. */
+  statuses: Record<string, string>;
+  notes: string[];
+}
+
 export interface ReportIndex {
-  latest: { jira?: string; calendar?: string; prs?: string };
-  history: { date: string; jira?: string; calendar?: string; prs?: string }[];
+  latest: { jira?: string; calendar?: string; prs?: string; stats?: string };
+  history: { date: string; jira?: string; calendar?: string; prs?: string; stats?: string }[];
 }
