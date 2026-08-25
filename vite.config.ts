@@ -8,6 +8,7 @@ import { PR_ACTIONS, prAction, pullOpenPrs, pullTicketPrs } from './server/githu
 import { jiraTransition, jiraTransitions, pullJira } from './server/jira.mjs'
 import { pullStats } from './server/stats.mjs'
 import { readKit } from './server/kit.mjs'
+import { readStandup } from './server/standup.mjs'
 import { pullGoogleCalendar } from './server/googleCalendar.mjs'
 
 // Personal / employer-specific settings live in ./config (gitignored). The committed
@@ -634,6 +635,42 @@ function writeJsonAtomic(file: string, value: unknown) {
 }
 
 /**
+ * What moved since the last working day, for the stand-up note. GET only, and read-only
+ * against Jira and GitHub.
+ */
+function standupPlugin(): Plugin {
+  return {
+    name: 'reporto-standup',
+    configureServer(server) {
+      server.middlewares.use('/api/standup', (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        if (req.method !== 'GET') {
+          res.statusCode = 405
+          res.end('{"error":"use GET"}')
+          return
+        }
+        const config = loadConfig()
+        void readStandup({
+          jiraSite: config.jiraSite,
+          jiraEmail: process.env.JIRA_EMAIL,
+          jiraApiToken: process.env.JIRA_API_TOKEN,
+          jiraStatsJql: config.jiraStatsJql,
+          githubAuthor: config.githubAuthor ?? '',
+          githubOrg: config.githubOrg ?? '',
+          githubAccount: config.githubAccount,
+        }).then(
+          (body) => res.end(JSON.stringify(body)),
+          (err: Error) => {
+            res.statusCode = 500
+            res.end(JSON.stringify({ error: err.message }))
+          },
+        )
+      })
+    },
+  }
+}
+
+/**
  * The commands and skills this machine has, read from ~/.claude at request time. GET only:
  * it reads local files and writes nothing, so the cross-site guard has nothing to protect.
  */
@@ -676,6 +713,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       kitPlugin(),
+      standupPlugin(),
       refreshPlugin(),
       pullPlugin(),
       prActionPlugin(),

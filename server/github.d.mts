@@ -51,3 +51,11 @@ export function pullPrStats(options: {
   from: string;
   to: string;
 }): Promise<PrStats>;
+
+export function pullMergedSince(options: {
+  author: string;
+  org: string;
+  account?: string;
+  /** ISO date; PRs merged on or after it are returned. */
+  since: string;
+}): Promise<{ repo: string; num: number; title: string; url: string; mergedAt: string }[]>;

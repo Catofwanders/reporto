@@ -149,6 +149,24 @@ export interface StatsReport {
   notes: string[];
 }
 
+/** What moved since the last working day, from the APIs rather than from a snapshot. */
+export interface StandupSince {
+  /** ISO date the window starts at. */
+  since: string;
+  generatedAt: string;
+  moved: {
+    key: string;
+    from: string | null;
+    to: string | null;
+    /** How many transitions it made inside the window. */
+    steps: number;
+    at: string;
+  }[];
+  merged: { repo: string; num: number; title: string; url: string; mergedAt: string }[];
+  /** Whatever a source could not answer, in readable sentences. */
+  notes: string[];
+}
+
 /** One slash command or skill installed on this machine. */
 export interface KitEntry {
   kind: 'command' | 'skill';

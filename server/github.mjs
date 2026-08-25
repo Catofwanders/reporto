@@ -546,3 +546,38 @@ export async function pullPrStats({ author, org, account, from, to }) {
     hoursToMerge: merged.map((pr) => hours(pr.createdAt, pr.mergedAt)),
   }
 }
+
+/**
+ * PRs of mine merged since a date, newest first. Search rather than per-repo listing: the
+ * merged ones are gone from the open-PR report, and "which repos did I touch" is not known
+ * in advance.
+ */
+export async function pullMergedSince({ author, org, account, since }) {
+  const token = await ghToken(account)
+  const data = await graphql(
+    `query {
+      search(query: "is:pr author:${author} org:${org} merged:>=${since}", type: ISSUE, first: 50) {
+        nodes {
+          ... on PullRequest {
+            number
+            title
+            url
+            mergedAt
+            repository { name }
+          }
+        }
+      }
+    }`,
+    token,
+  )
+  return (data.search?.nodes ?? [])
+    .filter((pr) => pr && pr.mergedAt)
+    .map((pr) => ({
+      repo: pr.repository?.name ?? 'unknown',
+      num: pr.number,
+      title: pr.title,
+      url: pr.url,
+      mergedAt: pr.mergedAt,
+    }))
+    .sort((a, b) => new Date(b.mergedAt).getTime() - new Date(a.mergedAt).getTime())
+}

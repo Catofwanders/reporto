@@ -2,6 +2,7 @@ import type { CalendarReport, JiraReport, PrsReport, StatsReport } from '../type
 import { useRefresh } from '../refreshContext';
 import { CalendarWidget } from '../components/CalendarWidget';
 import { FlowChecks } from '../components/FlowChecks';
+import { StandupCard } from '../components/StandupCard';
 import { HomeKpis } from '../components/HomeKpis';
 import { JiraActiveList } from '../components/JiraActiveList';
 import { PrLanes } from '../components/PrLanes';
@@ -32,6 +33,8 @@ export const HomePage = ({ jira, calendar, prs, stats }: HomePageProps) => {
 
         <div className="home-widgets">{calendar && <CalendarWidget report={calendar} />}</div>
       </div>
+
+      <StandupCard jira={jira} prs={prs} calendar={calendar} />
 
       {stats && <HomeKpis report={stats} />}
     </main>

@@ -830,3 +830,14 @@ body { background: var(--canvas); }
 .flow-item-head .key { margin-left: auto; font-size: .74rem; }
 .flow-detail { margin: 0; font-size: .76rem; color: var(--ink-2); }
 .flow-prs { display: flex; flex-wrap: wrap; gap: .5rem; margin: .1rem 0 0; font-size: .72rem; }
+
+/* Stand-up note: three blocks, plain enough to read out loud. */
+.standup { display: grid; gap: 1rem; margin-top: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+.standup-block h3 {
+  margin: 0 0 .4rem; font-size: .68rem; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2);
+}
+.standup-block ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+.standup-block li { font-size: .8rem; line-height: 1.4; padding-left: .8rem; position: relative; }
+.standup-block li::before { content: '·'; position: absolute; left: 0; color: var(--ink-2); }
+.standup-empty { margin: 0; font-size: .8rem; color: var(--ink-2); }
