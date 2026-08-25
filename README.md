@@ -424,6 +424,23 @@ the reports already on disk. **Copy note** puts it on the clipboard as plain tex
 On Hold is deliberately not a blocker: parked work read out every morning is what makes
 people stop listening to that part of the note.
 
+## ⌘K
+
+The app's only search, and the reason the top bar has no search box: everything it offers is
+already in memory — the tickets and PRs from the two reports, the pages, the update actions,
+and the command listing, fetched the first time the palette opens.
+
+Typing `14648` finds the ticket and the PR that names it; `procs` finds the command; `upd
+jira` finds the update action. A contiguous match at a word boundary outranks a scattered
+one, and the subsequence fallback is capped — without a cap, "storefront" can be spelled out
+of almost any long skill description.
+
+Choosing a ticket or a PR goes to the page that already shows it, with the key in the hash;
+the board or the lane scrolls there and flashes the row once, because landing on a board of
+thirty cards with the answer off-screen is technically correct and useless. Choosing a
+command copies its invocation — the app cannot run a slash command, that happens in a Claude
+session, so copying is the honest action and the palette stays open for the next one.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive
@@ -472,6 +489,7 @@ skills/             sanitized mail skill + report template, and the report contr
 src/prState.ts      PR review state + deploy-qc chip derivation
 src/prLanes.ts      which lane a PR is in, its reason line and aging tone
 src/kit.ts          client for /api/kit
+src/paletteItems.ts what ⌘K offers, and how a query is scored
 server/kit.mjs      reads the commands and skills installed on this machine
 server/reports.mjs  config, the pullers, and the report+index writing they share
 server/standup.mjs  what moved since the last working day

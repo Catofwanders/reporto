@@ -150,7 +150,7 @@ export const App = () => {
   return (
     <BrowserRouter>
       <RefreshProvider onReload={load}>
-        <AppShell generatedAt={generatedAt}>
+        <AppShell generatedAt={generatedAt} jira={reports.jira} prs={reports.prs}>
           {loading && <p className="status">Loading reports…</p>}
           {indexError && <p className="status error">Could not read the report index: {indexError}</p>}
           {failed.length > 0 && (

@@ -2,6 +2,7 @@ import AltRouteRoundedIcon from '@mui/icons-material/AltRouteRounded';
 import type { PrsReport } from '../types';
 import { LANES, type LanePr, agingTone, nudgeLinks, toLanes } from '../prLanes';
 import { PR_STATE_LABEL, prState, qcChip } from '../prState';
+import { useHashTarget } from '../useHashTarget';
 import { CopyPrLinks } from './CopyPrLinks';
 import { PrDraftToggle } from './PrDraftToggle';
 import { PrRowActions } from './PrRowActions';
@@ -18,7 +19,7 @@ const Row = ({ row, onChanged }: { row: LanePr; onChanged: () => void }) => {
   const qc = qcChip(pr.deployQc);
 
   return (
-    <article className={`pr-row${mergeReady ? ' is-merge-ready' : ''}`}>
+    <article className={`pr-row${mergeReady ? ' is-merge-ready' : ''}`} id={`${repo}-${pr.num}`}>
       <span
         className={`pr-age chip-${agingTone(idleDays)}`}
         title={`last moved ${new Date(pr.updatedAt).toLocaleString('en-GB')}`}
@@ -73,6 +74,8 @@ const Row = ({ row, onChanged }: { row: LanePr; onChanged: () => void }) => {
  * of equal weight, four of them zero, said nothing about what to do next.
  */
 export const PrLanes = ({ report, onChanged }: PrLanesProps) => {
+  useHashTarget([report]);
+
   const lanes = toLanes(report);
   const all = report.repos.flatMap((group) => group.prs);
   const counts = all.reduce<Record<string, number>>((acc, pr) => {

@@ -1,5 +1,6 @@
 import type { JiraReport, Pr, Ticket } from '../types';
 import { formatStatus, statusTone } from '../jiraStatus';
+import { useHashTarget } from '../useHashTarget';
 import { TicketStatus } from './TicketStatus';
 
 interface JiraBoardProps {
@@ -50,7 +51,8 @@ const droppedFromQc = (ticket: Ticket) =>
 const BoardCard = ({ ticket, onChanged }: { ticket: Ticket; onChanged?: () => void }) => {
   const dropped = droppedFromQc(ticket);
   return (
-    <article className="board-card">
+    // The id is what /jira#DTP-1234 scrolls to.
+    <article className="board-card" id={ticket.key}>
       <p className="board-card-summary" title={ticket.summary}>
         {ticket.summary}
       </p>
@@ -95,6 +97,8 @@ const BoardCard = ({ ticket, onChanged }: { ticket: Ticket; onChanged?: () => vo
  * per drop, and the chip already asks Jira what the workflow allows.
  */
 export const JiraBoard = ({ report, onChanged }: JiraBoardProps) => {
+  useHashTarget([report]);
+
   const columns = [...report.groups]
     .filter((group) => group.tickets.length > 0)
     .sort((a, b) => rank(a.title) - rank(b.title));

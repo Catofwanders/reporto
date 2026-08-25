@@ -277,7 +277,12 @@ Two things learned while building it:
 Still to do here: the `jira` puller, which needs the Atlassian token. The report also wants
 the deploy-branch ancestry check, which is GitHub-side and can reuse the same token.
 
-## 6. Command palette (⌘K)
+## 6. Command palette (⌘K) — **built**
+
+Shipped: ⌘K over tickets, PRs, pages, update actions and the kit listing, with scored
+matching, hash-deep-links that scroll to and flash the row, and copy-the-invocation for
+commands. Left undone from the sketch below: the `>`-for-actions-only mode.
+
 
 Jump anywhere by typing: a ticket key, a PR number, a repo, a command from `/commands`, or
 a report to refresh. Today every one of those is a click path through the sidebar, and the

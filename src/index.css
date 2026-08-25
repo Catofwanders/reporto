@@ -848,3 +848,42 @@ body { background: var(--canvas); }
 .setting-row span { display: grid; gap: .15rem; }
 .setting-row strong { font-size: .86rem; font-weight: 600; }
 .setting-row em { font-style: normal; font-size: .76rem; color: var(--ink-2); line-height: 1.4; }
+
+/* Command palette: the app's only search, over what is already in memory. */
+.palette-backdrop {
+  position: fixed; inset: 0; z-index: 40;
+  background: color-mix(in oklab, #05070b 55%, transparent);
+  display: grid; align-items: start; justify-items: center;
+  padding: 12vh 1rem 1rem;
+}
+.palette {
+  width: min(38rem, 100%); display: grid;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: 0 18px 48px color-mix(in oklab, #05070b 35%, transparent);
+  overflow: hidden;
+}
+.palette-input {
+  border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink);
+  font: inherit; font-size: 1rem; padding: .9rem 1rem;
+}
+.palette-input:focus-visible { outline: none; }
+.palette-list { list-style: none; margin: 0; padding: .35rem; display: grid; gap: .1rem; max-height: 22rem; overflow-y: auto; }
+.palette-row {
+  width: 100%; display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) auto; align-items: baseline; gap: .7rem;
+  background: transparent; border: 0; border-radius: .45rem; cursor: pointer;
+  padding: .5rem .6rem; font: inherit; text-align: left; color: var(--ink);
+}
+.palette-row.is-cursor { background: color-mix(in oklab, var(--accent) 14%, transparent); }
+.palette-group { font-size: .64rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); }
+.palette-title { font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-sub { font-size: .7rem; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 14rem; }
+.palette-empty { padding: .8rem .6rem; font-size: .82rem; color: var(--ink-2); }
+.palette-foot { margin: 0; padding: .5rem 1rem .6rem; border-top: 1px solid var(--line); font-size: .68rem; color: var(--ink-2); }
+.palette-copied { color: var(--ok-ink); font-weight: 600; }
+
+/* A row arrived at from the palette flashes once, so the eye finds it in a full board. */
+@keyframes reporto-flash {
+  from { box-shadow: 0 0 0 2px var(--accent); }
+  to { box-shadow: 0 0 0 2px transparent; }
+}
+.is-flash { animation: reporto-flash 1.4s ease-out 1; }

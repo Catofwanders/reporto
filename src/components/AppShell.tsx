@@ -1,12 +1,17 @@
 import { useLocation } from 'react-router-dom';
+import type { JiraReport, PrsReport } from '../types';
 import type { ReportKind } from '../reportKinds';
 import { useRefresh } from '../refreshContext';
+import { CommandPalette } from './CommandPalette';
 import { SideNav } from './SideNav';
 import { StaleRefresh } from './StaleRefresh';
 import { TopBar } from './TopBar';
 
 interface AppShellProps {
   generatedAt: Partial<Record<ReportKind, string | undefined>>;
+  /** What ⌘K searches: tickets and PRs, alongside pages, updates and the kit listing. */
+  jira: JiraReport | null;
+  prs: PrsReport | null;
   children: React.ReactNode;
 }
 
@@ -57,7 +62,7 @@ const HEADINGS: Record<
   },
 };
 
-export const AppShell = ({ generatedAt, children }: AppShellProps) => {
+export const AppShell = ({ generatedAt, jira, prs, children }: AppShellProps) => {
   const { pathname } = useLocation();
   const { running } = useRefresh();
   const heading = HEADINGS[pathname] ?? HEADINGS['/'];
@@ -65,6 +70,7 @@ export const AppShell = ({ generatedAt, children }: AppShellProps) => {
   return (
     <div className="shell">
       <StaleRefresh generatedAt={generatedAt} />
+      <CommandPalette jira={jira} prs={prs} />
       <SideNav generatedAt={generatedAt} running={running} />
       <div className="shell-main">
         <TopBar
