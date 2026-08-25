@@ -1,6 +1,6 @@
 import type { PrsReport } from '../types';
 import { useRefresh } from '../refreshContext';
-import { OpenPrList } from '../components/OpenPrList';
+import { PrLanes } from '../components/PrLanes';
 
 interface PrsPageProps {
   report: PrsReport | null;
@@ -15,7 +15,7 @@ export const PrsPage = ({ report }: PrsPageProps) => {
   return (
     <main className="grid">
       {report ? (
-        <OpenPrList report={report} onChanged={() => void run('prs')} />
+        <PrLanes report={report} onChanged={() => void run('prs')} />
       ) : (
         <p className="status">No PR report yet — press the bolt beside Pull requests.</p>
       )}

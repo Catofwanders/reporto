@@ -339,6 +339,27 @@ A board card holds the summary, its PRs, and a deploy-qc warning when a merged P
 from that branch. Everything else — per-ticket notes, PR remarks — lives in the **List**
 view behind the toggle in the card header.
 
+## Open PRs, by who is holding the ball
+
+The PR list is grouped by what has to happen next, not by repo — repo sorts work by where
+it lives, which is never the question:
+
+| Lane | What is in it |
+|---|---|
+| **Needs you** | changes requested, or review threads waiting on an answer |
+| **Waiting on others** | no review yet, or pushed since the last one — the lane the copy-links button lives in |
+| **Ready to merge** | approved; a row already on deploy-qc gets the accent border |
+| **Drafts** | not visible to reviewers, so its review state says nothing |
+
+Each row carries the reason in words — "no review yet — 6 days, chase it", "approved · on QC
+— merge it" — instead of leaving two coloured pills to be decoded, and an aging pill that
+turns amber at two days and red at four. Empty lanes are not rendered: a heading with
+nothing under it still has to be read before it can be dismissed.
+
+The state counts stay above the lanes but only for states that are not zero. Draft ⇄ ready
+is a button only in the Drafts lane, where it is the point; sending a live PR back to draft
+is rare and lives in the row menu instead of repeating down every row.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive
@@ -385,6 +406,7 @@ own Chrome and `gh` — N private instances, no auth layer to build.
 config/             your settings (gitignored)
 skills/             sanitized mail skill + report template, and the report contract
 src/prState.ts      PR review state + deploy-qc chip derivation
+src/prLanes.ts      which lane a PR is in, its reason line and aging tone
 src/statsMetrics.ts monthly metric definitions, deltas and formatting
 src/components/AppShell.tsx  rail + top bar; SideNav and TopBar are its two halves
 src/components/JiraBoard.tsx status columns in workflow order, like the Jira board

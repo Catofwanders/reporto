@@ -3,7 +3,7 @@ import { useRefresh } from '../refreshContext';
 import { CalendarWidget } from '../components/CalendarWidget';
 import { HomeKpis } from '../components/HomeKpis';
 import { JiraActiveList } from '../components/JiraActiveList';
-import { OpenPrList } from '../components/OpenPrList';
+import { PrLanes } from '../components/PrLanes';
 
 interface HomePageProps {
   jira: JiraReport | null;
@@ -24,7 +24,7 @@ export const HomePage = ({ jira, calendar, prs, stats }: HomePageProps) => {
       <div className="home-split">
         <div className="home-content">
           {jira && <JiraActiveList report={jira} onChanged={() => void run('jira')} />}
-          {prs && <OpenPrList report={prs} onChanged={() => void run('prs')} />}
+          {prs && <PrLanes report={prs} onChanged={() => void run('prs')} />}
         </div>
 
         <div className="home-widgets">{calendar && <CalendarWidget report={calendar} />}</div>

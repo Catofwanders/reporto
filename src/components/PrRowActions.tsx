@@ -54,8 +54,15 @@ export const PrRowActions = ({ repo, pr, onChanged }: PrRowActionsProps) => {
         <MoreVertIcon fontSize="small" />
       </IconButton>
 
-      {/* Draft ⇄ ready has its own button in the row now; the menu keeps what does not. */}
+      {/*
+        A draft's own lane offers "Ready for review" as a button, because that is the whole
+        point of the lane. The reverse — sending a live PR back to draft — is rare, so it
+        lives here rather than repeating itself down every row.
+      */}
       <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+        {!pr.draft && (
+          <MenuItem onClick={() => void apply('draft')}>Convert to draft</MenuItem>
+        )}
         <MenuItem
           onClick={() => {
             setAnchor(null);

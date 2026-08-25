@@ -744,3 +744,44 @@ body { background: var(--canvas); }
 .dot-na { background: var(--na-ink); }
 .dot-qc { background: var(--qc-ink); }
 .dot-qcout { background: var(--qcout-ink); }
+
+/*
+ * PR lanes: grouped by who is holding the ball. The lane heading carries the verdict, the
+ * row carries the reason, and the aging pill carries the urgency — so a row is readable
+ * without decoding two coloured chips.
+ */
+.pr-lane { margin-top: 1.3rem; }
+.pr-lane-head { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.pr-lane-head h3 { margin: 0; font-size: .82rem; }
+.pr-lane-hint { margin: 0; font-size: .72rem; color: var(--ink-2); }
+.pr-lane-head .MuiButton-root { margin-left: auto; }
+.pr-lane-rows { display: grid; gap: .5rem; margin-top: .6rem; }
+
+.pr-row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: .8rem;
+  background: var(--panel); border: 1px solid var(--line); border-radius: .6rem;
+  padding: .7rem .8rem;
+}
+.pr-row:hover { border-color: color-mix(in oklab, var(--accent) 40%, var(--line)); }
+/* Approved and already on deploy-qc: nothing left but the button, so it gets the accent. */
+.pr-row.is-merge-ready {
+  border-left: 3px solid var(--ok-ink);
+  background: color-mix(in oklab, var(--ok-ink) 4%, var(--panel));
+}
+
+.pr-age {
+  min-width: 2.9rem; text-align: center; border-radius: .4rem;
+  padding: .25rem .35rem; font-size: .7rem; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.pr-age.chip-na { background: var(--na-bg); color: var(--na-ink); border: 1px solid var(--na-line); }
+.pr-age.chip-warn { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); }
+.pr-age.chip-bad { background: var(--bad-bg); color: var(--bad-ink); border: 1px solid var(--bad-line); }
+
+.pr-row-body { display: grid; gap: .2rem; min-width: 0; }
+.pr-row-top { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; font-size: .74rem; }
+.pr-row-repo { color: var(--ink-2); }
+.pr-row-ticket { color: var(--ink-2); }
+.pr-row-title { margin: 0; font-size: .88rem; line-height: 1.35; }
+.pr-row-reason { margin: 0; font-size: .74rem; color: var(--ink-2); }
+.pr-row-actions { display: flex; align-items: center; gap: .3rem; }
