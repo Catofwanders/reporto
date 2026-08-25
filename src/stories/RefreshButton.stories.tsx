@@ -10,6 +10,7 @@ const base: RefreshStatus = {
   apiKinds: new Set<ReportKind>(['jira', 'prs']),
   canRefresh: (kind) => kind === 'jira' || kind === 'prs',
   run: () => Promise.resolve(),
+  runAll: () => Promise.resolve(),
 };
 
 /** Each story supplies its own context, since the button reads all of its state from there. */

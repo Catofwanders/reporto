@@ -151,9 +151,21 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
     [apiKinds, commandOf],
   );
 
+  /**
+   * Every kind at once. They are genuinely independent — separate endpoints, separate
+   * report files, and the dev server answers them concurrently (three pulls finish in the
+   * time of the slowest, not their sum) — so this fires them together and lets each card
+   * clear its own spinner as it lands. allSettled, because one failing puller must not
+   * cancel the others.
+   */
+  const runAll = useCallback(async () => {
+    const kinds = REPORT_KINDS.filter((kind) => canRefresh(kind) && !running.has(kind));
+    await Promise.allSettled(kinds.map((kind) => run(kind)));
+  }, [canRefresh, run, running]);
+
   const value = useMemo(
-    () => ({ running, errors, commandOf, apiKinds, canRefresh, run }),
-    [running, errors, commandOf, apiKinds, canRefresh, run],
+    () => ({ running, errors, commandOf, apiKinds, canRefresh, run, runAll }),
+    [running, errors, commandOf, apiKinds, canRefresh, run, runAll],
   );
   return <RefreshContext.Provider value={value}>{children}</RefreshContext.Provider>;
 };

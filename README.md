@@ -197,7 +197,14 @@ Both sides therefore merge instead of overwriting: the puller keeps every event 
 `source` is not `google`, and the skill keeps the Google ones and no longer reads Google
 Calendar at all. Whichever runs last, neither half deletes the other.
 
-Both pulls are plain API calls, so they answer in about a second and cost no tokens. The
+The **⚡ all** button beside them starts every refreshable report at once. They are
+genuinely independent — separate endpoints, separate report files, and the dev server
+answers them concurrently: firing all three together finishes in the time of the slowest
+(~17s, Jira) rather than their sum (~20s). Each card clears its own spinner as it lands, so
+PRs and calendar are usable while Jira is still going, and the button counts down what is
+left. One failing puller does not cancel the others.
+
+All the pulls are plain API calls, so they answer in about a second and cost no tokens. The
 agent-spawning path (`POST /api/refresh/<kind>`, `claude -p`) still exists for any command
 you list under `commandGroups`, but nothing needs it out of the box.
 

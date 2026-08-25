@@ -15,6 +15,8 @@ export interface RefreshStatus {
    */
   canRefresh: (kind: ReportKind) => boolean;
   run: (kind: ReportKind) => Promise<void>;
+  /** Start every refreshable kind at once; each card settles on its own. */
+  runAll: () => Promise<void>;
 }
 
 export const RefreshContext = createContext<RefreshStatus | null>(null);

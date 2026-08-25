@@ -1,4 +1,6 @@
 import type { ReportKind } from '../reportKinds';
+import CircularProgress from '@mui/material/CircularProgress';
+import Tooltip from '@mui/material/Tooltip';
 import { KIND_META, REPORT_KINDS } from '../reportKinds';
 import { useRefresh } from '../refreshContext';
 import { RefreshButton } from './RefreshButton';
@@ -19,7 +21,9 @@ const fmtStamp = (iso: string | undefined) => {
 };
 
 export const ActionBar = ({ generatedAt }: ActionBarProps) => {
-  const { running, errors, canRefresh } = useRefresh();
+  const { running, errors, canRefresh, runAll } = useRefresh();
+  const refreshable = REPORT_KINDS.filter(canRefresh);
+  const busy = refreshable.filter((kind) => running.has(kind));
 
   return (
     <div className="action-bar">
@@ -41,6 +45,36 @@ export const ActionBar = ({ generatedAt }: ActionBarProps) => {
           <RefreshButton kind={kind} />
         </div>
       ))}
+
+      {refreshable.length > 1 && (
+        <Tooltip
+          title={
+            busy.length
+              ? `Updating ${busy.map((kind) => KIND_META[kind].label).join(', ')}…`
+              : `Update ${refreshable.map((kind) => KIND_META[kind].label).join(', ')} — all at once`
+          }
+          disableInteractive
+        >
+          <span>
+            <button
+              type="button"
+              className="action-all"
+              onClick={() => void runAll()}
+              disabled={busy.length === refreshable.length}
+              aria-label="update every report"
+            >
+              {busy.length ? (
+                <>
+                  <CircularProgress size={11} sx={{ color: 'inherit' }} />
+                  {busy.length}/{refreshable.length}
+                </>
+              ) : (
+                <>⚡ all</>
+              )}
+            </button>
+          </span>
+        </Tooltip>
+      )}
     </div>
   );
 };

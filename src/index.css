@@ -151,6 +151,16 @@ body {
 .wrap { max-width: 82rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
 
 /* settings */
+/* Starts every refreshable report at once; each card still settles on its own. */
+.action-all {
+  display: inline-flex; align-items: center; gap: .35rem;
+  background: var(--panel); color: var(--ink-2);
+  border: 1px solid var(--line); border-radius: .55rem;
+  padding: .5rem .7rem; font: inherit; font-size: .74rem; font-weight: 600; cursor: pointer;
+}
+.action-all:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.action-all:disabled { cursor: progress; opacity: .7; }
+
 .app-settings {
   margin-left: .3rem; font-size: 1rem; line-height: 1; text-decoration: none;
   color: var(--ink-2); opacity: .8;

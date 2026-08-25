@@ -17,6 +17,7 @@ const refreshStub: RefreshStatus = {
   apiKinds: new Set<ReportKind>(['jira', 'prs']),
   canRefresh: (kind) => kind === 'jira' || kind === 'prs',
   run: () => Promise.resolve(),
+  runAll: () => Promise.resolve(),
 };
 
 const preview: Preview = {
