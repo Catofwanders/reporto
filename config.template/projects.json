@@ -6,38 +6,194 @@
       "name": "example-web-client",
       "title": "Customer web",
       "what": "What customers log into. The surface most tickets land on.",
-      "stack": ["React 19", "npm", "Node 20"],
+      "stack": [
+        "React 19",
+        "npm",
+        "Node 20"
+      ],
       "role": "client",
       "base": "deploy-qc",
       "url": "https://github.com/your-org/example-web-client",
-      "consumes": ["graph"]
+      "consumes": [
+        "graph"
+      ],
+      "flows": [
+        {
+          "id": "registration",
+          "title": "User registration",
+          "what": "Sign-up, e-mail confirmation, and the first sign-in that follows it. Invented \u2014 replace with yours.",
+          "source": "src/flows/registration.ts",
+          "verified": true,
+          "actors": [
+            {
+              "id": "user",
+              "label": "Visitor"
+            },
+            {
+              "id": "web",
+              "label": "Web client"
+            },
+            {
+              "id": "api",
+              "label": "API"
+            },
+            {
+              "id": "mail",
+              "label": "Mail"
+            }
+          ],
+          "steps": [
+            {
+              "id": "r1",
+              "actor": "user",
+              "label": "Fills the sign-up form"
+            },
+            {
+              "id": "r2",
+              "actor": "web",
+              "label": "Validates and submits",
+              "ref": "POST /accounts"
+            },
+            {
+              "id": "r3",
+              "actor": "api",
+              "label": "Creates the account",
+              "ref": "state: pending"
+            },
+            {
+              "id": "r4",
+              "actor": "mail",
+              "label": "Sends the confirm link",
+              "ref": "template: confirm-email"
+            },
+            {
+              "id": "r5",
+              "actor": "user",
+              "label": "Opens the link"
+            },
+            {
+              "id": "r6",
+              "actor": "api",
+              "label": "Marks it confirmed",
+              "ref": "POST /accounts/:id/confirm"
+            },
+            {
+              "id": "r7",
+              "actor": "web",
+              "label": "Signs the user in",
+              "ref": "POST /auth-sessions"
+            }
+          ]
+        },
+        {
+          "id": "job-creation",
+          "title": "Job creation",
+          "what": "An employer posts a job: draft, validation, moderation, then publication to the search index. Invented \u2014 replace with yours.",
+          "actors": [
+            {
+              "id": "employer",
+              "label": "Employer"
+            },
+            {
+              "id": "web",
+              "label": "Web client"
+            },
+            {
+              "id": "api",
+              "label": "API"
+            },
+            {
+              "id": "worker",
+              "label": "Worker"
+            }
+          ],
+          "steps": [
+            {
+              "id": "j1",
+              "actor": "employer",
+              "label": "Starts a draft"
+            },
+            {
+              "id": "j2",
+              "actor": "web",
+              "label": "Saves as it goes",
+              "ref": "PUT /jobs/:id"
+            },
+            {
+              "id": "j3",
+              "actor": "employer",
+              "label": "Submits for review"
+            },
+            {
+              "id": "j4",
+              "actor": "api",
+              "label": "Queues moderation",
+              "ref": "state: in-review"
+            },
+            {
+              "id": "j5",
+              "actor": "worker",
+              "label": "Runs the checks",
+              "ref": "queue: job-moderation"
+            },
+            {
+              "id": "j6",
+              "actor": "api",
+              "label": "Publishes the job",
+              "ref": "state: live"
+            },
+            {
+              "id": "j7",
+              "actor": "worker",
+              "label": "Indexes it for search",
+              "ref": "queue: search-index"
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "admin",
       "name": "example-admin-client",
       "title": "Admin console",
       "what": "Internal back-office: accounts, permissions, content.",
-      "stack": ["React 18", "pnpm", "Node 20"],
+      "stack": [
+        "React 18",
+        "pnpm",
+        "Node 20"
+      ],
       "role": "client",
       "url": "https://github.com/your-org/example-admin-client",
-      "consumes": ["graph"]
+      "consumes": [
+        "graph"
+      ]
     },
     {
       "id": "graph",
       "name": "example-graphql-service",
       "title": "GraphQL gateway",
       "what": "One schema in front of the services. Clients generate types from it.",
-      "stack": ["Apollo", "npm", "Node 18"],
+      "stack": [
+        "Apollo",
+        "npm",
+        "Node 18"
+      ],
       "role": "service",
       "url": "https://github.com/your-org/example-graphql-service",
-      "consumes": ["core"]
+      "consumes": [
+        "core"
+      ]
     },
     {
       "id": "core",
       "name": "example-backend-core",
       "title": "Backend core",
       "what": "Domain logic and the database of record. The schema everything else follows.",
-      "stack": ["TypeScript", "pnpm workspace", "Postgres"],
+      "stack": [
+        "TypeScript",
+        "pnpm workspace",
+        "Postgres"
+      ],
       "role": "service",
       "url": "https://github.com/your-org/example-backend-core"
     }
@@ -45,36 +201,144 @@
   "workflow": {
     "note": "deploy-qc is shared and resettable: a merge is not proof the change is on QC.",
     "stages": [
-      { "id": "todo", "label": "Backlog", "note": "not started", "statuses": ["Backlog", "NEXT"] },
-      { "id": "dev", "label": "In progress", "note": "branch off, DTP key in the name", "statuses": ["In Progress"] },
-      { "id": "review", "label": "Code review", "note": "PR opened against deploy-qc", "statuses": ["CODE REVIEW"] },
-      { "id": "qc", "label": "QC", "note": "merged into deploy-qc; QC tests there", "statuses": ["QC READY", "QC Failed"] },
-      { "id": "signoff", "label": "Sign-off", "note": "client approves", "statuses": ["CS Approved"] },
-      { "id": "release", "label": "Release", "note": "merged to the release branch", "statuses": ["RELEASE READY", "Released to Production"] }
+      {
+        "id": "todo",
+        "label": "Backlog",
+        "note": "not started",
+        "statuses": [
+          "Backlog",
+          "NEXT"
+        ]
+      },
+      {
+        "id": "dev",
+        "label": "In progress",
+        "note": "branch off, DTP key in the name",
+        "statuses": [
+          "In Progress"
+        ]
+      },
+      {
+        "id": "review",
+        "label": "Code review",
+        "note": "PR opened against deploy-qc",
+        "statuses": [
+          "CODE REVIEW"
+        ]
+      },
+      {
+        "id": "qc",
+        "label": "QC",
+        "note": "merged into deploy-qc; QC tests there",
+        "statuses": [
+          "QC READY",
+          "QC Failed"
+        ]
+      },
+      {
+        "id": "signoff",
+        "label": "Sign-off",
+        "note": "client approves",
+        "statuses": [
+          "CS Approved"
+        ]
+      },
+      {
+        "id": "release",
+        "label": "Release",
+        "note": "merged to the release branch",
+        "statuses": [
+          "RELEASE READY",
+          "Released to Production"
+        ]
+      }
     ]
   },
   "infra": {
-    "note": "High level only — what talks to what, not how it is deployed.",
-    "layers": ["Clients", "Edge", "Services", "Data"],
+    "note": "High level only \u2014 what talks to what, not how it is deployed.",
+    "layers": [
+      "Clients",
+      "Edge",
+      "Services",
+      "Data"
+    ],
     "nodes": [
-      { "id": "web", "label": "Customer web", "layer": "Clients" },
-      { "id": "admin", "label": "Admin console", "layer": "Clients" },
-      { "id": "cdn", "label": "CDN", "note": "static hosting", "layer": "Edge" },
-      { "id": "graph", "label": "GraphQL gateway", "layer": "Edge" },
-      { "id": "core", "label": "Backend core", "layer": "Services" },
-      { "id": "jobs", "label": "Workers", "note": "queues and scheduled jobs", "layer": "Services" },
-      { "id": "db", "label": "Postgres", "layer": "Data" },
-      { "id": "files", "label": "Object storage", "layer": "Data" }
+      {
+        "id": "web",
+        "label": "Customer web",
+        "layer": "Clients"
+      },
+      {
+        "id": "admin",
+        "label": "Admin console",
+        "layer": "Clients"
+      },
+      {
+        "id": "cdn",
+        "label": "CDN",
+        "note": "static hosting",
+        "layer": "Edge"
+      },
+      {
+        "id": "graph",
+        "label": "GraphQL gateway",
+        "layer": "Edge"
+      },
+      {
+        "id": "core",
+        "label": "Backend core",
+        "layer": "Services"
+      },
+      {
+        "id": "jobs",
+        "label": "Workers",
+        "note": "queues and scheduled jobs",
+        "layer": "Services"
+      },
+      {
+        "id": "db",
+        "label": "Postgres",
+        "layer": "Data"
+      },
+      {
+        "id": "files",
+        "label": "Object storage",
+        "layer": "Data"
+      }
     ],
     "edges": [
-      ["web", "cdn"],
-      ["web", "graph"],
-      ["admin", "graph"],
-      ["graph", "core"],
-      ["core", "jobs"],
-      ["core", "db"],
-      ["jobs", "db"],
-      ["core", "files"]
+      [
+        "web",
+        "cdn"
+      ],
+      [
+        "web",
+        "graph"
+      ],
+      [
+        "admin",
+        "graph"
+      ],
+      [
+        "graph",
+        "core"
+      ],
+      [
+        "core",
+        "jobs"
+      ],
+      [
+        "core",
+        "db"
+      ],
+      [
+        "jobs",
+        "db"
+      ],
+      [
+        "core",
+        "files"
+      ]
     ]
   }
 }

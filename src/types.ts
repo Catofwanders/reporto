@@ -149,6 +149,35 @@ export interface StatsReport {
   notes: string[];
 }
 
+/** A lane in a flow diagram: who or what performs a step. */
+export interface FlowActor {
+  id: string;
+  label: string;
+}
+
+export interface FlowStep {
+  id: string;
+  /** Which actor's lane this step sits in. */
+  actor: string;
+  label: string;
+  note?: string;
+  /** Where it lives — a file path, an endpoint, a saga name. */
+  ref?: string;
+}
+
+/** One named path through a project: sign-in, job creation, checkout. */
+export interface ProjectFlow {
+  id: string;
+  title: string;
+  what: string;
+  actors: FlowActor[];
+  steps: FlowStep[];
+  /** Where this was read from, so a reader can check it rather than trust it. */
+  source?: string;
+  /** False means nobody has confirmed it against the running system yet. */
+  verified?: boolean;
+}
+
 /** One repository, as a card on the projects page. */
 export interface ProjectCard {
   id: string;
@@ -167,6 +196,8 @@ export interface ProjectCard {
   url?: string;
   /** Ids of the projects this one depends on, drawn as edges. */
   consumes?: string[];
+  /** The paths through it worth drawing, shown on the project's own page. */
+  flows?: ProjectFlow[];
 }
 
 export interface WorkflowStage {

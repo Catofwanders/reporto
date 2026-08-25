@@ -461,11 +461,26 @@ Three views over the one file:
 - **Projects** — a card per repository: what it is, its stack, its base branch, plus how many
   of my PRs are open there and how many merged this month, read from the reports already on
   disk. That last part is why this is not a README.
+- **A page per project** — click a card's title. What it is, what it depends on and what
+  depends on it, what of mine is open in it right now, and a lane diagram per flow.
 - **Backend, high level** — a layered diagram, one row per layer, drawn as inline SVG. Not a
   diagramming dependency and not a force layout: the layer of every node is stated rather
   than solved, because a diagram you read every day must not rearrange itself between
   renders. An edge naming a node that is not on the map is dropped rather than drawn to
   nowhere.
+
+### Flows
+
+A project page draws the paths through it worth knowing — sign-in, a hand-off to a vendor,
+job creation — as lanes and ordered steps: each step sits in the lane of whatever performs
+it, so a hand-off is a crossing you can count. Elbow connectors rather than curves, because
+between two lanes a right angle says "the same step moved sideways" where a bezier suggests
+something smoother than a network call.
+
+Every flow carries **where it was read from** (`client/src/sagas/auth.ts`) so a reader can
+check it instead of trusting it, and `verified: false` renders as a chip until somebody has
+confirmed it against the running system. That distinction matters more than it looks: a
+diagram read out of code is a claim about the code, not about production.
 
 The infrastructure rows are a **sketch** and say so on the page — deployment topology is not
 documented anywhere the app can read, so it is seeded from what the local skill docs state

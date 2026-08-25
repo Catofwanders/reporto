@@ -70,7 +70,10 @@ const HEADINGS: Record<
 export const AppShell = ({ generatedAt, jira, prs, children }: AppShellProps) => {
   const { pathname } = useLocation();
   const { running } = useRefresh();
-  const heading = HEADINGS[pathname] ?? HEADINGS['/'];
+  // A project page is one of many, so it is titled from the path rather than the table.
+  const heading = pathname.startsWith('/projects/')
+    ? { title: 'Project', subtitle: 'What it is, what it talks to, and how work moves through it.', action: 'none' as const }
+    : (HEADINGS[pathname] ?? HEADINGS['/']);
 
   return (
     <div className="shell">

@@ -13,6 +13,7 @@ import { PrsPage } from './pages/PrsPage';
 import { StatsPage } from './pages/StatsPage';
 import { CommandsPage } from './pages/CommandsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
+import { ProjectPage } from './pages/ProjectPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -183,6 +184,10 @@ export const App = () => {
                   element={
                     <ProjectsPage jira={reports.jira} prs={reports.prs} stats={reports.stats} />
                   }
+                />
+                <Route
+                  path="/projects/:id"
+                  element={<ProjectPage jira={reports.jira} prs={reports.prs} />}
                 />
                 <Route path="/commands" element={<CommandsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />

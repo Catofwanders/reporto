@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { ProjectMap, PrsReport, StatsReport } from '../types';
 
 interface ProjectGridProps {
@@ -27,7 +28,10 @@ export const ProjectGrid = ({ map, prs, stats }: ProjectGridProps) => (
       return (
         <article key={project.id} className={`project-card role-${project.role}`}>
           <div className="project-card-head">
-            <h3>{project.title}</h3>
+            {/* The title is the way in: the repo link below goes to GitHub instead. */}
+            <h3>
+              <Link to={`/projects/${project.id}`}>{project.title}</Link>
+            </h3>
             <span className={`chip chip-${project.role === 'client' ? 'open' : 'qc'}`}>
               {project.role}
             </span>
@@ -50,6 +54,11 @@ export const ProjectGrid = ({ map, prs, stats }: ProjectGridProps) => (
           </ul>
 
           <div className="project-card-foot">
+            {(project.flows?.length ?? 0) > 0 && (
+              <Link to={`/projects/${project.id}`}>
+                {project.flows?.length} flow{project.flows?.length === 1 ? '' : 's'} →
+              </Link>
+            )}
             {project.base && <span title="PRs open against this branch">base {project.base}</span>}
             {open > 0 && <span className="project-live">{open} open PR{open === 1 ? '' : 's'}</span>}
             {merged > 0 && <span>{merged} merged this month</span>}
