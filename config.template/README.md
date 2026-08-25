@@ -28,6 +28,7 @@ stays free of employer or account specifics.
 | `jiraStatsJql` | JQL prefix the monthly statistics are built on. Defaults to `assignee = currentUser()`. |
 | `statsStatuses` | Status names the statistics count transitions into: `releaseReady`, `deployed`, `qcReady`, `qcFailed`, `inProgress`. Defaults suit a QC-then-release workflow; set them to whatever your board calls those columns. |
 | `statsMonths` | How many months the statistics file carries, newest first. Defaults to 6. |
+| `projects.json` | The project map behind `/projects`: repositories, the ticket workflow, and the infrastructure sketch. Separate file, same directory; copy `config.template/projects.json` and describe your own work. |
 | `statusChoices` | Statuses offered when changing a ticket from the dashboard, matched against a transition's target status. Empty means Jira's whole workflow, which is usually far more than anyone moves a ticket to by hand. |
 | `upcomingDays` | How far the calendar watch-list looks ahead. Defaults to 7. |
 | `commandGroups[].command` | Claude Code slash command that regenerates reports, spawned as `claude -p`. Only needed for reports the server cannot pull itself — the Outlook half of the calendar, which requires the Chrome extension. Leave the list empty if you run `/email` by hand. |

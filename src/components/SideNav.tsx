@@ -4,6 +4,7 @@ import InsightsRoundedIcon from '@mui/icons-material/InsightsRounded';
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import AltRouteRoundedIcon from '@mui/icons-material/AltRouteRounded';
 import EventRoundedIcon from '@mui/icons-material/EventRounded';
+import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import TerminalRoundedIcon from '@mui/icons-material/TerminalRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import type { ReportKind } from '../reportKinds';
@@ -42,7 +43,10 @@ const SECTIONS: { title: string; rows: NavRow[] }[] = [
   },
   {
     title: 'Toolkit',
-    rows: [{ to: '/commands', label: 'Commands', icon: TerminalRoundedIcon }],
+    rows: [
+      { to: '/projects', label: 'Projects', icon: AccountTreeRoundedIcon },
+      { to: '/commands', label: 'Commands', icon: TerminalRoundedIcon },
+    ],
   },
 ];
 

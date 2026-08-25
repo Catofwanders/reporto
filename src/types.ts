@@ -149,6 +149,50 @@ export interface StatsReport {
   notes: string[];
 }
 
+/** One repository, as a card on the projects page. */
+export interface ProjectCard {
+  id: string;
+  /** Repository name, as GitHub knows it. */
+  name: string;
+  /** What a human calls it. */
+  title: string;
+  /** One line: what it is for. */
+  what: string;
+  /** Stack facts worth seeing at a glance — framework, package manager, Node version. */
+  stack: string[];
+  /** client / service / cms / infra / tool — decides the card's accent. */
+  role: string;
+  /** Branch PRs are opened against, when it is not the default. */
+  base?: string;
+  url?: string;
+  /** Ids of the projects this one depends on, drawn as edges. */
+  consumes?: string[];
+}
+
+export interface WorkflowStage {
+  id: string;
+  label: string;
+  /** What actually happens at this stage, in a few words. */
+  note?: string;
+  /** Jira statuses that count as this stage, for the live count. */
+  statuses?: string[];
+}
+
+export interface InfraNode {
+  id: string;
+  label: string;
+  note?: string;
+  /** Which layer it sits in; the layer order comes from `layers`. */
+  layer: string;
+}
+
+/** The hand-written map of the work: gitignored, because it names an employer's systems. */
+export interface ProjectMap {
+  projects: ProjectCard[];
+  workflow: { stages: WorkflowStage[]; note?: string };
+  infra: { layers: string[]; nodes: InfraNode[]; edges: [string, string][]; note?: string };
+}
+
 /** What moved since the last working day, from the APIs rather than from a snapshot. */
 export interface StandupSince {
   /** ISO date the window starts at. */

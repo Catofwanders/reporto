@@ -887,3 +887,49 @@ body { background: var(--canvas); }
   to { box-shadow: 0 0 0 2px transparent; }
 }
 .is-flash { animation: reporto-flash 1.4s ease-out 1; }
+
+/* Projects: the ticket route, the repositories, and what talks to what. */
+.flow-strip { list-style: none; display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0 0; padding: 0; counter-reset: stage; }
+.flow-strip li {
+  flex: 1 1 8rem; display: grid; gap: .2rem; position: relative;
+  border: 1px solid var(--line); border-radius: .5rem; padding: .6rem .7rem;
+  background: var(--bg);
+}
+/* A stage holding work is where the queue is, so it gets the accent rather than the label. */
+.flow-strip li.has-work { border-color: color-mix(in oklab, var(--accent) 45%, var(--line)); background: var(--panel); }
+.flow-strip-head { display: flex; align-items: baseline; gap: .4rem; }
+.flow-strip-label { font-size: .8rem; font-weight: 600; }
+.flow-strip-head .count { margin-left: auto; }
+.flow-strip-note { font-size: .7rem; color: var(--ink-2); line-height: 1.35; }
+
+.project-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); margin-top: 1rem; }
+.project-card {
+  display: grid; gap: .35rem; align-content: start;
+  border: 1px solid var(--line); border-left-width: 3px; border-radius: .6rem;
+  padding: .8rem .9rem; background: var(--panel);
+}
+.role-client { border-left-color: var(--open-ink); }
+.role-service { border-left-color: var(--qc-ink); }
+.role-cms { border-left-color: var(--qcout-ink); }
+.role-infra { border-left-color: var(--warn-ink); }
+.role-tool { border-left-color: var(--na-ink); }
+.project-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.project-card-head h3 { margin: 0; font-size: .95rem; }
+.project-repo { font-size: .72rem; color: var(--ink-2); font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+.project-what { margin: .2rem 0 0; font-size: .8rem; line-height: 1.4; color: var(--ink-2); }
+.project-stack { list-style: none; display: flex; flex-wrap: wrap; gap: .3rem; margin: .3rem 0 0; padding: 0; }
+.project-stack li {
+  font-size: .66rem; color: var(--ink-2);
+  border: 1px solid var(--line); border-radius: 99px; padding: .1rem .45rem;
+}
+.project-card-foot { display: flex; flex-wrap: wrap; gap: .3rem .8rem; margin-top: .3rem; font-size: .7rem; color: var(--ink-2); }
+.project-live { color: var(--accent); font-weight: 600; }
+
+.infra { margin-top: 1rem; overflow-x: auto; }
+.infra-plot { max-width: 100%; height: auto; }
+.infra-layer { fill: var(--ink-2); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.infra-edge { fill: none; stroke: var(--line); stroke-width: 1.5; }
+.infra-node rect { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+.infra-node:hover rect { stroke: var(--accent); }
+.infra-label { fill: var(--ink); font-size: 11px; font-weight: 600; text-anchor: middle; }
+.infra-note { fill: var(--ink-2); font-size: 9px; text-anchor: middle; }

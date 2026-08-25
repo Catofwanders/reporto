@@ -441,6 +441,36 @@ thirty cards with the answer off-screen is technically correct and useless. Choo
 command copies its invocation — the app cannot run a slash command, that happens in a Claude
 session, so copying is the honest action and the palette stays open for the next one.
 
+## The project map
+
+`/projects` answers the questions a new laptop cannot: which repositories exist, what each
+one is for, what talks to what, and the route a ticket takes from Backlog to production.
+
+None of it can be derived. A repository does not say what it is for, and no API knows which
+service sits behind which gateway — so the map is hand-written in
+`config/projects.json`, **gitignored**, because it names an employer's systems and this
+remote is public. `config.template/projects.json` is the committed version, invented
+throughout; copy it and describe your own work. Without it the page says which file to copy
+rather than showing nothing.
+
+Three views over the one file:
+
+- **How work travels** — the ticket route, with a live count of my tickets at each stop, so a
+  stage holding nine of them shows where the queue is. A picture of the process alone cannot
+  say that.
+- **Projects** — a card per repository: what it is, its stack, its base branch, plus how many
+  of my PRs are open there and how many merged this month, read from the reports already on
+  disk. That last part is why this is not a README.
+- **Backend, high level** — a layered diagram, one row per layer, drawn as inline SVG. Not a
+  diagramming dependency and not a force layout: the layer of every node is stated rather
+  than solved, because a diagram you read every day must not rearrange itself between
+  renders. An edge naming a node that is not on the map is dropped rather than drawn to
+  nowhere.
+
+The infrastructure rows are a **sketch** and say so on the page — deployment topology is not
+documented anywhere the app can read, so it is seeded from what the local skill docs state
+and is meant to be corrected by hand.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive
@@ -490,6 +520,7 @@ src/prState.ts      PR review state + deploy-qc chip derivation
 src/prLanes.ts      which lane a PR is in, its reason line and aging tone
 src/kit.ts          client for /api/kit
 src/paletteItems.ts what ⌘K offers, and how a query is scored
+src/projectMap.ts   client for /api/projects, and the diagram's layout maths
 server/kit.mjs      reads the commands and skills installed on this machine
 server/reports.mjs  config, the pullers, and the report+index writing they share
 server/standup.mjs  what moved since the last working day

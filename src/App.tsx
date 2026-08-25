@@ -12,6 +12,7 @@ import { JiraPage } from './pages/JiraPage';
 import { PrsPage } from './pages/PrsPage';
 import { StatsPage } from './pages/StatsPage';
 import { CommandsPage } from './pages/CommandsPage';
+import { ProjectsPage } from './pages/ProjectsPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -177,6 +178,12 @@ export const App = () => {
                 <Route path="/prs" element={<PrsPage report={reports.prs} />} />
                 <Route path="/calendar" element={<CalendarPage report={reports.calendar} />} />
                 <Route path="/stats" element={<StatsPage report={reports.stats} />} />
+                <Route
+                  path="/projects"
+                  element={
+                    <ProjectsPage jira={reports.jira} prs={reports.prs} stats={reports.stats} />
+                  }
+                />
                 <Route path="/commands" element={<CommandsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 {/* /email was a route until the mail views were removed; a bookmark to it

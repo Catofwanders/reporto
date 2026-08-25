@@ -50,6 +50,11 @@ const HEADINGS: Record<
     subtitle: "Today's events and the upcoming watch-list.",
     kind: 'calendar',
   },
+  '/projects': {
+    title: 'Projects',
+    subtitle: 'How work travels, which repositories exist, and what talks to what.',
+    action: 'none',
+  },
   '/commands': {
     title: 'Commands',
     subtitle: 'Every slash command and skill installed on this machine.',

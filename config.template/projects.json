@@ -1,0 +1,80 @@
+{
+  "$comment": "Copy to ./config/projects.json and describe your own work. ./config is gitignored, so repo names, systems and anything employer-specific stay off the remote. Everything below is invented.",
+  "projects": [
+    {
+      "id": "web",
+      "name": "example-web-client",
+      "title": "Customer web",
+      "what": "What customers log into. The surface most tickets land on.",
+      "stack": ["React 19", "npm", "Node 20"],
+      "role": "client",
+      "base": "deploy-qc",
+      "url": "https://github.com/your-org/example-web-client",
+      "consumes": ["graph"]
+    },
+    {
+      "id": "admin",
+      "name": "example-admin-client",
+      "title": "Admin console",
+      "what": "Internal back-office: accounts, permissions, content.",
+      "stack": ["React 18", "pnpm", "Node 20"],
+      "role": "client",
+      "url": "https://github.com/your-org/example-admin-client",
+      "consumes": ["graph"]
+    },
+    {
+      "id": "graph",
+      "name": "example-graphql-service",
+      "title": "GraphQL gateway",
+      "what": "One schema in front of the services. Clients generate types from it.",
+      "stack": ["Apollo", "npm", "Node 18"],
+      "role": "service",
+      "url": "https://github.com/your-org/example-graphql-service",
+      "consumes": ["core"]
+    },
+    {
+      "id": "core",
+      "name": "example-backend-core",
+      "title": "Backend core",
+      "what": "Domain logic and the database of record. The schema everything else follows.",
+      "stack": ["TypeScript", "pnpm workspace", "Postgres"],
+      "role": "service",
+      "url": "https://github.com/your-org/example-backend-core"
+    }
+  ],
+  "workflow": {
+    "note": "deploy-qc is shared and resettable: a merge is not proof the change is on QC.",
+    "stages": [
+      { "id": "todo", "label": "Backlog", "note": "not started", "statuses": ["Backlog", "NEXT"] },
+      { "id": "dev", "label": "In progress", "note": "branch off, DTP key in the name", "statuses": ["In Progress"] },
+      { "id": "review", "label": "Code review", "note": "PR opened against deploy-qc", "statuses": ["CODE REVIEW"] },
+      { "id": "qc", "label": "QC", "note": "merged into deploy-qc; QC tests there", "statuses": ["QC READY", "QC Failed"] },
+      { "id": "signoff", "label": "Sign-off", "note": "client approves", "statuses": ["CS Approved"] },
+      { "id": "release", "label": "Release", "note": "merged to the release branch", "statuses": ["RELEASE READY", "Released to Production"] }
+    ]
+  },
+  "infra": {
+    "note": "High level only — what talks to what, not how it is deployed.",
+    "layers": ["Clients", "Edge", "Services", "Data"],
+    "nodes": [
+      { "id": "web", "label": "Customer web", "layer": "Clients" },
+      { "id": "admin", "label": "Admin console", "layer": "Clients" },
+      { "id": "cdn", "label": "CDN", "note": "static hosting", "layer": "Edge" },
+      { "id": "graph", "label": "GraphQL gateway", "layer": "Edge" },
+      { "id": "core", "label": "Backend core", "layer": "Services" },
+      { "id": "jobs", "label": "Workers", "note": "queues and scheduled jobs", "layer": "Services" },
+      { "id": "db", "label": "Postgres", "layer": "Data" },
+      { "id": "files", "label": "Object storage", "layer": "Data" }
+    ],
+    "edges": [
+      ["web", "cdn"],
+      ["web", "graph"],
+      ["admin", "graph"],
+      ["graph", "core"],
+      ["core", "jobs"],
+      ["core", "db"],
+      ["jobs", "db"],
+      ["core", "files"]
+    ]
+  }
+}
