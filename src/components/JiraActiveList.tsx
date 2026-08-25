@@ -7,7 +7,7 @@ import { RefreshButton } from './RefreshButton';
 
 // "cs approved" is the board's "Waiting for Merge (CS Approved)" column — the skill writes
 // the short name, so match that.
-const ACTIVE_STATUSES = ['in progress', 'code review', 'qc ready', 'cs approved'];
+const ACTIVE_STATUSES = ['in progress', 'code review', 'qc ready', 'qc failed', 'cs approved'];
 
 const isActiveStatus = (status: string) => ACTIVE_STATUSES.includes(status.toLowerCase());
 

@@ -9,6 +9,7 @@ import type { Chip, Ticket } from './types';
  *   warn   CS APPROVED     — approved, waiting on a merge; also waiting on somebody
  *   open   In Progress     — live work, like "awaiting review"
  *   bad    BLOCKED         — stuck, like "changes requested"
+ *   bad    QC FAILED       — also stuck, and back on the author's desk
  *   qcout  On Hold         — parked rather than broken, so distinct from BLOCKED
  *   ok     RELEASE READY   — done as far as this board goes
  *   na     Backlog / NEXT  — not started
@@ -22,7 +23,7 @@ const STATUS_TONE: [RegExp, Chip][] = [
   [/^(code review|in review|review)$/i, 'warn'],
   [/^cs approved$/i, 'warn'],
   [/^(in progress|in development|doing)$/i, 'open'],
-  [/^blocked$/i, 'bad'],
+  [/^(blocked|qc failed)$/i, 'bad'],
   [/^on hold$/i, 'qcout'],
   [/^(release ready|released|done|closed)/i, 'ok'],
   [/^(backlog|next|to do|selected|new)$/i, 'na'],
