@@ -432,8 +432,8 @@ and the command listing, fetched the first time the palette opens.
 
 Typing `14648` finds the ticket and the PR that names it; `procs` finds the command; `upd
 jira` finds the update action. A contiguous match at a word boundary outranks a scattered
-one, and the subsequence fallback is capped — without a cap, "storefront" can be spelled out
-of almost any long skill description.
+one, and the subsequence fallback is capped — without a cap, a ten-letter query can be
+spelled out of almost any long skill description.
 
 Choosing a ticket or a PR goes to the page that already shows it, with the key in the hash;
 the board or the lane scrolls there and flashes the row once, because landing on a board of

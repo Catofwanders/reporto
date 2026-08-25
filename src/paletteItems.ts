@@ -99,9 +99,10 @@ export function buildItems(
 }
 
 /**
- * Scored match, best first. A subsequence is enough to appear — so `14648` finds
- * `DTP-14648` and `stf` finds `bln-storefront-client` — but a contiguous hit, and one at a
- * word boundary, ranks above a scattered one, which keeps the obvious answer on top.
+ * Scored match, best first. A subsequence is enough to appear — so a bare number finds the
+ * ticket that carries it, and an abbreviation finds a long repo name — but a contiguous hit,
+ * and one at a word boundary, ranks above a scattered one, which keeps the obvious answer on
+ * top.
  */
 export function scoreItem(item: PaletteItem, query: string): number {
   if (!query) return 0;
@@ -120,8 +121,8 @@ export function scoreItem(item: PaletteItem, query: string): number {
       return;
     }
     // Fall back to a subsequence, scored by how tightly the letters sit together — and
-    // capped, because "storefront" can be spelled out of almost any long description if the
-    // letters are allowed to be arbitrarily far apart.
+    // capped, because a ten-letter query can be spelled out of almost any long description
+    // if the letters are allowed to be arbitrarily far apart.
     let at = -1;
     let gaps = 0;
     for (const char of needle) {

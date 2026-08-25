@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 /**
  * Scrolls to the element the URL hash names and flashes it once.
  *
- * The palette navigates to `/jira#DTP-14648`, which lands on a board of thirty cards where
+ * The palette navigates to `/jira#<KEY>`, which lands on a board of thirty cards where
  * the answer is somewhere off-screen; without this the jump is technically correct and
  * useless. Runs on every hash change, so choosing a second ticket moves again.
  */

@@ -51,7 +51,7 @@ const droppedFromQc = (ticket: Ticket) =>
 const BoardCard = ({ ticket, onChanged }: { ticket: Ticket; onChanged?: () => void }) => {
   const dropped = droppedFromQc(ticket);
   return (
-    // The id is what /jira#DTP-1234 scrolls to.
+    // The id is what /jira#<KEY> scrolls to.
     <article className="board-card" id={ticket.key}>
       <p className="board-card-summary" title={ticket.summary}>
         {ticket.summary}

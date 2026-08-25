@@ -166,9 +166,12 @@ export const ProjectPage = ({ jira, prs }: ProjectPageProps) => {
       {(project.flows ?? []).length === 0 && (
         <section className="panel">
           <p className="status">
-            No flows described for this project yet. Add them under its <code>flows</code> in{' '}
-            <code>config/projects.json</code> — the shape is in{' '}
-            <code>config.template/projects.json</code>.
+            {/* A stated reason beats a bare empty state: "nobody wrote it yet" and "there is
+                nothing to read" are different problems. */}
+            {project.flowsNote ??
+              'No flows described for this project yet.'}{' '}
+            Add them under its <code>flows</code> in <code>config/projects.json</code> — the
+            shape is in <code>config.template/projects.json</code>.
           </p>
         </section>
       )}

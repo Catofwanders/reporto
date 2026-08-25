@@ -4,8 +4,8 @@ import { promisify } from 'node:util'
 const run = promisify(execFile)
 
 /**
- * Bluedrop org repos are visible only to one account, so a `gh` keyring holding several
- * accounts will silently 404 if the wrong one is active. Pin the token explicitly.
+ * Org repos are often visible to only one of the accounts a `gh` keyring holds, and the
+ * wrong active account silently 404s rather than saying so. Pin the token explicitly.
  */
 async function ghToken(account) {
   if (account) {

@@ -228,7 +228,8 @@ security find-generic-password -s reporto-jira -w                     # how the 
 `read:org`, `admin:public_key`, `gist`), and `gh api graphql` authenticates fine. Shell out
 to `gh api`, 5000 requests/hour.
 
-Note the account trap: Bluedrop org repos are visible only to **BaturaBluedrop**. If the
+Note the account trap: org repos may be visible to only one of the accounts in the `gh`
+keyring, and the wrong one 404s silently. If the
 active `gh` account is another one, every call against the org returns `HTTP 404`. Either
 pin the account per call (`gh --hostname`/`GH_TOKEN` from the right keyring entry) or check
 `gh auth status` first and fail with a clear message rather than reporting an empty PR list.
@@ -301,9 +302,9 @@ searched nothing would be set dressing. A palette is the version that can actual
 **Mechanics**
 
 Everything needed is already loaded client-side: `reports.jira`, `reports.prs`, and
-`/api/kit`. No new endpoint. Matching wants to be fuzzy enough that `14648` finds
-`DTP-14648` and `stf` finds `bln-storefront-client`; a small scored substring match is
-probably enough before reaching for a library.
+`/api/kit`. No new endpoint. Matching wants to be fuzzy enough that a bare number finds
+the ticket that carries it and an abbreviation finds a long repo name; a small scored
+substring match is probably enough before reaching for a library.
 
 **Open questions**
 

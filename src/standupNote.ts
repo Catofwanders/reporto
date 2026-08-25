@@ -29,7 +29,7 @@ const has = (list: string[], status: string) => list.includes(status.trim().toLo
 const allTickets = (report: JiraReport | null): Ticket[] =>
   (report?.groups ?? []).flatMap((group) => group.tickets);
 
-/** `DTP-1 CODE REVIEW → QC READY`, or the plain status when it only moved one step. */
+/** `KEY-1 FROM → TO`, or the plain status when it only moved one step. */
 const movement = (from: string | null, to: string | null) =>
   from && to && from !== to ? `${formatStatus(from)} → ${formatStatus(to)}` : formatStatus(to ?? '');
 

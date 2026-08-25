@@ -198,6 +198,8 @@ export interface ProjectCard {
   consumes?: string[];
   /** The paths through it worth drawing, shown on the project's own page. */
   flows?: ProjectFlow[];
+  /** Why there are no flows, when that is a fact rather than an omission. */
+  flowsNote?: string;
 }
 
 export interface WorkflowStage {
