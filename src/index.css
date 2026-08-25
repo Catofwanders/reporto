@@ -841,3 +841,10 @@ body { background: var(--canvas); }
 .standup-block li { font-size: .8rem; line-height: 1.4; padding-left: .8rem; position: relative; }
 .standup-block li::before { content: '·'; position: absolute; left: 0; color: var(--ink-2); }
 .standup-empty { margin: 0; font-size: .8rem; color: var(--ink-2); }
+
+/* Settings: one row per switch. */
+.setting-row { display: flex; gap: .7rem; align-items: flex-start; margin-top: 1rem; cursor: pointer; }
+.setting-row input { margin-top: .15rem; accent-color: var(--accent); }
+.setting-row span { display: grid; gap: .15rem; }
+.setting-row strong { font-size: .86rem; font-weight: 600; }
+.setting-row em { font-style: normal; font-size: .76rem; color: var(--ink-2); line-height: 1.4; }

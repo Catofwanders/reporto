@@ -384,6 +384,46 @@ Two things the reader has to get right, both learned the hard way:
   paths from `installed_plugins.json` and `known_marketplaces.json`, and skips plugins that
   `settings.json` has switched off.
 
+## Keeping it current without pressing anything
+
+Two paths, and they share one implementation — `server/reports.mjs` holds the config, the
+pullers and the index bookkeeping, so the button in the browser and the cron job do the same
+thing rather than two similar things.
+
+**On open.** Anything older than four hours is refetched once per session when the dashboard
+loads: an overnight report is worse than useless because it looks current, while reopening a
+tab an hour later fetches nothing. Only reports the server can pull itself are touched —
+never an agent run — and Settings has the switch if you want it off.
+
+**From cron.** `npm run pull` needs no browser and no dev server:
+
+```bash
+npm run pull                 # every report the API can fetch
+npm run pull -- jira prs     # just these
+```
+
+It exits non-zero if any pull failed, which is what a cron wrapper wants to see. To have the
+dashboard current before stand-up, on a Mac that stays awake:
+
+```bash
+# crontab -e — 08:45 on weekdays
+45 8 * * 1-5 cd /path/to/reporto && /usr/local/bin/node scripts/pull.mjs >> /tmp/reporto-pull.log 2>&1
+```
+
+`launchd` is the better fit if the laptop sleeps through 08:45, since a `StartCalendarInterval`
+job runs on wake and cron does not.
+
+## The stand-up note
+
+The dashboard builds it on demand: what moved since the last working day (Monday looks back
+to Friday), what is in flight, what is stuck, and what the calendar takes today. The first
+half is a Jira search plus a changelog read per ticket and one GitHub search — behind a
+button, because it is wanted once a day rather than on every visit. The rest is derived from
+the reports already on disk. **Copy note** puts it on the clipboard as plain text.
+
+On Hold is deliberately not a blocker: parked work read out every morning is what makes
+people stop listening to that part of the note.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive
@@ -433,6 +473,9 @@ src/prState.ts      PR review state + deploy-qc chip derivation
 src/prLanes.ts      which lane a PR is in, its reason line and aging tone
 src/kit.ts          client for /api/kit
 server/kit.mjs      reads the commands and skills installed on this machine
+server/reports.mjs  config, the pullers, and the report+index writing they share
+server/standup.mjs  what moved since the last working day
+scripts/pull.mjs    headless pull, for cron
 src/statsMetrics.ts monthly metric definitions, deltas and formatting
 src/components/AppShell.tsx  rail + top bar; SideNav and TopBar are its two halves
 src/components/JiraBoard.tsx status columns in workflow order, like the Jira board

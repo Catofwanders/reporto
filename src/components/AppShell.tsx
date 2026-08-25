@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom';
 import type { ReportKind } from '../reportKinds';
 import { useRefresh } from '../refreshContext';
 import { SideNav } from './SideNav';
+import { StaleRefresh } from './StaleRefresh';
 import { TopBar } from './TopBar';
 
 interface AppShellProps {
@@ -63,6 +64,7 @@ export const AppShell = ({ generatedAt, children }: AppShellProps) => {
 
   return (
     <div className="shell">
+      <StaleRefresh generatedAt={generatedAt} />
       <SideNav generatedAt={generatedAt} running={running} />
       <div className="shell-main">
         <TopBar

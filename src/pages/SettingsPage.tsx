@@ -1,9 +1,15 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { PALETTES, applyPalette, readPalette } from '../theme';
+import { STALE_HOURS, autoRefreshEnabled, setAutoRefresh } from '../autoRefresh';
 
 export const SettingsPage = () => {
   const [palette, setPalette] = useState(readPalette);
+  const [auto, setAuto] = useState(autoRefreshEnabled);
+
+  const toggleAuto = () => {
+    setAutoRefresh(!auto);
+    setAuto(!auto);
+  };
 
   const choose = (id: string) => {
     applyPalette(id);
@@ -12,13 +18,27 @@ export const SettingsPage = () => {
 
   return (
     <main className="grid">
-      <Link to="/" className="back-link">
-        ← Home
-      </Link>
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Updating</h2>
+          <span className="panel-meta">saved in this browser</span>
+        </div>
+
+        <label className="setting-row">
+          <input type="checkbox" checked={auto} onChange={toggleAuto} />
+          <span>
+            <strong>Update stale reports when I open the dashboard</strong>
+            <em>
+              Anything older than {STALE_HOURS} hours is refetched once per session — only
+              the reports the server can pull itself, never an agent run.
+            </em>
+          </span>
+        </label>
+      </section>
 
       <section className="panel">
         <div className="panel-head">
-          <h2>🎨 Palette</h2>
+          <h2>Palette</h2>
           <span className="panel-meta">applies everywhere, saved in this browser</span>
         </div>
 
