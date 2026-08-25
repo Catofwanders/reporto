@@ -7,6 +7,7 @@ import type { PrActionName } from './server/github.mjs'
 import { PR_ACTIONS, prAction, pullOpenPrs, pullTicketPrs } from './server/github.mjs'
 import { jiraTransition, jiraTransitions, pullJira } from './server/jira.mjs'
 import { pullStats } from './server/stats.mjs'
+import { readKit } from './server/kit.mjs'
 import { pullGoogleCalendar } from './server/googleCalendar.mjs'
 
 // Personal / employer-specific settings live in ./config (gitignored). The committed
@@ -632,6 +633,32 @@ function writeJsonAtomic(file: string, value: unknown) {
   fs.renameSync(tmp, file)
 }
 
+/**
+ * The commands and skills this machine has, read from ~/.claude at request time. GET only:
+ * it reads local files and writes nothing, so the cross-site guard has nothing to protect.
+ */
+function kitPlugin(): Plugin {
+  return {
+    name: 'reporto-kit',
+    configureServer(server) {
+      server.middlewares.use('/api/kit', (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        if (req.method !== 'GET') {
+          res.statusCode = 405
+          res.end('{"error":"use GET"}')
+          return
+        }
+        try {
+          res.end(JSON.stringify(readKit({ projectDir: __dirname })))
+        } catch (err) {
+          res.statusCode = 500
+          res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }))
+        }
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   // Vite only exposes VITE_-prefixed vars, and only to the client. The pullers run in
@@ -648,6 +675,7 @@ export default defineConfig(({ mode }) => {
     server: { host: '127.0.0.1' },
     plugins: [
       react(),
+      kitPlugin(),
       refreshPlugin(),
       pullPlugin(),
       prActionPlugin(),

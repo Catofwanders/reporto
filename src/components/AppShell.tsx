@@ -44,6 +44,11 @@ const HEADINGS: Record<
     subtitle: "Today's events and the upcoming watch-list.",
     kind: 'calendar',
   },
+  '/commands': {
+    title: 'Commands',
+    subtitle: 'Every slash command and skill installed on this machine.',
+    action: 'none',
+  },
   '/settings': {
     title: 'Settings',
     subtitle: 'Palette, and what this dashboard is allowed to do.',

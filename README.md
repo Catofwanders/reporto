@@ -362,6 +362,28 @@ The state counts stay above the lanes but only for states that are not zero. Dra
 is a button only in the Drafts lane, where it is the point; sending a live PR back to draft
 is rare and lives in the row menu instead of repeating down every row.
 
+## Commands and skills
+
+`/commands` lists every slash command and skill this machine can run — 20 commands and 79
+skills at the time of writing, across 13 plugins — with a filter by name, description or
+tool, the source each came from, the file to edit it in, and a copy button for the
+invocation. It exists because `/help` scrolls past a list that long, and a command you
+cannot find is a command you rewrite by hand.
+
+`GET /api/kit` reads it at request time rather than writing a report file: commands are
+edited between sessions, so a snapshot would be stale immediately, and the source is a local
+directory that costs nothing to walk.
+
+Two things the reader has to get right, both learned the hard way:
+
+- **A plugin keeps every version it ever installed.** Only the newest is live, so the reader
+  takes the newest directory per plugin — otherwise three cached figma versions report three
+  copies of every figma skill.
+- **A marketplace whose source is a local directory installs in place**, never into
+  `plugins/cache`, so guessing that layout silently loses those plugins. The reader resolves
+  paths from `installed_plugins.json` and `known_marketplaces.json`, and skips plugins that
+  `settings.json` has switched off.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive
@@ -409,6 +431,8 @@ config/             your settings (gitignored)
 skills/             sanitized mail skill + report template, and the report contract
 src/prState.ts      PR review state + deploy-qc chip derivation
 src/prLanes.ts      which lane a PR is in, its reason line and aging tone
+src/kit.ts          client for /api/kit
+server/kit.mjs      reads the commands and skills installed on this machine
 src/statsMetrics.ts monthly metric definitions, deltas and formatting
 src/components/AppShell.tsx  rail + top bar; SideNav and TopBar are its two halves
 src/components/JiraBoard.tsx status columns in workflow order, like the Jira board

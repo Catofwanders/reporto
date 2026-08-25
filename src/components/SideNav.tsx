@@ -4,6 +4,7 @@ import InsightsRoundedIcon from '@mui/icons-material/InsightsRounded';
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import AltRouteRoundedIcon from '@mui/icons-material/AltRouteRounded';
 import EventRoundedIcon from '@mui/icons-material/EventRounded';
+import TerminalRoundedIcon from '@mui/icons-material/TerminalRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import type { ReportKind } from '../reportKinds';
 import { RefreshButton } from './RefreshButton';
@@ -38,6 +39,10 @@ const SECTIONS: { title: string; rows: NavRow[] }[] = [
       { to: '/prs', label: 'Pull requests', icon: AltRouteRoundedIcon, kind: 'prs' },
       { to: '/calendar', label: 'Calendar', icon: EventRoundedIcon, kind: 'calendar' },
     ],
+  },
+  {
+    title: 'Toolkit',
+    rows: [{ to: '/commands', label: 'Commands', icon: TerminalRoundedIcon }],
   },
 ];
 

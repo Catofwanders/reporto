@@ -149,6 +149,36 @@ export interface StatsReport {
   notes: string[];
 }
 
+/** One slash command or skill installed on this machine. */
+export interface KitEntry {
+  kind: 'command' | 'skill';
+  /** What you type, without the leading slash. */
+  name: string;
+  source: 'personal' | 'project' | 'plugin';
+  plugin: string | null;
+  description: string;
+  /** The command's own `argument-hint`, when it declares one. */
+  argumentHint: string | null;
+  tools: string[];
+  model: string | null;
+  /** Home-relative path, so the repo never carries an absolute one. */
+  path: string;
+  lines: number;
+  modified: string;
+}
+
+export interface KitReport {
+  generatedAt: string;
+  entries: KitEntry[];
+  plugins: {
+    name: string;
+    marketplace: string;
+    version: string;
+    commands: number;
+    skills: number;
+  }[];
+}
+
 export interface ReportIndex {
   latest: { jira?: string; calendar?: string; prs?: string; stats?: string };
   history: { date: string; jira?: string; calendar?: string; prs?: string; stats?: string }[];

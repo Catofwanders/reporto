@@ -787,3 +787,32 @@ body { background: var(--canvas); }
 .pr-row-title { margin: 0; font-size: .88rem; line-height: 1.35; }
 .pr-row-reason { margin: 0; font-size: .74rem; color: var(--ink-2); }
 .pr-row-actions { display: flex; align-items: center; gap: .3rem; }
+
+/* Toolkit: the commands and skills this machine has. */
+.kit-filters { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; align-items: center; }
+.kit-search {
+  flex: 1 1 16rem; min-width: 12rem;
+  background: var(--bg); color: var(--ink);
+  border: 1px solid var(--line); border-radius: .5rem;
+  padding: .45rem .65rem; font: inherit; font-size: .82rem;
+}
+.kit-search:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.kit-count { margin: .8rem 0 0; font-size: .72rem; color: var(--ink-2); }
+.kit-list { display: grid; gap: .5rem; margin-top: .5rem; }
+
+.kit-row {
+  display: grid; gap: .3rem;
+  background: var(--panel); border: 1px solid var(--line); border-radius: .55rem;
+  padding: .6rem .7rem;
+}
+.kit-row:hover { border-color: color-mix(in oklab, var(--accent) 40%, var(--line)); }
+.kit-row-head { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; }
+.kit-name { font-size: .84rem; font-weight: 600; color: var(--accent); }
+.kit-plugin { font-size: .68rem; color: var(--ink-2); }
+.kit-args { font-size: .68rem; color: var(--ink-2); }
+.kit-desc { margin: 0; font-size: .78rem; color: var(--ink-2); line-height: 1.4; }
+.kit-row-foot { display: flex; flex-wrap: wrap; gap: .3rem .8rem; align-items: baseline; }
+.kit-tools { font-size: .68rem; color: var(--ink-2); }
+/* The path is the answer to "where do I edit this", so it stays visible rather than hidden
+   behind a hover. */
+.kit-path { margin-left: auto; font-size: .66rem; color: var(--ink-2); opacity: .8; }
