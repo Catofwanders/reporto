@@ -323,6 +323,22 @@ fail: green↔red sits at ΔE 5.3 for a deuteranope and blue↔purple at ΔE 8.7
 colour vision. So the donut carries the two biggest repos plus a folded tail, and the full
 ranking sits under it as labelled bars, where identity comes from text.
 
+## The Jira board
+
+`/jira` defaults to a board: one column per status, in **workflow order** rather than the
+order the JQL returned — a board is a pipeline, and JQL gives a ranking. A status the order
+does not know keeps its place after the ones it does, so an unfamiliar column appears on the
+right instead of vanishing. Columns are a fixed width and the row scrolls sideways; a column
+that grew with its content would make a busy status wider than a quiet one.
+
+The status chip on a card is still how a ticket moves. Dragging would need a drop target per
+column and a guess at which transition a drop means, while the chip asks Jira what the
+workflow actually allows for that ticket right now.
+
+A board card holds the summary, its PRs, and a deploy-qc warning when a merged PR is missing
+from that branch. Everything else — per-ticket notes, PR remarks — lives in the **List**
+view behind the toggle in the card header.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive
@@ -371,6 +387,7 @@ skills/             sanitized mail skill + report template, and the report contr
 src/prState.ts      PR review state + deploy-qc chip derivation
 src/statsMetrics.ts monthly metric definitions, deltas and formatting
 src/components/AppShell.tsx  rail + top bar; SideNav and TopBar are its two halves
+src/components/JiraBoard.tsx status columns in workflow order, like the Jira board
 src/reportSchema.ts report shape guards
 config.template/    committed template to copy
 public/reports/     report JSON + index.json (gitignored)
