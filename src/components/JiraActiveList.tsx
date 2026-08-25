@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { JiraReport, Ticket } from '../types';
+import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import { Chip } from './Chip';
 import { TicketStatus } from './TicketStatus';
 import { RefreshButton } from './RefreshButton';
@@ -77,7 +78,15 @@ export const JiraActiveList = ({ report, onChanged }: JiraActiveListProps) => {
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>🎫 Jira</h2>
+        <div className="panel-title">
+          <span className="panel-icon badge-qc" aria-hidden="true">
+            <ConfirmationNumberRoundedIcon fontSize="small" />
+          </span>
+          <div>
+            <h2>Active tickets</h2>
+            <p className="panel-sub">In progress, in review, or waiting on QC</p>
+          </div>
+        </div>
         <span className="panel-meta">
           <Link to="/jira">
             {report.date} · {tickets.length} active →

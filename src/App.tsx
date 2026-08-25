@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import type { CalendarReport, JiraReport, PrsReport, ReportIndex, StatsReport } from './types';
 import type { ReportKind } from './reportKinds';
 import { REPORT_KINDS } from './reportKinds';
 import { RefreshProvider } from './refresh';
 import { assertReport } from './reportSchema';
-import { ActionBar } from './components/ActionBar';
+import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { HomePage } from './pages/HomePage';
 import { JiraPage } from './pages/JiraPage';
+import { PrsPage } from './pages/PrsPage';
 import { StatsPage } from './pages/StatsPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -148,20 +149,7 @@ export const App = () => {
   return (
     <BrowserRouter>
       <RefreshProvider onReload={load}>
-        <div className="wrap">
-          <header className="app-head">
-            <h1>
-              <Link to="/" className="home-link">
-                reporto
-              </Link>
-            </h1>
-            <span className="app-sub">jira + PRs + calendar dashboard</span>
-            <Link to="/settings" className="app-settings" title="Settings">
-              ⚙
-            </Link>
-            <ActionBar generatedAt={generatedAt} />
-          </header>
-
+        <AppShell generatedAt={generatedAt}>
           {loading && <p className="status">Loading reports…</p>}
           {indexError && <p className="status error">Could not read the report index: {indexError}</p>}
           {failed.length > 0 && (
@@ -185,6 +173,7 @@ export const App = () => {
                   }
                 />
                 <Route path="/jira" element={<JiraPage report={reports.jira} />} />
+                <Route path="/prs" element={<PrsPage report={reports.prs} />} />
                 <Route path="/calendar" element={<CalendarPage report={reports.calendar} />} />
                 <Route path="/stats" element={<StatsPage report={reports.stats} />} />
                 <Route path="/settings" element={<SettingsPage />} />
@@ -194,7 +183,7 @@ export const App = () => {
               </Routes>
             </ErrorBoundary>
           )}
-        </div>
+        </AppShell>
       </RefreshProvider>
     </BrowserRouter>
   );

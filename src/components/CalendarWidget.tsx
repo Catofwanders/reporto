@@ -1,3 +1,4 @@
+import EventRoundedIcon from '@mui/icons-material/EventRounded';
 import { Link } from 'react-router-dom';
 import type { CalendarEvent, CalendarReport } from '../types';
 import { Chip } from './Chip';
@@ -46,7 +47,12 @@ const EventLine = ({ event }: { event: CalendarEvent }) => (
 export const CalendarWidget = ({ report }: { report: CalendarReport }) => (
   <aside className="widget">
     <div className="widget-head">
-      <h3>📅 Today</h3>
+      <h3>
+        <span className="panel-icon badge-qcout" aria-hidden="true">
+          <EventRoundedIcon fontSize="small" />
+        </span>
+        Today
+      </h3>
       <span className="widget-more">
         <Link to="/calendar">{report.date} →</Link>
       </span>

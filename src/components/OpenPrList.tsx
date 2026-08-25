@@ -1,6 +1,7 @@
 import type { OpenPr, PrsReport } from '../types';
 import { PR_STATE_LABEL, PR_STATE_TONE, prState, qcChip } from '../prState';
 import { Chip } from './Chip';
+import AltRouteRoundedIcon from '@mui/icons-material/AltRouteRounded';
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
 import { PrSummary } from './PrSummary';
@@ -77,7 +78,15 @@ export const OpenPrList = ({ report, onChanged }: OpenPrListProps) => {
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>🔀 My open PRs</h2>
+        <div className="panel-title">
+          <span className="panel-icon badge-open" aria-hidden="true">
+            <AltRouteRoundedIcon fontSize="small" />
+          </span>
+          <div>
+            <h2>My open PRs</h2>
+            <p className="panel-sub">Review state and deploy-qc standing</p>
+          </div>
+        </div>
         <span className="panel-meta">
           {report.date} · {total} open in {report.repos.length} repos
           <RefreshButton kind="prs" />

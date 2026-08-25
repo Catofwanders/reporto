@@ -295,6 +295,34 @@ costs one changelog request per ticket, so a refresh only pays for the current m
 Whatever a source could not answer is recorded in `notes` and shown on the page — a missing
 number reads as missing, never as zero.
 
+## Look and charts
+
+The layout follows the SaaS-admin convention: a dark rail that keeps its dark surface in
+both colour schemes, a near-white canvas, and hairline cards with a soft shadow. The rail
+carries the nav and each report's freshness stamp, with its update control appearing on
+hover; the top bar carries the page heading and **Update all**. There is deliberately no
+search box — four reports do not need one, and a search that found nothing would be set
+dressing.
+
+Charts are [Recharts](https://recharts.org). It was picked over the alternatives for one
+reason that matters here: its colours are plain SVG attributes, so a chart takes
+`stroke="var(--ok-ink)"` and the four palettes plus dark mode keep working without any
+JavaScript colour plumbing or a re-render per theme switch.
+
+Two rules the charts follow, both of which are about not misleading:
+
+- **One measure per plot.** Counts, days and hours never share an axis; a segmented control
+  in the card header switches between them instead. A second y-axis would misstate both
+  series on it.
+- **A gap is a gap.** A month whose source failed plots as `null` with `connectNulls` off,
+  so a hole in the data looks like a hole rather than a drop to zero.
+
+The repo donut is one hue at three steps, not one hue per repo. The status inks this app is
+built from are tuned to be read one at a time beside a label, and as a categorical set they
+fail: green↔red sits at ΔE 5.3 for a deuteranope and blue↔purple at ΔE 8.7 even with full
+colour vision. So the donut carries the two biggest repos plus a folded tail, and the full
+ranking sits under it as labelled bars, where identity comes from text.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive
@@ -342,11 +370,12 @@ config/             your settings (gitignored)
 skills/             sanitized mail skill + report template, and the report contract
 src/prState.ts      PR review state + deploy-qc chip derivation
 src/statsMetrics.ts monthly metric definitions, deltas and formatting
+src/components/AppShell.tsx  rail + top bar; SideNav and TopBar are its two halves
 src/reportSchema.ts report shape guards
 config.template/    committed template to copy
 public/reports/     report JSON + index.json (gitignored)
-src/pages/          Home, Jira, Calendar, Settings routes
-src/components/     cards, widgets, accordion, refresh button
+src/pages/          Home, Jira, PRs, Calendar, Stats, Settings routes
+src/components/     cards, charts, widgets, accordion, refresh button
 src/stories/        Storybook stories + synthetic fixtures
 .storybook/         Storybook config; preview stubs the router and refresh context
 server/github.mjs   open-PR pull, deploy-qc comparison, ticket↔PR match, PR actions

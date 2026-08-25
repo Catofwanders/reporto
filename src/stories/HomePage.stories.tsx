@@ -1,6 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Link } from 'react-router-dom';
-import { ActionBar } from '../components/ActionBar';
 import { HomePage } from '../pages/HomePage';
 import { calendarReport, jiraReport, prsReport, statsReport } from './fixtures';
 
@@ -28,37 +26,12 @@ const meta = {
     prs: freshPrs,
   },
   parameters: { layout: 'fullscreen' },
-  decorators: [
-    // Mirrors the shell in App.tsx, so the story is the whole dashboard rather than the
-    // panels floating on their own. The preview decorator supplies .wrap and the router.
-    (Story) => (
-      <>
-        <header className="app-head">
-          <h1>
-            <Link to="/" className="home-link">
-              reporto
-            </Link>
-          </h1>
-          <span className="app-sub">jira + PRs + calendar dashboard</span>
-          <ActionBar
-            generatedAt={{
-              calendar: minutesAgo(14),
-              stats: minutesAgo(22),
-              jira: minutesAgo(3),
-              prs: minutesAgo(1),
-            }}
-          />
-        </header>
-        <Story />
-      </>
-    ),
-  ],
 } satisfies Meta<typeof HomePage>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The whole dashboard on invented data — safe to screenshot and share. */
+/** The dashboard on invented data — safe to screenshot and share. */
 export const Default: Story = {};
 
 /** A fresh checkout, before any report has been written. */

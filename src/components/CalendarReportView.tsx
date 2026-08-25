@@ -1,5 +1,6 @@
 import type { CalendarEvent, CalendarReport } from '../types';
 import { Chip } from './Chip';
+import EventRoundedIcon from '@mui/icons-material/EventRounded';
 import { ReportAccordion } from './ReportAccordion';
 
 interface CalendarReportViewProps {
@@ -55,7 +56,15 @@ const EventRow = ({ event }: { event: CalendarEvent }) => (
 export const CalendarReportView = ({ report }: CalendarReportViewProps) => (
   <section className="panel">
     <div className="panel-head">
-      <h2>📅 Calendar</h2>
+      <div className="panel-title">
+        <span className="panel-icon badge-qcout" aria-hidden="true">
+          <EventRoundedIcon fontSize="small" />
+        </span>
+        <div>
+          <h2>Schedule</h2>
+          <p className="panel-sub">Today, then the upcoming watch-list</p>
+        </div>
+      </div>
       <span className="panel-meta">{report.date}</span>
     </div>
 

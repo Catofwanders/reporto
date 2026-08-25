@@ -1,6 +1,7 @@
 import type { JiraReport, Pr } from '../types';
 import { formatStatus } from '../jiraStatus';
 import { TicketStatus } from './TicketStatus';
+import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
 
@@ -15,7 +16,15 @@ const prLabel = (pr: Pr) => `${pr.repo.split('/').pop()}#${pr.num}`;
 export const JiraReportView = ({ report, onChanged }: JiraReportViewProps) => (
   <section className="panel">
     <div className="panel-head">
-      <h2>🎫 Jira</h2>
+      <div className="panel-title">
+        <span className="panel-icon badge-qc" aria-hidden="true">
+          <ConfirmationNumberRoundedIcon fontSize="small" />
+        </span>
+        <div>
+          <h2>All tickets</h2>
+          <p className="panel-sub">Grouped by the status Jira reports</p>
+        </div>
+      </div>
       <span className="panel-meta">
         {report.date}
         <RefreshButton kind="jira" />

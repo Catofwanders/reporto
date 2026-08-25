@@ -1,146 +1,114 @@
-import { Link } from 'react-router-dom';
-import type { StatsMonth, StatsReport } from '../types';
+import type { StatsReport } from '../types';
+import RocketLaunchRoundedIcon from '@mui/icons-material/RocketLaunchRounded';
+import AltRouteRoundedIcon from '@mui/icons-material/AltRouteRounded';
+import TimerRoundedIcon from '@mui/icons-material/TimerRounded';
+import EventRoundedIcon from '@mui/icons-material/EventRounded';
 import {
   DELIVERY_METRICS,
   LOAD_METRICS,
   PR_METRICS,
   chronological,
-  delta,
-  formatValue,
   type StatsMetric,
 } from '../statsMetrics';
-import { MonthBars } from '../components/MonthBars';
-import { RefreshButton } from '../components/RefreshButton';
+import { MonthTable } from '../components/MonthTable';
+import { RepoDonut } from '../components/RepoDonut';
+import { SparkCard } from '../components/SparkCard';
+import { TrendCard } from '../components/TrendCard';
 
 interface StatsPageProps {
   report: StatsReport | null;
 }
 
-const HEADLINE_IDS = ['deployed', 'merged', 'cycle', 'meetings'];
+const ALL = [...DELIVERY_METRICS, ...PR_METRICS, ...LOAD_METRICS];
 
-const Headline = ({
-  metric,
-  months,
-}: {
-  metric: StatsMetric;
-  months: StatsMonth[];
-}) => {
-  const latest = months[months.length - 1];
-  const change = delta(metric, months);
-  return (
-    <li>
-      <span className="stat-tile-value">{formatValue(metric, metric.value(latest))}</span>
-      <span className={`stat-tile-mark bar-${metric.tone}`} aria-hidden="true" />
-      <span className="stat-tile-label">{metric.label}</span>
-      {change && (
-        <span className={`stat-tile-delta ${change.better ? 'is-better' : 'is-worse'}`}>
-          {change.change === 0
-            ? 'no change'
-            : `${change.change > 0 ? '▲' : '▼'} ${Math.abs(change.change)} vs ${
-                months[months.length - 2].month
-              }`}
-        </span>
-      )}
-    </li>
-  );
-};
+/** The four numbers worth a card of their own, with the badge each one wears. */
+const HEADLINES = [
+  { id: 'deployed', icon: RocketLaunchRoundedIcon },
+  { id: 'merged', icon: AltRouteRoundedIcon },
+  { id: 'cycle', icon: TimerRoundedIcon },
+  { id: 'meetings', icon: EventRoundedIcon },
+];
 
-const Group = ({
-  title,
-  metrics,
-  months,
-}: {
-  title: string;
-  metrics: StatsMetric[];
-  months: StatsMonth[];
-}) => (
-  <section className="panel">
-    <div className="panel-head">
-      <h2>{title}</h2>
-    </div>
-    <div className="stats-charts">
-      {metrics.map((metric) => (
-        <MonthBars key={metric.id} metric={metric} months={months} />
-      ))}
-    </div>
-  </section>
-);
+type Badge = React.ComponentType<{ fontSize?: 'small' }>;
+
+const pick = (ids: { id: string; icon: Badge }[]) =>
+  ids
+    .map(({ id, icon }) => ({ metric: ALL.find((m) => m.id === id), icon }))
+    .filter((entry): entry is { metric: StatsMetric; icon: Badge } => Boolean(entry.metric));
 
 export const StatsPage = ({ report }: StatsPageProps) => {
   if (!report) {
     return (
       <main className="grid">
-        <Link to="/" className="back-link">
-          ← Home
-        </Link>
-        <p className="status">No stats yet — press ⚡ on the Stats card to pull them.</p>
+        <p className="status">
+          No statistics yet — press the bolt beside Statistics in the sidebar.
+        </p>
       </main>
     );
   }
 
   const months = chronological(report);
   const latest = months[months.length - 1];
-  const all = [...DELIVERY_METRICS, ...PR_METRICS, ...LOAD_METRICS];
-  const headlines = HEADLINE_IDS.map((id) => all.find((m) => m.id === id)).filter(
-    (metric): metric is StatsMetric => Boolean(metric),
-  );
-  const repos = latest?.prs?.byRepo ?? [];
-  const repoPeak = Math.max(...repos.map((r) => r.merged), 1);
 
   return (
-    <main className="grid stats-page">
-      <Link to="/" className="back-link">
-        ← Home
-      </Link>
+    <main className="grid">
+      <div className="kpi-grid">
+        {pick(HEADLINES).map(({ metric, icon }) => (
+          <SparkCard key={metric.id} metric={metric} months={months} icon={icon} />
+        ))}
+      </div>
+
+      <div className="stats-split">
+        <TrendCard
+          title="Delivery"
+          subtitle="Tickets through the workflow, by month"
+          metrics={DELIVERY_METRICS}
+          months={months}
+        />
+
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <h2>Merged by repo</h2>
+              <p className="panel-sub">Share of {latest?.month} merges</p>
+            </div>
+          </div>
+          <RepoDonut slices={latest?.prs?.byRepo ?? []} month={latest?.month ?? ''} />
+        </section>
+      </div>
+
+      <TrendCard
+        title="Pull requests"
+        subtitle="Throughput and review turnaround, by month"
+        metrics={PR_METRICS}
+        months={months}
+      />
+
+      <TrendCard
+        title="Load"
+        subtitle="What arrived, and what the calendar took"
+        metrics={LOAD_METRICS}
+        months={months}
+      />
 
       <section className="panel">
         <div className="panel-head">
-          <h2>📈 {latest?.month ?? 'Stats'}</h2>
-          <span className="panel-meta">
-            {months.length} months · pulled {report.date}
-            <RefreshButton kind="stats" />
-          </span>
+          <div>
+            <h2>Every month</h2>
+            <p className="panel-sub">The same numbers, exact</p>
+          </div>
+          <span className="panel-meta">pulled {report.date}</span>
         </div>
-        <ul className="stat-tiles stat-tiles-wide">
-          {headlines.map((metric) => (
-            <Headline key={metric.id} metric={metric} months={months} />
-          ))}
-        </ul>
+        <MonthTable months={months} metrics={ALL} />
       </section>
 
-      <Group title="Delivery" metrics={DELIVERY_METRICS} months={months} />
-      <Group title="Pull requests" metrics={PR_METRICS} months={months} />
-      <Group title="Load" metrics={LOAD_METRICS} months={months} />
-
-      {repos.length > 0 && (
-        <section className="panel">
-          <div className="panel-head">
-            <h2>Merged by repo</h2>
-            <span className="panel-meta">{latest?.month}</span>
-          </div>
-          <ul className="repo-bars">
-            {repos.map((repo) => (
-              <li key={repo.repo}>
-                <span className="repo-bars-name">{repo.repo}</span>
-                <span className="repo-bars-track">
-                  <span
-                    className="repo-bars-fill"
-                    style={{ width: `${(repo.merged / repoPeak) * 100}%` }}
-                  />
-                </span>
-                <span className="repo-bars-value">{repo.merged}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* The numbers are only as good as what the APIs can see, and two limits are easy to
-          forget: Outlook meetings are invisible here, and cycle time is a median over a
-          sample rather than every ticket. */}
+      {/* The limits are easy to forget once the numbers are drawn as a smooth area. */}
       <section className="panel stats-caveats">
         <div className="panel-head">
-          <h2>What these count</h2>
+          <div>
+            <h2>What these count</h2>
+            <p className="panel-sub">Read this before quoting any of it</p>
+          </div>
         </div>
         <ul>
           <li>
