@@ -193,7 +193,9 @@ Both sides therefore merge instead of overwriting: the puller keeps every event 
 `source` is not `google`, and the skill keeps the Google ones and no longer reads Google
 Calendar at all. Whichever runs last, neither half deletes the other.
 
-The **⚡ all** button beside them starts every refreshable report at once. They are
+The top-bar button belongs to the page: on Jira it updates Jira, on the statistics page it
+updates the statistics. Only the dashboard, which shows every report at once, offers
+**Update all** — and that button starts every refreshable report at once. They are
 genuinely independent — separate endpoints, separate report files, and the dev server
 answers them concurrently: firing all three together finishes in the time of the slowest
 (~17s, Jira) rather than their sum (~20s). Each card clears its own spinner as it lands, so

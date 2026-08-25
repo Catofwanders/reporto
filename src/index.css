@@ -573,6 +573,8 @@ body { background: var(--canvas); }
 }
 .shell-top-action:hover:not(:disabled) { filter: brightness(1.08); }
 .shell-top-action:disabled { cursor: progress; opacity: .75; }
+/* A failed pull keeps the button, tinted: the tooltip carries the reason. */
+.shell-top-action.has-error { background: var(--bad-ink); }
 
 .shell-content { padding: 1.5rem 1.75rem 3.5rem; max-width: 88rem; width: 100%; }
 
