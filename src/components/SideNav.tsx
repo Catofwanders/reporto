@@ -9,6 +9,7 @@ import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import TerminalRoundedIcon from '@mui/icons-material/TerminalRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import type { ReportKind } from '../reportKinds';
+import { useCapabilities } from '../capabilitiesContext';
 import { RefreshButton } from './RefreshButton';
 
 interface SideNavProps {
@@ -66,50 +67,63 @@ const age = (iso: string | undefined): string => {
   return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 };
 
-export const SideNav = ({ generatedAt, running }: SideNavProps) => (
-  <aside className="shell-side">
-    <div className="shell-brand">
-      <span className="shell-brand-mark" aria-hidden="true">
-        ◧
-      </span>
-      <span className="shell-brand-text">
-        <strong>reporto</strong>
-        <small>daily triage</small>
-      </span>
-    </div>
+/**
+ * A row for a report this machine cannot fetch leads to a page that can only apologise, so
+ * rows are dropped when their module is unconfigured or switched off. Sections empty
+ * themselves out the same way rather than leaving a heading over nothing.
+ */
+export const SideNav = ({ generatedAt, running }: SideNavProps) => {
+  const { usable } = useCapabilities();
+  const sections = SECTIONS.map((section) => ({
+    ...section,
+    rows: section.rows.filter((row) => !row.kind || usable(row.kind)),
+  })).filter((section) => section.rows.length > 0);
 
-    <nav className="shell-nav">
-      {SECTIONS.map((section) => (
-        <div key={section.title} className="shell-nav-group">
-          <p className="shell-nav-title">{section.title}</p>
-          <ul>
-            {section.rows.map((row) => (
-              <li key={row.to}>
-                {/* end, so "/" is only active on the dashboard rather than everywhere. */}
-                <NavLink to={row.to} end={row.to === '/'} className="shell-nav-row">
-                  <row.icon className="shell-nav-icon" fontSize="small" />
-                  <span className="shell-nav-label">{row.label}</span>
+  return (
+    <aside className="shell-side">
+      <div className="shell-brand">
+        <span className="shell-brand-mark" aria-hidden="true">
+          ◧
+        </span>
+        <span className="shell-brand-text">
+          <strong>reporto</strong>
+          <small>daily triage</small>
+        </span>
+      </div>
+
+      <nav className="shell-nav">
+        {sections.map((section) => (
+          <div key={section.title} className="shell-nav-group">
+            <p className="shell-nav-title">{section.title}</p>
+            <ul>
+              {section.rows.map((row) => (
+                <li key={row.to}>
+                  {/* end, so "/" is only active on the dashboard rather than everywhere. */}
+                  <NavLink to={row.to} end={row.to === '/'} className="shell-nav-row">
+                    <row.icon className="shell-nav-icon" fontSize="small" />
+                    <span className="shell-nav-label">{row.label}</span>
+                    {row.kind && (
+                      <span className="shell-nav-stamp">
+                        {running.has(row.kind) ? 'updating…' : age(generatedAt[row.kind])}
+                      </span>
+                    )}
+                  </NavLink>
                   {row.kind && (
-                    <span className="shell-nav-stamp">
-                      {running.has(row.kind) ? 'updating…' : age(generatedAt[row.kind])}
+                    <span className="shell-nav-refresh">
+                      <RefreshButton kind={row.kind} />
                     </span>
                   )}
-                </NavLink>
-                {row.kind && (
-                  <span className="shell-nav-refresh">
-                    <RefreshButton kind={row.kind} />
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </nav>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
 
-    <NavLink to="/settings" className="shell-side-foot">
-      <SettingsRoundedIcon fontSize="small" />
-      <span>Settings</span>
-    </NavLink>
-  </aside>
-);
+      <NavLink to="/settings" className="shell-side-foot">
+        <SettingsRoundedIcon fontSize="small" />
+        <span>Settings</span>
+      </NavLink>
+    </aside>
+  );
+};

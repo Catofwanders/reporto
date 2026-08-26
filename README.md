@@ -55,6 +55,29 @@ remote. A fresh checkout therefore starts with no data:
 the cards stay hidden and the action bar reads "never" until you press an update
 button.
 
+## Modules and credentials
+
+Settings → **Modules** lists what this machine can fetch. Each row says whether it is
+configured, offers a switch, and takes the credentials it needs:
+
+- A module that is **unconfigured or switched off is hidden** — no sidebar row, no dashboard
+  module, no ⌘K entry, no update button — and its page explains which of the two it is rather
+  than rendering empty. A card that can never fill reads as a bug.
+- The switch is a **config write**, not a browser preference: it lands in
+  `config/reporto.json` as `disabledModules`, so `npm run pull` from cron skips it too. The
+  pull endpoint refuses a disabled kind, so a stale tab cannot fetch behind the switch.
+- Credentials are **write-only**. The server answers "set" or "unset" and never returns a
+  value, the field is cleared the moment it saves, and only variables on a fixed list are
+  writable. A value is shape-checked first, so a token pasted into the e-mail field fails
+  there rather than as a 401 an hour later. Saving again replaces — that is how a rotated
+  token gets in without opening an editor.
+- Some modules take **either** of two credential routes: Google Calendar is happy with a
+  service-account key *or* the installed-app OAuth trio, and the row reports whichever route
+  is closest to done.
+
+This endpoint writes secrets to disk, so it exists only in the dev server, behind the same
+cross-site guard as the other write APIs — a production build is a static site with no API.
+
 ## Before pushing
 
 The remote is public and the work behind these reports is not, so a push is gated on a scan

@@ -9,6 +9,7 @@
  * Exits non-zero if any pull failed, which is what a cron wrapper wants to see.
  */
 import { PULLABLE, loadConfig, loadDotEnv, pullReport } from '../server/reports.mjs'
+import { capabilityOf } from '../server/capabilities.mjs'
 
 loadDotEnv()
 
@@ -28,6 +29,16 @@ let failed = 0
 // Sequential on purpose: the pullers share one Jira token and one gh process, and a cron
 // run has all the time it needs.
 for (const kind of kinds) {
+  // A module switched off in Settings, or missing its credentials, is skipped rather than
+  // failed: cron running every morning must not mail a failure for something deliberately off.
+  const capability = capabilityOf(kind, config)
+  if (capability && !(capability.configured && capability.enabled)) {
+    const why = capability.enabled
+      ? `missing ${[...capability.missingEnv, ...capability.missingConfig].join(', ') || 'credentials'}`
+      : 'switched off'
+    console.log(`${stamp()}  ${kind.padEnd(9)} skipped  ${why}`)
+    continue
+  }
   try {
     const result = await pullReport(kind, config)
     console.log(`${stamp()}  ${kind.padEnd(9)} ${result.file}  ${result.durationMs}ms`)

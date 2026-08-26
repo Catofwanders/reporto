@@ -11,9 +11,11 @@ import type {
 import type { ReportKind } from './reportKinds';
 import { REPORT_KINDS } from './reportKinds';
 import { RefreshProvider } from './refresh';
+import { CapabilitiesProvider } from './capabilities';
 import { assertReport } from './reportSchema';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ModuleGate } from './components/ModuleGate';
 import { HomePage } from './pages/HomePage';
 import { JiraPage } from './pages/JiraPage';
 import { PrsPage } from './pages/PrsPage';
@@ -161,58 +163,92 @@ export const App = () => {
 
   return (
     <BrowserRouter>
-      <RefreshProvider onReload={load}>
-        <AppShell generatedAt={generatedAt} jira={reports.jira} prs={reports.prs}>
-          {loading && <p className="status">Loading reports…</p>}
-          {indexError && <p className="status error">Could not read the report index: {indexError}</p>}
-          {failed.length > 0 && (
-            <p className="status error">
-              {failed.map((kind) => `${kind}: ${loadErrors[kind]}`).join(' · ')}
-            </p>
-          )}
+      <CapabilitiesProvider>
+        <RefreshProvider onReload={load}>
+          <AppShell generatedAt={generatedAt} jira={reports.jira} prs={reports.prs}>
+            {loading && <p className="status">Loading reports…</p>}
+            {indexError && <p className="status error">Could not read the report index: {indexError}</p>}
+            {failed.length > 0 && (
+              <p className="status error">
+                {failed.map((kind) => `${kind}: ${loadErrors[kind]}`).join(' · ')}
+              </p>
+            )}
 
-          {!loading && (
-            <ErrorBoundary>
-              <Routes>
-                <Route
-                  path="/"
-                  element={
-                    <HomePage
-                      jira={reports.jira}
-                      reviews={reports.reviews}
-                      calendar={reports.calendar}
-                      prs={reports.prs}
-                    />
-                  }
-                />
-                <Route path="/jira" element={<JiraPage report={reports.jira} />} />
-                <Route path="/prs" element={<PrsPage report={reports.prs} />} />
-                <Route
-                  path="/reviews"
-                  element={<ReviewsPage report={reports.reviews} jira={reports.jira} />}
-                />
-                <Route path="/calendar" element={<CalendarPage report={reports.calendar} />} />
-                <Route path="/stats" element={<StatsPage report={reports.stats} />} />
-                <Route
-                  path="/projects"
-                  element={
-                    <ProjectsPage jira={reports.jira} prs={reports.prs} stats={reports.stats} />
-                  }
-                />
-                <Route
-                  path="/projects/:id"
-                  element={<ProjectPage jira={reports.jira} prs={reports.prs} />}
-                />
-                <Route path="/commands" element={<CommandsPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                {/* /email was a route until the mail views were removed; a bookmark to it
-                    lands on the dashboard rather than on a blank page. */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </ErrorBoundary>
-          )}
-        </AppShell>
-      </RefreshProvider>
+            {!loading && (
+              <ErrorBoundary>
+                <Routes>
+                  <Route
+                    path="/"
+                    element={
+                      <HomePage
+                        jira={reports.jira}
+                        reviews={reports.reviews}
+                        calendar={reports.calendar}
+                        prs={reports.prs}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/jira"
+                    element={
+                      <ModuleGate kind="jira">
+                        <JiraPage report={reports.jira} />
+                      </ModuleGate>
+                    }
+                  />
+                  <Route
+                    path="/prs"
+                    element={
+                      <ModuleGate kind="prs">
+                        <PrsPage report={reports.prs} />
+                      </ModuleGate>
+                    }
+                  />
+                  <Route
+                    path="/reviews"
+                    element={
+                      <ModuleGate kind="reviews">
+                        <ReviewsPage report={reports.reviews} jira={reports.jira} />
+                      </ModuleGate>
+                    }
+                  />
+                  <Route
+                    path="/calendar"
+                    element={
+                      <ModuleGate kind="calendar">
+                        <CalendarPage report={reports.calendar} />
+                      </ModuleGate>
+                    }
+                  />
+                  <Route
+                    path="/stats"
+                    element={
+                      <ModuleGate kind="stats">
+                        <StatsPage report={reports.stats} />
+                      </ModuleGate>
+                    }
+                  />
+                  <Route
+                    path="/projects"
+                    element={
+                      <ProjectsPage jira={reports.jira} prs={reports.prs} stats={reports.stats} />
+                    }
+                  />
+                  <Route
+                    path="/projects/:id"
+                    element={<ProjectPage jira={reports.jira} prs={reports.prs} />}
+                  />
+                  <Route path="/commands" element={<CommandsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  {/* /email was a route until the mail views were removed; a bookmark to it
+                      lands on the dashboard rather than on a blank page. */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </ErrorBoundary>
+            )}
+          </AppShell>
+        </RefreshProvider>
+      </CapabilitiesProvider>
     </BrowserRouter>
   );
 };

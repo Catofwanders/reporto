@@ -1,4 +1,5 @@
 import type { CalendarReport, JiraReport, PrsReport, ReviewsReport } from '../types';
+import { useCapabilities } from '../capabilitiesContext';
 import { CalendarWidget } from '../components/CalendarWidget';
 import { FlowChecks } from '../components/FlowChecks';
 import { HomePrs } from '../components/HomePrs';
@@ -22,18 +23,24 @@ interface HomePageProps {
  * rather than acted on, and the review queue — where somebody else is waiting — earns that
  * space better.
  */
-export const HomePage = ({ jira, calendar, prs, reviews }: HomePageProps) => (
-  <main className="home">
-    {/* Contradictions first: they are the only thing here that is silently wrong. */}
-    <FlowChecks jira={jira} prs={prs} />
+export const HomePage = ({ jira, calendar, prs, reviews }: HomePageProps) => {
+  // A module whose credentials are missing, or which has been switched off in Settings, is
+  // not shown at all: an empty card that can never fill reads as a broken card.
+  const { usable } = useCapabilities();
 
-    <div className="home-modules">
-      {jira && <HomeTickets report={jira} />}
-      {prs && <HomePrs report={prs} />}
-      {reviews && <HomeReviews report={reviews} jira={jira} />}
-      {calendar && <CalendarWidget report={calendar} />}
-    </div>
+  return (
+    <main className="home">
+      {/* Contradictions first: they are the only thing here that is silently wrong. */}
+      <FlowChecks jira={jira} prs={prs} />
 
-    <StandupCard jira={jira} prs={prs} calendar={calendar} />
-  </main>
-);
+      <div className="home-modules">
+        {jira && usable('jira') && <HomeTickets report={jira} />}
+        {prs && usable('prs') && <HomePrs report={prs} />}
+        {reviews && usable('reviews') && <HomeReviews report={reviews} jira={jira} />}
+        {calendar && usable('calendar') && <CalendarWidget report={calendar} />}
+      </div>
+
+      <StandupCard jira={jira} prs={prs} calendar={calendar} />
+    </main>
+  );
+};

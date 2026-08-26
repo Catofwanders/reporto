@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReportKind } from './reportKinds';
 import { REPORT_KINDS } from './reportKinds';
 import { RefreshContext } from './refreshContext';
+import { useCapabilities } from './capabilitiesContext';
 
 interface RefreshResult {
   ok?: boolean;
@@ -19,6 +20,7 @@ interface RefreshProviderProps {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) => {
+  const { usable } = useCapabilities();
   const [running, setRunning] = useState<Set<ReportKind>>(new Set());
   const [errors, setErrors] = useState<Partial<Record<ReportKind, string>>>({});
   const [commandOf, setCommandOf] = useState<Partial<Record<ReportKind, string>>>({});
@@ -146,9 +148,14 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
     };
   }, [onReload]);
 
+  /**
+   * A kind is refreshable when the server can fetch it *and* the module is on. Without the
+   * second half, switching a module off left its update button everywhere — pressing it
+   * would work, which is worse than a dead button: the switch would look ignored.
+   */
   const canRefresh = useCallback(
-    (kind: ReportKind) => apiKinds.has(kind) || commandOf[kind] !== undefined,
-    [apiKinds, commandOf],
+    (kind: ReportKind) => usable(kind) && (apiKinds.has(kind) || commandOf[kind] !== undefined),
+    [apiKinds, commandOf, usable],
   );
 
   /**

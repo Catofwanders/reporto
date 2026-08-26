@@ -9,6 +9,7 @@ import { jiraTransition, jiraTransitions } from './server/jira.mjs'
 import { readKit } from './server/kit.mjs'
 import { readStandup } from './server/standup.mjs'
 import { PULLABLE, loadConfig, pullReport } from './server/reports.mjs'
+import { capabilities, capabilityOf, setEnabled, setSecret } from './server/capabilities.mjs'
 
 
 // A headless `claude -p` run cannot prompt for permission, so every tool the skill
@@ -242,6 +243,18 @@ function pullPlugin(): Plugin {
           res.end('{"error":"use POST"}')
           return
         }
+        // A module switched off in Settings, or one whose credentials are missing, is not
+        // pulled — otherwise the switch would only hide the card while cron and any stale
+        // tab kept fetching behind it.
+        const capability = capabilityOf(kind)
+        if (capability && !(capability.configured && capability.enabled)) {
+          res.statusCode = 409
+          const why = capability.enabled
+            ? `missing ${[...capability.missingEnv, ...capability.missingConfig].join(', ') || 'credentials'}`
+            : 'switched off in Settings'
+          res.end(JSON.stringify({ ok: false, kind, error: `${capability.label}: ${why}` }))
+          return
+        }
 
         // The pull itself, the file it writes and the index bookkeeping all live in
         // server/reports.mjs, so `npm run pull` from cron does exactly what this button does.
@@ -430,6 +443,77 @@ function readBody(
  * sketch. It lives in config/ rather than public/ because it names an employer's systems and
  * this remote is public, so it needs an endpoint rather than being served as a static file.
  */
+/**
+ * Settings the server owns: which modules are on, and which credentials exist.
+ *
+ * Reading is safe — it answers "set or unset", never a value, because the browser has no use
+ * for a token it cannot spend. Writing is the sharp edge: this endpoint puts a secret on
+ * disk, so it takes the cross-site guard, refuses any variable not on the writable list, and
+ * checks the value's shape before believing it. It exists only in the dev server; a
+ * production build is a static site with no API at all.
+ */
+function settingsPlugin(): Plugin {
+  return {
+    name: 'reporto-settings',
+    configureServer(server) {
+      server.middlewares.use('/api/settings', (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        const route = (req.url ?? '/').split('?')[0]
+
+        if (req.method === 'GET' && (route === '/' || route === '')) {
+          res.end(JSON.stringify({ modules: capabilities() }))
+          return
+        }
+
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.end('{"error":"use POST"}')
+          return
+        }
+        const blocked = rejectCrossSite(req)
+        if (blocked) {
+          res.statusCode = 403
+          res.end(JSON.stringify({ error: `settings write blocked: ${blocked}` }))
+          return
+        }
+
+        const module = /^\/modules\/([a-z]+)$/.exec(route)
+        const secret = /^\/secrets\/([A-Z][A-Z0-9_]*)$/.exec(route)
+        if (!module && !secret) {
+          res.statusCode = 404
+          res.end('{"error":"no such setting"}')
+          return
+        }
+
+        readBody(req, (raw) => {
+          let parsed: { enabled?: boolean; value?: string }
+          try {
+            parsed = JSON.parse(raw || '{}') as typeof parsed
+          } catch {
+            res.statusCode = 400
+            res.end('{"error":"body is not JSON"}')
+            return
+          }
+          try {
+            if (module) {
+              const result = setEnabled(module[1], parsed.enabled !== false)
+              res.end(JSON.stringify({ ok: true, ...result, modules: capabilities() }))
+              return
+            }
+            // The value is written and forgotten: what comes back is the standing, so the
+            // page can say "configured" without ever having held the token.
+            const result = setSecret(secret![1], parsed.value ?? '')
+            res.end(JSON.stringify({ ok: true, name: result.name, replaced: result.replaced, modules: capabilities() }))
+          } catch (err) {
+            res.statusCode = 400
+            res.end(JSON.stringify({ ok: false, error: (err as Error).message }))
+          }
+        })
+      })
+    },
+  }
+}
+
 function projectsPlugin(): Plugin {
   return {
     name: 'reporto-projects',
@@ -543,6 +627,7 @@ export default defineConfig(({ mode }) => {
       kitPlugin(),
       standupPlugin(),
       projectsPlugin(),
+      settingsPlugin(),
       refreshPlugin(),
       pullPlugin(),
       prActionPlugin(),

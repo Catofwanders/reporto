@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PALETTES, applyPalette, readPalette } from '../theme';
 import { STALE_HOURS, autoRefreshEnabled, setAutoRefresh } from '../autoRefresh';
+import { ModuleSettings } from '../components/ModuleSettings';
 
 export const SettingsPage = () => {
   const [palette, setPalette] = useState(readPalette);
@@ -18,6 +19,21 @@ export const SettingsPage = () => {
 
   return (
     <main className="grid">
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>Modules</h2>
+            <p className="panel-sub">
+              What this machine can fetch. Anything unconfigured or switched off is hidden
+              from the sidebar, the dashboard and ⌘K rather than failing when pressed.
+            </p>
+          </div>
+          <span className="panel-meta">saved on this machine</span>
+        </div>
+
+        <ModuleSettings />
+      </section>
+
       <section className="panel">
         <div className="panel-head">
           <h2>Updating</h2>

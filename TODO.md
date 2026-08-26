@@ -375,3 +375,45 @@ cycle-time median already pays in `server/stats.mjs`. Two options, and the choic
 The first is the honest one. What has to be settled first is the threshold per status —
 "normal" for CODE REVIEW is not "normal" for QC READY, and a fixed number of days would cry
 wolf on the statuses that are meant to be slow.
+
+## 9. Live updates instead of polling — research
+
+Every report is a file on disk that changes only when something pulls it, so the app shows
+whatever the last pull found. Today that means the auto-refresh in `src/autoRefresh.ts`
+(anything older than `STALE_HOURS` is refetched once per session) plus whatever buttons get
+pressed. The question is whether any of it can be push rather than poll.
+
+**What to check per source, because they differ**
+
+- **Slack** — the only one with real push available to a local app: Socket Mode over a
+  WebSocket, using an app-level `xapp-` token, delivers `message` and `reaction_added` events
+  with no public endpoint. That is the strongest candidate, and the reason the app-level token
+  already exists.
+- **GitHub** — webhooks need a public URL. A local dev server has none, so either a tunnel
+  (another moving part, and it exposes a port) or the GraphQL polling that already works. Also
+  worth measuring: conditional requests. A `304` costs no rate-limit budget on REST, which
+  makes a short poll interval cheap; GraphQL has no equivalent.
+- **Jira** — webhooks are admin-configured and also want a public URL. Assume polling.
+- **Google Calendar** — push notifications require an HTTPS callback with a verified domain.
+  Assume polling; `updatedMin` plus a sync token keeps the request small.
+
+**If push is not available (the likely answer for three of four)**
+
+Make the polling reasoned rather than fixed:
+
+- Poll on `visibilitychange` and window focus, not on a timer while the tab sits hidden — the
+  data only matters when somebody is looking at it.
+- Per-kind intervals from how fast each source actually moves: PR review state changes in
+  minutes, the calendar in hours, monthly statistics in days.
+- Only refetch the report the current page shows, with the dashboard refetching the four its
+  modules read.
+- Show freshness rather than hiding it: the nav already stamps each row, and a "just now"
+  after a focus-triggered pull is what tells the reader the number in front of them is live.
+
+**What has to be settled first**
+
+Whether a WebSocket connection held by the dev server is acceptable at all — it means the
+server keeps state between requests, which nothing here does today, and a dropped socket has
+to reconnect without turning into a busy loop. Also whether Socket Mode events are worth it
+for Slack alone, or whether one honest poll on focus covers every source with a fraction of
+the machinery.

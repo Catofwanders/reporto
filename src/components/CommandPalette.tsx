@@ -5,6 +5,7 @@ import { useRefresh } from '../refreshContext';
 import { fetchKit } from '../kit';
 import { copyText } from '../copyText';
 import { buildItems, matchItems, type PaletteItem } from '../paletteItems';
+import { useCapabilities } from '../capabilitiesContext';
 
 interface CommandPaletteProps {
   jira: JiraReport | null;
@@ -53,7 +54,8 @@ export const CommandPalette = ({ jira, prs }: CommandPaletteProps) => {
       });
   }, [open, kit.length]);
 
-  const items = useMemo(() => buildItems(jira, prs, kit), [jira, prs, kit]);
+  const { usable } = useCapabilities();
+  const items = useMemo(() => buildItems(jira, prs, kit, usable), [jira, prs, kit, usable]);
   const shown = useMemo(() => matchItems(items, query), [items, query]);
 
   const choose = async (item: PaletteItem) => {

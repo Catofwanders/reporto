@@ -22,15 +22,18 @@ export interface PaletteItem {
   subtitle?: string;
   /** Extra words worth matching that are not in the title. */
   keywords?: string;
+  /** The report this row depends on, when it has one — unusable kinds are left out. */
+  kind?: ReportKind;
   action: PaletteAction;
 }
 
 const PAGES: PaletteItem[] = [
   { id: 'page:/', group: 'Pages', title: 'Dashboard', action: { kind: 'goto', to: '/' } },
-  { id: 'page:/jira', group: 'Pages', title: 'Jira board', keywords: 'tickets', action: { kind: 'goto', to: '/jira' } },
-  { id: 'page:/prs', group: 'Pages', title: 'Pull requests', keywords: 'prs github', action: { kind: 'goto', to: '/prs' } },
-  { id: 'page:/calendar', group: 'Pages', title: 'Calendar', keywords: 'meetings', action: { kind: 'goto', to: '/calendar' } },
-  { id: 'page:/stats', group: 'Pages', title: 'Statistics', keywords: 'metrics charts', action: { kind: 'goto', to: '/stats' } },
+  { id: 'page:/jira', group: 'Pages', title: 'Jira board', keywords: 'tickets', kind: 'jira', action: { kind: 'goto', to: '/jira' } },
+  { id: 'page:/prs', group: 'Pages', title: 'Pull requests', keywords: 'prs github', kind: 'prs', action: { kind: 'goto', to: '/prs' } },
+  { id: 'page:/reviews', group: 'Pages', title: 'Review queue', keywords: 'reviews waiting', kind: 'reviews', action: { kind: 'goto', to: '/reviews' } },
+  { id: 'page:/calendar', group: 'Pages', title: 'Calendar', keywords: 'meetings', kind: 'calendar', action: { kind: 'goto', to: '/calendar' } },
+  { id: 'page:/stats', group: 'Pages', title: 'Statistics', keywords: 'metrics charts', kind: 'stats', action: { kind: 'goto', to: '/stats' } },
   { id: 'page:/commands', group: 'Pages', title: 'Commands and skills', keywords: 'kit slash', action: { kind: 'goto', to: '/commands' } },
   { id: 'page:/settings', group: 'Pages', title: 'Settings', keywords: 'palette theme', action: { kind: 'goto', to: '/settings' } },
 ];
@@ -44,10 +47,16 @@ export function buildItems(
   jira: JiraReport | null,
   prs: PrsReport | null,
   kit: KitEntry[],
+  /** Which report kinds this machine can actually fetch; everything else is left out. */
+  usable: (kind: ReportKind) => boolean = () => true,
 ): PaletteItem[] {
-  const items: PaletteItem[] = [...PAGES];
+  // A palette that offers "Update Statistics" on a machine with no Jira token is a list of
+  // ways to fail. Pages tied to a report go the same way as their nav row.
+  const items: PaletteItem[] = PAGES.filter(
+    (page) => !page.kind || usable(page.kind),
+  );
 
-  for (const kind of REPORT_KINDS) {
+  for (const kind of REPORT_KINDS.filter(usable)) {
     items.push({
       id: `refresh:${kind}`,
       group: 'Update',
