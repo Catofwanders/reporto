@@ -16,12 +16,24 @@ const freshPrs = {
   })),
 };
 
+/** Same for the review queue: an age pill reading "104d" is the fixture's date, not a fact. */
+const freshReviews = {
+  ...reviewsReport,
+  prs: reviewsReport.prs.map((pr, i) => ({
+    ...pr,
+    updatedAt: minutesAgo(60 + i * 120),
+    lastCommitAt: minutesAgo(60 + i * 120),
+    createdAt: minutesAgo(60 * 24 * (2 + i)),
+    myReviewAt: pr.myReviewAt ? minutesAgo(60 * 24 * (3 + i)) : null,
+  })),
+};
+
 const meta = {
   title: 'Pages/Home',
   component: HomePage,
   args: {
     jira: jiraReport,
-    reviews: reviewsReport,
+    reviews: freshReviews,
     calendar: calendarReport,
     prs: freshPrs,
   },

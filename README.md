@@ -6,12 +6,15 @@ calendar, each rendered from a JSON report on disk.
 **This is a single-user, local-only app by design.** See
 [Why it stays local](#why-it-stays-local) before considering deploying it anywhere.
 
-![The dashboard: open PRs with review and deploy-qc state, Jira tickets and the calendar
-widget](docs/home.jpg)
+![The dashboard: a flow-check card, then modules for active tickets, my open PRs, the review
+queue and today's calendar, and the stand-up note](docs/home.jpg)
 
-Rendered from the synthetic fixtures in `src/stories/fixtures.ts` via the `Pages/Home`
-story, not from real reports — those hold meeting links and ticket detail and never leave
-your disk. The same story in the Nord palette: [docs/home-nord.jpg](docs/home-nord.jpg).
+One screen of modules rather than embedded pages: each carries the few rows worth acting on
+and links to the page holding the rest. Rendered from the synthetic fixtures in
+`src/stories/fixtures.ts` via the `Pages/Home` story, not from real reports — those hold
+meeting links and ticket detail and never leave your disk. The fixtures describe an invented
+online marketplace for the same reason. The same story in the Nord palette:
+[docs/home-nord.jpg](docs/home-nord.jpg).
 
 ## Running it
 
