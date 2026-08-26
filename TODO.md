@@ -40,8 +40,8 @@ the same shape as `/api/refresh`, with the cross-site guard applied.
 a confirmation naming the repo, number and title. `POST /api/pr/<repo>/<num>/<action>`
 drives it — draft and ready are GraphQL mutations (REST cannot flip draft state), close and
 reopen a REST PATCH. The action comes from a fixed server-side list, so the request can only
-name one of four; **merge is deliberately not among them.** Unresolved inline thread count
-now shows as a red chip on the row.
+name one of four; **merge is deliberately not among them.** Unanswered inline comments show
+in the row's reason line.
 
 Still open from the original sketch: requesting reviewers, and whether closed PRs should
 linger in the list so the action is undoable in place.
@@ -140,20 +140,21 @@ permission. The report already carries `review` and `url` per PR, so the filter 
 
 ## 4. Per-PR "Resolve comments" — PR detail page with a live Claude terminal
 
-For a PR that has unresolved review comments, one click opens a dedicated page showing
+For a PR that has unanswered review comments, one click opens a dedicated page showing
 the full PR context and, under it, a large terminal already running `claude` in that
 repo's local checkout — so the review feedback can be worked through without leaving the
 dashboard or hunting for the directory.
 
 **Shape**
 
-- The button appears on a PR row only when that PR has **unresolved** review threads, and
-  says how many.
+- The button appears on a PR row only when that PR has **unanswered** review comments —
+  nobody replied, nothing pushed over the hunk — and says how many. Resolution state is not
+  the test: nobody here clicks resolve.
 - It navigates to a detail route, `/pr/:repo/:number`, which shows:
   - PR title, state, review verdict, branch, ticket link;
-  - each unresolved thread — file, line, author, body, and the surrounding diff hunk —
+  - each unanswered thread — file, line, author, body, and the surrounding diff hunk —
     since that is the actual work list;
-  - resolved threads collapsed, for context.
+  - threads already answered or pushed over, collapsed, for context.
 - Below that, a terminal filling most of the viewport, attached to a `claude` session
   whose working directory is that repo's checkout, seeded with the PR number and the
   thread list so the first turn already has the context.
@@ -265,13 +266,16 @@ Nothing else moves.
 
 **GitHub `prs` is done.** `POST /api/pull/prs` (see `server/github.mjs`) fetches every open
 PR in one GraphQL call — review decision, draft flag, updated time, ticket key from the
-title, and unresolved inline thread count — writes `prs-<date>.json` and bumps the index.
+title, and unanswered inline comment count — writes `prs-<date>.json` and bumps the index.
 Measured 1.5s against 11 PRs, versus roughly three minutes for the `/jira` agent run. The
 PRs card picks it automatically (bolt icon) and no longer marks the Jira card busy.
 
 Two things learned while building it:
-- `unresolvedThreads` counts *inline* threads only. A review left as a top-level body — as
-  on #987 — has zero threads, so request 4's button cannot key off this number alone.
+- The thread count covers *inline* threads only. A review left as a top-level body — as on
+  #987 — has zero threads, so request 4's button cannot key off this number alone.
+- Resolution state turned out to be useless here: nobody on this team clicks resolve, so
+  the count only ever grew. What the reports carry instead is "nobody replied and nobody
+  pushed over the hunk" — see `unansweredThreads` in `server/github.mjs`.
 - The API result can be fresher than the skill's: #1791 merged at 06:45 UTC and vanished
   from the open list within the same session.
 

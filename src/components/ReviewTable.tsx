@@ -45,7 +45,7 @@ export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTab
             <th>PR</th>
             <th>What it needs</th>
             <th className="review-col-ticket">Ticket</th>
-            <th className="review-col-size">Size · threads</th>
+            <th className="review-col-size">Size</th>
           </tr>
         </thead>
         <tbody>
@@ -103,18 +103,6 @@ export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTab
                   <span className={`chip chip-${sizeTone(pr)}`} title="how much there is to read">
                     {sizeLabel(pr)}
                   </span>
-                  {/* Every unresolved thread on the PR, not only mine — "2 open" read as
-                      two open somethings next to a file count. */}
-                  {pr.unresolvedThreads > 0 && (
-                    <span
-                      className="chip chip-bad"
-                      title={`${pr.unresolvedThreads} unresolved review thread${
-                        pr.unresolvedThreads === 1 ? '' : 's'
-                      } on this PR, from anyone`}
-                    >
-                      {pr.unresolvedThreads} unresolved
-                    </span>
-                  )}
                 </td>
               </tr>
             );

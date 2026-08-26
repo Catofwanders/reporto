@@ -213,7 +213,7 @@ export const prsReport: PrsReport = {
         // One PR per state the pill can show, so the story doubles as a colour reference.
         pr(77, 'PROJ-812 - cache the tenant lookup', 'APPROVED', {
           deployQc: { status: 'BEHIND', aheadBy: 0, behindBy: 12 },
-          unresolvedThreads: 2,
+          unansweredThreads: 2,
         }),
         pr(74, 'PROJ-802 - retry the webhook dispatch', 'CHANGES_REQUESTED', {
           deployQc: { status: 'DIVERGED', aheadBy: 4, behindBy: 30 },
@@ -262,8 +262,7 @@ const reviewPr = (
   myReviewAt: null,
   myReviewCount: 0,
   pushedSinceMyReview: false,
-  unresolvedThreads: 0,
-  myUnresolvedThreads: 0,
+  myUnansweredThreads: 0,
   size: { additions: 40, deletions: 8, files: 3 },
   ...over,
 });
@@ -288,8 +287,7 @@ export const reviewsReport: ReviewsReport = {
       title: 'PROJ-810 - move the tenant guard into middleware',
       myReviewState: 'CHANGES_REQUESTED',
       myReviewAt: AT('05:30'),
-      unresolvedThreads: 3,
-      myUnresolvedThreads: 2,
+      myUnansweredThreads: 2,
     }),
     reviewPr({
       num: 76,

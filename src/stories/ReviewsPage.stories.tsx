@@ -21,8 +21,7 @@ const pr = (over: Partial<ReviewPr> & Pick<ReviewPr, 'num' | 'title'>): ReviewPr
   myReviewAt: null,
   myReviewCount: 0,
   pushedSinceMyReview: false,
-  unresolvedThreads: 0,
-  myUnresolvedThreads: 0,
+  myUnansweredThreads: 0,
   size: { additions: 40, deletions: 8, files: 3 },
   ...over,
 });
@@ -49,8 +48,7 @@ const report: ReviewsReport = {
       title: 'Your two threads are still open',
       myReviewState: 'CHANGES_REQUESTED',
       myReviewAt: days(2),
-      unresolvedThreads: 3,
-      myUnresolvedThreads: 2,
+      myUnansweredThreads: 2,
       size: { additions: 210, deletions: 40, files: 7 },
     }),
     pr({

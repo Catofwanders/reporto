@@ -8,6 +8,10 @@ import { idleDays } from './prLanes';
  * happened since I did" — and GitHub answers neither directly: a requested review vanishes
  * from the request list the moment it is submitted, and an approval says nothing about the
  * three commits pushed afterwards.
+ *
+ * Nor does thread *resolution* answer anything: nobody on this team clicks resolve, so a
+ * count of unresolved threads is a count of every comment ever written. "Unanswered" here
+ * means nobody replied and nobody pushed over the hunk.
  */
 export type ReviewLaneId =
   | 'changed'
@@ -33,7 +37,7 @@ export const REVIEW_LANES: ReviewLaneMeta[] = [
   {
     id: 'unanswered',
     title: 'Your comments unanswered',
-    hint: 'Threads you opened that nobody has resolved or pushed against',
+    hint: 'You asked, and nobody has replied or pushed over it',
   },
   {
     id: 'approved',
@@ -62,7 +66,7 @@ export const laneOfReview = (pr: ReviewPr): ReviewLaneId => {
   if (pr.bot) return 'bots';
   if (pr.myReviewState && pr.pushedSinceMyReview) return 'changed';
   if (!pr.myReviewState) return 'unseen';
-  if (pr.myUnresolvedThreads > 0) return 'unanswered';
+  if (pr.myUnansweredThreads > 0) return 'unanswered';
   if (pr.myReviewState === 'APPROVED') return 'approved';
   return 'quiet';
 };
@@ -102,8 +106,8 @@ export const reasonOfReview = (
     if (open >= 2) return `waiting ${open} days for your first look`;
     return 'waiting for your first look';
   }
-  if (pr.myUnresolvedThreads > 0) {
-    return `${plural(pr.myUnresolvedThreads, 'thread')} of yours unanswered`;
+  if (pr.myUnansweredThreads > 0) {
+    return `${plural(pr.myUnansweredThreads, 'comment')} of yours with no reply`;
   }
   if (pr.myReviewState === 'APPROVED') {
     return pr.reviewDecision === 'APPROVED'

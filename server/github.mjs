@@ -54,7 +54,13 @@ const OPEN_PRS = (author, org) => `
       ... on PullRequest {
         number title url isDraft updatedAt reviewDecision headRefName
         repository { name isArchived }
-        reviewThreads(first: 100) { nodes { isResolved } }
+        reviewThreads(first: 100) {
+          nodes {
+            isResolved
+            isOutdated
+            latest: comments(last: 1) { nodes { author { login } } }
+          }
+        }
         reviews(last: 20) { nodes { submittedAt author { login } } }
         commits(last: 1) { nodes { commit { committedDate pushedDate } } }
       }
@@ -160,7 +166,19 @@ export async function pullOpenPrs({ author, org, jiraBrowseUrl, account, pinnedR
       review: n.reviewDecision ?? (threads.length ? 'COMMENTED' : 'NONE'),
       draft: n.isDraft,
       updatedAt: n.updatedAt,
-      unresolvedThreads: threads.filter((t) => !t.isResolved).length,
+      /*
+       * A question actually waiting on me: somebody else had the last word, the hunk has
+       * not been pushed over, and it is not marked resolved. Resolution is the last of the
+       * three rather than the whole test — reviewers here rarely click it, so on its own it
+       * counts every comment ever written; as an extra filter it only ever drops work that
+       * is demonstrably finished.
+       */
+      unansweredThreads: threads.filter(
+        (t) =>
+          !t.isResolved &&
+          !t.isOutdated &&
+          t.latest?.nodes?.[0]?.author?.login !== author,
+      ).length,
       lastReviewAt: lastReviewAt(n.reviews?.nodes ?? [], author),
       lastCommitAt: lastCommitAt(n.commits?.nodes ?? []),
     }
@@ -603,7 +621,12 @@ const REVIEW_FIELDS = `
   commits(last: 1) { nodes { commit { committedDate } } }
   reviews(last: 20) { nodes { author { login } state submittedAt } }
   reviewThreads(first: 50) {
-    nodes { isResolved isOutdated comments(first: 1) { nodes { author { login } } } }
+    nodes {
+      isResolved
+      isOutdated
+      opener: comments(first: 1) { nodes { author { login } } }
+      latest: comments(last: 1) { nodes { author { login } } }
+    }
   }`
 
 /**
@@ -678,11 +701,19 @@ export async function pullReviewQueue({ author, org, account, ticketPattern }) {
         pushedSinceMyReview: Boolean(
           last?.submittedAt && lastCommitAt && new Date(lastCommitAt) > new Date(last.submittedAt),
         ),
-        unresolvedThreads: threads.filter((thread) => !thread.isResolved).length,
-        // Threads I started that nobody has resolved: my review, still unanswered.
-        myUnresolvedThreads: threads.filter(
+        /*
+         * Threads I opened that nobody has answered — and answered means answered, not
+         * merely marked resolved. Reviewers on other people's PRs rarely click resolve, so
+         * keying off that count alone made every comment ever written look outstanding.
+         * A thread counts when I opened it, mine is still the last word in it, the hunk it
+         * hangs on has not been pushed over, and nobody has resolved it.
+         */
+        myUnansweredThreads: threads.filter(
           (thread) =>
-            !thread.isResolved && thread.comments?.nodes?.[0]?.author?.login === author,
+            !thread.isResolved &&
+            !thread.isOutdated &&
+            thread.opener?.nodes?.[0]?.author?.login === author &&
+            thread.latest?.nodes?.[0]?.author?.login === author,
         ).length,
         size: {
           additions: pr.additions ?? 0,

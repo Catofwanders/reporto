@@ -61,7 +61,7 @@ export const laneOf = (pr: OpenPr): LaneId => {
   return 'waiting';
 };
 
-const threads = (pr: OpenPr) => pr.unresolvedThreads ?? 0;
+const threads = (pr: OpenPr) => pr.unansweredThreads ?? 0;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -74,11 +74,11 @@ export const reasonOf = (pr: OpenPr, days: number): string => {
 
   if (state === 'changes-requested') {
     return open > 0
-      ? `changes requested · ${plural(open, 'thread')} to answer`
+      ? `changes requested · ${plural(open, 'comment')} unanswered`
       : 'changes requested — push a fix';
   }
   if (state === 'commented') {
-    return open > 0 ? `${plural(open, 'thread')} to answer` : 'reviewed — your move';
+    return open > 0 ? `${plural(open, 'comment')} to answer` : 'reviewed — your move';
   }
   if (state === 'approved') {
     const qc = qcChip(pr.deployQc);

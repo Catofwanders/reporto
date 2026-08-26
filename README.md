@@ -525,13 +525,20 @@ top of the list until it was excluded. The open-PR report drops them for the sam
 
 The report is two searches: `review-requested:<me>` and `reviewed-by:<me>` on open PRs.
 Neither is enough alone, and per PR it works out my latest review, whether commits landed
-after it, and how many unresolved threads are *mine* rather than anyone's.
+after it, and how many of my own comments nobody has answered.
+
+Thread *resolution* is not the test. Reviewers here rarely click resolve, so a count of
+unresolved threads is a count of every comment ever written and never falls — and most of
+them are the review bot's. A thread counts as unanswered when I opened it, mine is still the
+last word in it, and the hunk it hangs on has not been pushed over; being unresolved is a
+fourth condition rather than the only one, so it can only ever drop work that is
+demonstrably finished.
 
 | Lane | What it means |
 |---|---|
 | **Changed since you looked** | your verdict is out of date |
 | **Never looked at** | requested of you, no review from you yet |
-| **Your comments unanswered** | threads you opened that nobody resolved or pushed against |
+| **Your comments unanswered** | you asked, and nobody has replied or pushed over it |
 | **You approved** | still open, waiting on somebody else |
 | **Reviewed, nothing new** | nothing has moved since |
 | **Automation** | dependency bumps, collapsed behind a toggle so they never compete with a colleague |

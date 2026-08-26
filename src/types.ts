@@ -84,8 +84,12 @@ export interface OpenPr {
   review: ReviewDecision;
   draft: boolean;
   updatedAt: string;
-  /** Unresolved inline review threads. Only set by the API puller. */
-  unresolvedThreads?: number;
+  /**
+   * Inline threads whose last word is somebody else's, on a hunk still in the diff — the
+   * questions actually waiting on me. Not thread *resolution*: nobody here clicks resolve,
+   * so that count only ever grows. Only set by the API puller.
+   */
+  unansweredThreads?: number;
   /** Last review submitted by somebody other than the author. Only set by the API puller. */
   lastReviewAt?: string | null;
   /** Tip commit of the branch. Only set by the API puller. */
@@ -173,9 +177,8 @@ export interface ReviewPr {
   myReviewCount: number;
   /** Commits landed after my last review — the reason to look again. */
   pushedSinceMyReview: boolean;
-  unresolvedThreads: number;
-  /** Unresolved threads I started: my review, still unanswered. */
-  myUnresolvedThreads: number;
+  /** Threads I opened where mine is still the last word, and the hunk still stands. */
+  myUnansweredThreads: number;
   size: { additions: number; deletions: number; files: number };
 }
 
