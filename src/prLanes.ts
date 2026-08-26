@@ -31,6 +31,12 @@ export interface LanePr {
   reason: string;
   /** Approved and already on deploy-qc: the one row worth pulling the eye. */
   mergeReady: boolean;
+  /**
+   * The row's own colour, for the two states worth spotting without reading: approved is
+   * finished work waiting on a button, a draft is not in anybody's queue at all. Everything
+   * else stays neutral — colouring every row would mean colouring nothing.
+   */
+  tone: 'ok' | 'na' | null;
 }
 
 export const idleDays = (iso: string): number =>
@@ -103,12 +109,14 @@ export const toLanes = (report: PrsReport): Map<LaneId, LanePr[]> => {
     group.prs.map((pr) => {
       const days = idleDays(pr.updatedAt);
       const qc = qcChip(pr.deployQc);
+      const approved = prState(pr) === 'approved' && !pr.draft;
       return {
         repo: group.repo,
         pr,
         idleDays: days,
         reason: reasonOf(pr, days),
-        mergeReady: prState(pr) === 'approved' && !pr.draft && qc?.tone === 'qc',
+        mergeReady: approved && qc?.tone === 'qc',
+        tone: pr.draft ? ('na' as const) : approved ? ('ok' as const) : null,
       };
     }),
   );

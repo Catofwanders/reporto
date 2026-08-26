@@ -15,11 +15,14 @@ interface PrLanesProps {
 }
 
 const Row = ({ row, onChanged }: { row: LanePr; onChanged: () => void }) => {
-  const { pr, repo, idleDays, reason, mergeReady } = row;
+  const { pr, repo, idleDays, reason, mergeReady, tone } = row;
   const qc = qcChip(pr.deployQc);
 
   return (
-    <article className={`pr-row${mergeReady ? ' is-merge-ready' : ''}`} id={`${repo}-${pr.num}`}>
+    <article
+      className={`pr-row${tone ? ` pr-row-${tone}` : ''}${mergeReady ? ' is-merge-ready' : ''}`}
+      id={`${repo}-${pr.num}`}
+    >
       <span
         className={`pr-age chip-${agingTone(idleDays)}`}
         title={`last moved ${new Date(pr.updatedAt).toLocaleString('en-GB')}`}

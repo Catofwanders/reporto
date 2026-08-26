@@ -765,11 +765,24 @@ body { background: var(--canvas); }
   padding: .7rem .8rem;
 }
 .pr-row:hover { border-color: color-mix(in oklab, var(--accent) 40%, var(--line)); }
-/* Approved and already on deploy-qc: nothing left but the button, so it gets the accent. */
-.pr-row.is-merge-ready {
+
+/*
+ * Two states are worth spotting without reading the row: approved is finished work waiting
+ * on a button, and a draft is in nobody's queue. Both get a 3px edge and a wash of their own
+ * ink; every other row stays neutral, because colouring all of them would colour none.
+ */
+.pr-row-ok {
   border-left: 3px solid var(--ok-ink);
-  background: color-mix(in oklab, var(--ok-ink) 4%, var(--panel));
+  background: color-mix(in oklab, var(--ok-ink) 5%, var(--panel));
 }
+/* A draft is deliberately quieter than a live PR rather than louder. */
+.pr-row-na {
+  border-left: 3px solid var(--na-ink);
+  background: color-mix(in oklab, var(--na-ink) 6%, var(--panel));
+}
+.pr-row-na .pr-row-title a { color: var(--ink-2); }
+/* Approved *and* on deploy-qc: nothing is left but the button, so it gets the full tint. */
+.pr-row.is-merge-ready { background: color-mix(in oklab, var(--ok-ink) 11%, var(--panel)); }
 
 .pr-age {
   min-width: 2.9rem; text-align: center; border-radius: .4rem;
