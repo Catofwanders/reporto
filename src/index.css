@@ -971,3 +971,8 @@ body { background: var(--canvas); }
 .flow-step-index { fill: var(--ink-2); font-size: 9px; font-weight: 700; }
 .flow-step-label { fill: var(--ink); font-size: 10.5px; font-weight: 600; }
 .flow-step-ref { fill: var(--ink-2); font-size: 8.5px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+
+/* Review queue: the PR rows again, plus who wrote it and how big it is. */
+.review-author { color: var(--ink-2); }
+.review-toggle { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; color: var(--ink-2); cursor: pointer; }
+.review-toggle input { accent-color: var(--accent); }

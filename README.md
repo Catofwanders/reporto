@@ -33,6 +33,7 @@ Reports are JSON files in `public/reports/`, listed by `index.json`:
 | `calendar-<date>.json` | server, Google Calendar API; `/email` skill adds Outlook | today's events, upcoming watch-list |
 | `jira-<date>.json` | server, Jira REST API | tickets, their PRs, and merged-PR QC state |
 | `prs-<date>.json` | server, GitHub GraphQL | my open PRs grouped by repo |
+| `reviews-<date>.json` | server, GitHub GraphQL | PRs waiting on my review, and what moved since I looked |
 | `stats-<date>.json` | server, Jira REST + GitHub GraphQL + Google Calendar | six months of monthly counts, medians and meeting hours |
 
 The TypeScript types in `src/types.ts` are the schema of record, guarded on load by
@@ -183,6 +184,7 @@ thing a button cannot fetch (see below).
 | `prs` | `POST /api/pull/prs` — one GitHub GraphQL call, about a second (bolt icon) |
 | `jira` | `POST /api/pull/jira` — one Jira search plus one GitHub search (bolt icon) |
 | `calendar` | `POST /api/pull/calendar` — Google Calendar API (bolt icon) |
+| `reviews` | `POST /api/pull/reviews` — two GitHub searches, about a second (bolt icon) |
 | `stats` | `POST /api/pull/stats` — Jira, GitHub and Calendar for six months (bolt icon) |
 
 The calendar pull covers **Google only**. Outlook is readable only through the Chrome
@@ -492,6 +494,36 @@ Rows the app cannot verify are labelled a **sketch** on the page — deployment 
 documented anywhere it can read, so it is seeded from what the local docs state and meant to
 be corrected by hand.
 
+## The review queue
+
+`/reviews` answers two questions GitHub does not: **have I looked at this**, and **has
+anything happened since I did**. Its own "review requested" list drops a PR the moment a
+review is submitted, so the case most worth seeing — you approved, then the author pushed
+three more commits — is exactly the one it hides. That gets the top lane here.
+
+The report is two searches: `review-requested:<me>` and `reviewed-by:<me>` on open PRs.
+Neither is enough alone, and per PR it works out my latest review, whether commits landed
+after it, and how many unresolved threads are *mine* rather than anyone's.
+
+| Lane | What it means |
+|---|---|
+| **Changed since you looked** | your verdict is out of date |
+| **Never looked at** | requested of you, no review from you yet |
+| **Your comments unanswered** | threads you opened that nobody resolved or pushed against |
+| **You approved** | still open, waiting on somebody else |
+| **Reviewed, nothing new** | nothing has moved since |
+| **Automation** | dependency bumps, collapsed behind a toggle so they never compete with a colleague |
+
+Each row carries the author, the linked ticket and its Jira status, and a size chip — files
+plus lines added and removed, toned so a one-line fix and a forty-file refactor do not look
+alike, because that is what decides whether a review fits in the gap before your next
+meeting.
+
+Two ages, deliberately kept apart: the pill is how long the **branch** has been still, while
+"waiting N days" is how long the **PR** has existed. On an abandoned branch they differ by
+years, and conflating them made a three-year-old PR read as though the request arrived
+yesterday.
+
 ## Security model
 
 The dev server can write files and start agent processes, so it is not a passive
@@ -539,6 +571,7 @@ config/             your settings (gitignored)
 skills/             sanitized mail skill + report template, and the report contract
 src/prState.ts      PR review state + deploy-qc chip derivation
 src/prLanes.ts      which lane a PR is in, its reason line and aging tone
+src/reviewLanes.ts  the review queue's lanes, reasons and size tones
 src/kit.ts          client for /api/kit
 src/paletteItems.ts what ⌘K offers, and how a query is scored
 src/projectMap.ts   client for /api/projects, and the diagram's layout maths

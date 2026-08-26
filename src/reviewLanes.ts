@@ -48,6 +48,8 @@ export interface ReviewRow {
   pr: ReviewPr;
   /** Days since the branch last moved. */
   idleDays: number;
+  /** Days since the PR was opened — a different number, and the one "waiting" means. */
+  openDays: number;
   /** Days since my review, when I have made one. */
   sinceMyReview: number | null;
   reason: string;
@@ -69,8 +71,19 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 const state = (pr: ReviewPr) => (pr.myReviewState ?? '').toLowerCase().replace('_', ' ');
 
-/** The row's one line: what is true, and what it implies I do. */
-export const reasonOfReview = (pr: ReviewPr, days: number, since: number | null): string => {
+/**
+ * The row's one line: what is true, and what it implies I do.
+ *
+ * `days` is how long the branch has been still and `open` is how long the PR has existed —
+ * they are wildly different on an abandoned branch, and conflating them made a three-year-old
+ * PR read as "requested 1009 days ago" when the request may have come last week.
+ */
+export const reasonOfReview = (
+  pr: ReviewPr,
+  days: number,
+  since: number | null,
+  open: number,
+): string => {
   if (pr.bot) {
     return pr.myReviewState ? `${state(pr)} — bot PR` : 'dependency bump, nobody is waiting';
   }
@@ -80,8 +93,14 @@ export const reasonOfReview = (pr: ReviewPr, days: number, since: number | null)
   }
   if (!pr.myReviewState) {
     if (pr.draft) return 'requested, but still a draft';
-    if (days >= 4) return `requested ${days} days ago — they are waiting`;
-    return days >= 2 ? `waiting ${days} days for your first look` : 'waiting for your first look';
+    // An old PR whose branch is equally old is stale, not urgent — say which it is.
+    if (open >= 30) {
+      return days >= 30
+        ? `opened ${open}d ago, untouched since — probably dead`
+        : `opened ${open}d ago, never reviewed by you`;
+    }
+    if (open >= 2) return `waiting ${open} days for your first look`;
+    return 'waiting for your first look';
   }
   if (pr.myUnresolvedThreads > 0) {
     return `${plural(pr.myUnresolvedThreads, 'thread')} of yours unanswered`;
@@ -124,11 +143,13 @@ export const toReviewLanes = (
   for (const pr of report.prs) {
     const days = idleDays(pr.lastCommitAt ?? pr.updatedAt);
     const since = pr.myReviewAt ? idleDays(pr.myReviewAt) : null;
+    const openDays = idleDays(pr.createdAt);
     const row: ReviewRow = {
       pr,
       idleDays: days,
+      openDays,
       sinceMyReview: since,
-      reason: reasonOfReview(pr, days, since),
+      reason: reasonOfReview(pr, days, since, openDays),
       ticketStatus: pr.ticket ? (statuses.get(pr.ticket) ?? null) : null,
     };
     const lane = laneOfReview(pr);

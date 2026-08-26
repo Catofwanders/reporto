@@ -45,6 +45,11 @@ const HEADINGS: Record<
     subtitle: 'My open PRs, their review state and QC standing.',
     kind: 'prs',
   },
+  '/reviews': {
+    title: 'Reviews',
+    subtitle: "PRs waiting on your review, and the ones that moved since you looked.",
+    kind: 'reviews',
+  },
   '/calendar': {
     title: 'Calendar',
     subtitle: "Today's events and the upcoming watch-list.",

@@ -3,6 +3,7 @@ import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import InsightsRoundedIcon from '@mui/icons-material/InsightsRounded';
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import AltRouteRoundedIcon from '@mui/icons-material/AltRouteRounded';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import EventRoundedIcon from '@mui/icons-material/EventRounded';
 import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import TerminalRoundedIcon from '@mui/icons-material/TerminalRounded';
@@ -38,6 +39,7 @@ const SECTIONS: { title: string; rows: NavRow[] }[] = [
     rows: [
       { to: '/jira', label: 'Jira', icon: ConfirmationNumberRoundedIcon, kind: 'jira' },
       { to: '/prs', label: 'Pull requests', icon: AltRouteRoundedIcon, kind: 'prs' },
+      { to: '/reviews', label: 'Reviews', icon: VisibilityRoundedIcon, kind: 'reviews' },
       { to: '/calendar', label: 'Calendar', icon: EventRoundedIcon, kind: 'calendar' },
     ],
   },

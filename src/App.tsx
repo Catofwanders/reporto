@@ -17,6 +17,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { HomePage } from './pages/HomePage';
 import { JiraPage } from './pages/JiraPage';
 import { PrsPage } from './pages/PrsPage';
+import { ReviewsPage } from './pages/ReviewsPage';
 import { StatsPage } from './pages/StatsPage';
 import { CommandsPage } from './pages/CommandsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -186,6 +187,10 @@ export const App = () => {
                 />
                 <Route path="/jira" element={<JiraPage report={reports.jira} />} />
                 <Route path="/prs" element={<PrsPage report={reports.prs} />} />
+                <Route
+                  path="/reviews"
+                  element={<ReviewsPage report={reports.reviews} jira={reports.jira} />}
+                />
                 <Route path="/calendar" element={<CalendarPage report={reports.calendar} />} />
                 <Route path="/stats" element={<StatsPage report={reports.stats} />} />
                 <Route
