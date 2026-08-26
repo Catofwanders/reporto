@@ -1,8 +1,8 @@
 import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import BoltIcon from '@mui/icons-material/Bolt';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import type { ReportKind } from '../reportKinds';
 import { KIND_META } from '../reportKinds';
 import { useRefresh } from '../refreshContext';
@@ -46,12 +46,15 @@ export const RefreshButton = ({ kind, size = 'small' }: RefreshButtonProps) => {
             '&:hover': { color: 'var(--accent)' },
           }}
         >
+          {/* Both are refresh: the circular arrow for a straight API fetch, the two-arrow
+              cycle for the slower path that runs a skill. A bolt said "fast" but never said
+              "update", which is the only thing this button does. */}
           {busy ? (
             <CircularProgress size={16} sx={{ color: 'var(--accent)' }} />
           ) : viaApi ? (
-            <BoltIcon fontSize="small" />
+            <RefreshRoundedIcon fontSize="small" />
           ) : (
-            <RefreshIcon fontSize="small" />
+            <AutorenewRoundedIcon fontSize="small" />
           )}
         </IconButton>
       </span>

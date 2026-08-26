@@ -17,7 +17,7 @@ export const PrsPage = ({ report }: PrsPageProps) => {
       {report ? (
         <PrLanes report={report} onChanged={() => void run('prs')} />
       ) : (
-        <p className="status">No PR report yet — press the bolt beside Pull requests.</p>
+        <p className="status">No PR report yet — press the update button beside Pull requests.</p>
       )}
     </main>
   );

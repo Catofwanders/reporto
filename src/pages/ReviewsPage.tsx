@@ -58,7 +58,7 @@ export const ReviewsPage = ({ report, jira }: ReviewsPageProps) => {
     return (
       <main className="grid">
         <p className="status">
-          No review report yet — press the bolt beside Reviews in the sidebar.
+          No review report yet — press the update button beside Reviews in the sidebar.
         </p>
       </main>
     );

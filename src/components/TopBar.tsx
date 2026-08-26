@@ -1,7 +1,7 @@
 import CircularProgress from '@mui/material/CircularProgress';
 import Tooltip from '@mui/material/Tooltip';
-import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import type { ReportKind } from '../reportKinds';
 import { KIND_META, REPORT_KINDS } from '../reportKinds';
 import { useRefresh } from '../refreshContext';
@@ -70,9 +70,9 @@ export const TopBar = ({ title, subtitle, kind, action }: TopBarProps) => {
               {busy ? (
                 <CircularProgress size={13} sx={{ color: 'inherit' }} />
               ) : viaApi ? (
-                <BoltRoundedIcon fontSize="small" />
-              ) : (
                 <RefreshRoundedIcon fontSize="small" />
+              ) : (
+                <AutorenewRoundedIcon fontSize="small" />
               )}
               Update {meta.label}
             </button>
@@ -112,7 +112,7 @@ export const TopBar = ({ title, subtitle, kind, action }: TopBarProps) => {
               </>
             ) : (
               <>
-                <BoltRoundedIcon fontSize="small" />
+                <RefreshRoundedIcon fontSize="small" />
                 Update all
               </>
             )}

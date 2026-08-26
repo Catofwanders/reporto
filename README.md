@@ -181,11 +181,11 @@ thing a button cannot fetch (see below).
 
 | Report | How it refreshes |
 |---|---|
-| `prs` | `POST /api/pull/prs` — one GitHub GraphQL call, about a second (bolt icon) |
-| `jira` | `POST /api/pull/jira` — one Jira search plus one GitHub search (bolt icon) |
-| `calendar` | `POST /api/pull/calendar` — Google Calendar API (bolt icon) |
-| `reviews` | `POST /api/pull/reviews` — two GitHub searches, about a second (bolt icon) |
-| `stats` | `POST /api/pull/stats` — Jira, GitHub and Calendar for six months (bolt icon) |
+| `prs` | `POST /api/pull/prs` — one GitHub GraphQL call, about a second (circular-arrow icon) |
+| `jira` | `POST /api/pull/jira` — one Jira search plus one GitHub search (circular-arrow icon) |
+| `calendar` | `POST /api/pull/calendar` — Google Calendar API (circular-arrow icon) |
+| `reviews` | `POST /api/pull/reviews` — two GitHub searches, about a second (circular-arrow icon) |
+| `stats` | `POST /api/pull/stats` — Jira, GitHub and Calendar for six months (circular-arrow icon) |
 
 The calendar pull covers **Google only**. Outlook is readable only through the Chrome
 extension, so the `/email` skill remains the only thing that can see it — and a pull would

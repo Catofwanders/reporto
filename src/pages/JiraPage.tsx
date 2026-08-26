@@ -19,7 +19,7 @@ export const JiraPage = ({ report }: JiraPageProps) => {
   if (!report) {
     return (
       <main className="grid">
-        <p className="status">No Jira report yet — press the bolt beside Jira in the sidebar.</p>
+        <p className="status">No Jira report yet — press the update button beside Jira in the sidebar.</p>
       </main>
     );
   }

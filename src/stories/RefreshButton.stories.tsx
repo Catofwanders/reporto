@@ -29,7 +29,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** API-pulled kinds get the bolt: seconds, no agent run. */
+/** API-pulled kinds get the circular arrow: seconds, no agent run. */
 export const ApiPull: Story = {};
 
 /** A kind produced by a slash command gets the circular-arrow icon instead. */

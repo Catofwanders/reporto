@@ -41,7 +41,7 @@ export const StatsPage = ({ report }: StatsPageProps) => {
     return (
       <main className="grid">
         <p className="status">
-          No statistics yet — press the bolt beside Statistics in the sidebar.
+          No statistics yet — press the update button beside Statistics in the sidebar.
         </p>
       </main>
     );
