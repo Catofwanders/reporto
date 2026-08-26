@@ -1,11 +1,12 @@
+import { useState } from 'react';
 import AltRouteRoundedIcon from '@mui/icons-material/AltRouteRounded';
+import Button from '@mui/material/Button';
 import type { PrsReport } from '../types';
-import { LANES, type LanePr, agingTone, nudgeLinks, toLanes } from '../prLanes';
-import { PR_STATE_LABEL, prState, qcChip } from '../prState';
+import { LANES, toLanes } from '../prLanes';
+import { PR_STATE_LABEL, prState } from '../prState';
 import { useHashTarget } from '../useHashTarget';
 import { CopyPrLinks } from './CopyPrLinks';
-import { PrDraftToggle } from './PrDraftToggle';
-import { PrRowActions } from './PrRowActions';
+import { PrTable } from './PrTable';
 import { RefreshButton } from './RefreshButton';
 
 interface PrLanesProps {
@@ -14,60 +15,6 @@ interface PrLanesProps {
   onChanged: () => void;
 }
 
-const Row = ({ row, onChanged }: { row: LanePr; onChanged: () => void }) => {
-  const { pr, repo, idleDays, reason, mergeReady, tone } = row;
-  const qc = qcChip(pr.deployQc);
-
-  return (
-    <article
-      className={`pr-row${tone ? ` pr-row-${tone}` : ''}${mergeReady ? ' is-merge-ready' : ''}`}
-      id={`${repo}-${pr.num}`}
-    >
-      <span
-        className={`pr-age chip-${agingTone(idleDays)}`}
-        title={`last moved ${new Date(pr.updatedAt).toLocaleString('en-GB')}`}
-      >
-        {idleDays === 0 ? 'today' : `${idleDays}d`}
-      </span>
-
-      <div className="pr-row-body">
-        <div className="pr-row-top">
-          <a className="ref" href={pr.url} target="_blank" rel="noopener noreferrer">
-            #{pr.num}
-          </a>
-          <span className="pr-row-repo">{repo}</span>
-          {pr.ticket && pr.ticketUrl && (
-            <a className="pr-row-ticket" href={pr.ticketUrl} target="_blank" rel="noopener noreferrer">
-              {pr.ticket}
-            </a>
-          )}
-          {/* The QC standing is the one fact the reason line cannot always carry. */}
-          {qc && (
-            <span className={`chip chip-${qc.tone}`} title={qc.title}>
-              {qc.label}
-            </span>
-          )}
-        </div>
-
-        <p className="pr-row-title">
-          <a href={pr.url} target="_blank" rel="noopener noreferrer">
-            {pr.title}
-          </a>
-        </p>
-
-        <p className="pr-row-reason">{reason}</p>
-      </div>
-
-      <div className="pr-row-actions">
-        {/* Only the draft lane gets the button: elsewhere the flip is a menu item, so the
-            rows are not five copies of the same control. */}
-        {pr.draft && <PrDraftToggle repo={repo} pr={pr} onChanged={onChanged} />}
-        <PrRowActions repo={repo} pr={pr} onChanged={onChanged} />
-      </div>
-    </article>
-  );
-};
-
 /**
  * Open PRs sorted by who is holding the ball. Lanes with nothing in them are not rendered:
  * an empty "Changes requested" heading is a claim about the day that has to be read before
@@ -75,9 +22,31 @@ const Row = ({ row, onChanged }: { row: LanePr; onChanged: () => void }) => {
  *
  * The state counts stay as a summary, but only the states that are not zero — six numbers
  * of equal weight, four of them zero, said nothing about what to do next.
+ *
+ * Rows are selectable because the list is an input to something else: tick the PRs that
+ * need a nudge, or the ones to hand an agent, and copy their urls in one go. Selection is
+ * keyed by url, so a refresh that moves a PR between lanes keeps it ticked.
  */
 export const PrLanes = ({ report, onChanged }: PrLanesProps) => {
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   useHashTarget([report]);
+
+  const toggle = (url: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(url)) next.add(url);
+      return next;
+    });
+
+  const toggleAll = (urls: string[], on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const url of urls) {
+        if (on) next.add(url);
+        else next.delete(url);
+      }
+      return next;
+    });
 
   const lanes = toLanes(report);
   const all = report.repos.flatMap((group) => group.prs);
@@ -86,7 +55,11 @@ export const PrLanes = ({ report, onChanged }: PrLanesProps) => {
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
   }, {});
-  const links = nudgeLinks(lanes);
+  // Only rows still on screen can be copied: a tick left over from a PR that has since
+  // merged would otherwise ride along invisibly.
+  const picked = LANES.flatMap((lane) => lanes.get(lane.id) ?? [])
+    .filter((row) => selected.has(row.pr.url))
+    .map((row) => row.pr.url);
 
   return (
     <section className="panel">
@@ -119,6 +92,25 @@ export const PrLanes = ({ report, onChanged }: PrLanesProps) => {
         </span>
       </div>
 
+      {/* The one action the ticks feed. It appears with the first tick rather than sitting
+          there disabled, and says how many it would copy. */}
+      {picked.length > 0 && (
+        <div className="review-selection">
+          <span>{picked.length} selected</span>
+          <CopyPrLinks
+            links={picked}
+            label={`Copy ${picked.length} PR url${picked.length === 1 ? '' : 's'}`}
+          />
+          <Button
+            size="small"
+            onClick={() => setSelected(new Set())}
+            sx={{ textTransform: 'none', color: 'var(--ink-2)' }}
+          >
+            Clear
+          </Button>
+        </div>
+      )}
+
       {all.length === 0 && <p className="status">No open PRs.</p>}
 
       {LANES.map((lane) => {
@@ -130,13 +122,14 @@ export const PrLanes = ({ report, onChanged }: PrLanesProps) => {
               <h3>{lane.title}</h3>
               <span className="count">{rows.length}</span>
               <p className="pr-lane-hint">{lane.hint}</p>
-              {lane.id === 'waiting' && <CopyPrLinks links={links} />}
             </header>
-            <div className="pr-lane-rows">
-              {rows.map((row) => (
-                <Row key={row.pr.url} row={row} onChanged={onChanged} />
-              ))}
-            </div>
+            <PrTable
+              rows={rows}
+              selected={selected}
+              onToggle={toggle}
+              onToggleAll={toggleAll}
+              onChanged={onChanged}
+            />
           </section>
         );
       })}

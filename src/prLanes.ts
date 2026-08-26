@@ -130,7 +130,3 @@ export const toLanes = (report: PrsReport): Map<LaneId, LanePr[]> => {
   for (const list of lanes.values()) list.sort((a, b) => b.idleDays - a.idleDays);
   return lanes;
 };
-
-/** PRs whose links are worth copying for a nudge: the ones somebody else is sitting on. */
-export const nudgeLinks = (lanes: Map<LaneId, LanePr[]>): string[] =>
-  (lanes.get('waiting') ?? []).map((row) => row.pr.url);

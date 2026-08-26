@@ -1,24 +1,32 @@
-import type { ReviewRow } from '../reviewLanes';
-import { sizeLabel, sizeTone } from '../reviewLanes';
+import type { LanePr } from '../prLanes';
 import { agingTone } from '../prLanes';
-import { formatStatus } from '../jiraStatus';
+import { qcChip } from '../prState';
+import { PrDraftToggle } from './PrDraftToggle';
+import { PrRowActions } from './PrRowActions';
 
-interface ReviewTableProps {
-  rows: ReviewRow[];
+interface PrTableProps {
+  rows: LanePr[];
   selected: ReadonlySet<string>;
   onToggle: (url: string) => void;
   /** Select or clear the whole lane in one click — the usual way a batch starts. */
   onToggleAll: (urls: string[], next: boolean) => void;
+  onChanged: () => void;
 }
 
 /**
- * One lane of the review queue as a table.
+ * One lane of open PRs as a table.
  *
- * A table rather than cards because the rows are now a work list rather than a feed: the
- * point is to tick several and hand them to an agent, and that needs a checkbox column
- * that lines up, an age column that compares at a glance, and one row per PR.
+ * Same shape as the review queue: a checkbox column that lines up, so several rows can be
+ * ticked and their urls handed to an agent or a message in one go. The per-row menu keeps
+ * its own column at the end rather than sharing a cell with the data.
  */
-export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTableProps) => {
+export const PrTable = ({
+  rows,
+  selected,
+  onToggle,
+  onToggleAll,
+  onChanged,
+}: PrTableProps) => {
   const urls = rows.map((row) => row.pr.url);
   const picked = urls.filter((url) => selected.has(url)).length;
   const all = picked === urls.length && urls.length > 0;
@@ -44,33 +52,35 @@ export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTab
             <th>Age</th>
             <th>PR</th>
             <th>What it needs</th>
-            <th className="review-col-ticket">Ticket</th>
-            <th className="review-col-size">Size</th>
+            <th className="review-col-qc">QC</th>
+            <th className="review-col-actions" aria-label="actions" />
           </tr>
         </thead>
         <tbody>
-          {rows.map(({ pr, idleDays, openDays, reason, ticketStatus }) => {
+          {rows.map(({ pr, repo, idleDays, reason, mergeReady, tone }) => {
+            const qc = qcChip(pr.deployQc);
             const on = selected.has(pr.url);
+            const classes = [
+              on ? 'is-selected' : '',
+              tone ? `is-${tone}` : '',
+              mergeReady ? 'is-merge-ready' : '',
+            ]
+              .filter(Boolean)
+              .join(' ');
             return (
-              <tr
-                key={pr.url}
-                id={`${pr.repo}-${pr.num}`}
-                className={`${on ? 'is-selected' : ''} ${pr.draft ? 'is-draft' : ''}`}
-              >
+              <tr key={pr.url} id={`${repo}-${pr.num}`} className={classes}>
                 <td className="review-pick">
                   <input
                     type="checkbox"
                     checked={on}
                     onChange={() => onToggle(pr.url)}
-                    aria-label={`Select ${pr.repo} #${pr.num}`}
+                    aria-label={`Select ${repo} #${pr.num}`}
                   />
                 </td>
                 <td>
                   <span
                     className={`pr-age chip-${agingTone(idleDays)}`}
-                    title={`last commit ${new Date(
-                      pr.lastCommitAt ?? pr.updatedAt,
-                    ).toLocaleString('en-GB')} · opened ${openDays}d ago`}
+                    title={`last moved ${new Date(pr.updatedAt).toLocaleString('en-GB')}`}
                   >
                     {idleDays === 0 ? 'today' : `${idleDays}d`}
                   </span>
@@ -79,9 +89,17 @@ export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTab
                   <a className="ref" href={pr.url} target="_blank" rel="noopener noreferrer">
                     #{pr.num}
                   </a>
-                  <span className="pr-row-repo">{pr.repo}</span>
-                  {/* Whose work it is: a review queue is a list of people waiting. */}
-                  <span className="review-author">@{pr.author}</span>
+                  <span className="pr-row-repo">{repo}</span>
+                  {pr.ticket && pr.ticketUrl && (
+                    <a
+                      className="pr-row-ticket"
+                      href={pr.ticketUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {pr.ticket}
+                    </a>
+                  )}
                 </td>
                 <td className="review-cell-what">
                   <a href={pr.url} target="_blank" rel="noopener noreferrer">
@@ -90,24 +108,18 @@ export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTab
                   <span className="pr-row-reason">{reason}</span>
                 </td>
                 <td className="review-cell-ticket">
-                  {pr.ticket && <span className="pr-row-ticket">{pr.ticket}</span>}
-                  {ticketStatus && (
-                    <span className="chip chip-na" title="status of the linked ticket">
-                      {formatStatus(ticketStatus)}
+                  {/* The QC standing is the one fact the reason line cannot always carry. */}
+                  {qc && (
+                    <span className={`chip chip-${qc.tone}`} title={qc.title}>
+                      {qc.label}
                     </span>
                   )}
-                  {pr.draft && <span className="chip chip-na">draft</span>}
                 </td>
-                <td className="review-cell-size">
-                  {/* Size decides whether this fits in the gap before the next meeting. */}
-                  <span className={`chip chip-${sizeTone(pr)}`} title="how much there is to read">
-                    {sizeLabel(pr)}
-                  </span>
-                  {pr.unresolvedThreads > 0 && (
-                    <span className="chip chip-bad" title="unresolved threads, from anyone">
-                      {pr.unresolvedThreads} open
-                    </span>
-                  )}
+                <td className="pr-cell-actions">
+                  {/* Only the draft lane gets the button: elsewhere the flip is a menu item,
+                      so the rows are not five copies of the same control. */}
+                  {pr.draft && <PrDraftToggle repo={repo} pr={pr} onChanged={onChanged} />}
+                  <PrRowActions repo={repo} pr={pr} onChanged={onChanged} />
                 </td>
               </tr>
             );
