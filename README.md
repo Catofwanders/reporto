@@ -538,7 +538,7 @@ who put it there, and how many of my own comments nobody has answered.
 "Pushed since your review" is not one thing. A merge commit is the base branch being pulled
 in — the *Update branch* button, or whatever keeps branches current — and re-reading a PR
 because master moved is a waste of the one lane meant to be urgent. So only commits with a
-single parent count as work, the row names their author (`@stilet0000 pushed 2 commits`),
+single parent count as work, the row names their author (`@author pushed 2 commits`),
 and a PR whose sole push was a merge stays where it was, saying so: *still the author's
 move (only a base-branch merge by @x since)*.
 
