@@ -54,14 +54,17 @@ button.
 
 ## Committing
 
-This repository belongs to the `Catofwanders` account and **only that identity commits
-here** — set repo-locally, overriding whatever global git identity is configured for other
-projects:
+This repository belongs to a personal account, and **only that identity commits here** —
+set it repo-locally so it overrides whatever global git identity other projects use:
 
 ```bash
-git config user.name  "Catofwanders"
-git config user.email "23452775+Catofwanders@users.noreply.github.com"
+git config user.name  "<personal account name>"
+git config user.email "<personal account noreply address>"
 ```
+
+The values are not written down here; take them from the account's GitHub settings, or from
+`git log -1 --format='%an <%ae>'` in this clone. Verify before the first commit of a session
+— a commit authored by a work identity links this project to an employer.
 
 ## Configuration
 
