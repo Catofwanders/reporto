@@ -21,7 +21,7 @@ const contradictory: JiraReport = {
       title: 'QC READY',
       tickets: [
         ticket('DEMO-1', 'QC READY', [
-          { repo: 'billing-api', num: 11, url: 'https://example.com/pr11', state: 'open' },
+          { repo: 'orders-api', num: 11, url: 'https://example.com/pr11', state: 'open' },
         ]),
       ],
     },
@@ -30,7 +30,7 @@ const contradictory: JiraReport = {
       tickets: [
         ticket('DEMO-3', 'RELEASE READY', [
           {
-            repo: 'billing-api',
+            repo: 'orders-api',
             num: 13,
             url: 'https://example.com/pr13',
             state: 'merged',
@@ -47,7 +47,7 @@ const offQc: PrsReport = {
   ...prsReport,
   repos: [
     {
-      repo: 'billing-api',
+      repo: 'orders-api',
       prs: [
         {
           num: 11,

@@ -5,7 +5,7 @@ const meta = {
   title: 'Primitives/ReportAccordion',
   component: ReportAccordion,
   args: {
-    title: 'billing-api',
+    title: 'orders-api',
     count: 3,
     children: <p className="subj">Rows go here.</p>,
   },

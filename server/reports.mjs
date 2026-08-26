@@ -123,6 +123,7 @@ export const PULLERS = {
       jiraBrowseUrl: c.jiraBrowseUrl ?? '',
       account: c.githubAccount,
       pinnedRepos: c.pinnedRepos ?? [],
+      ticketPattern: c.ticketPattern ?? '\\b[A-Z][A-Z0-9]+-\\d+\\b',
     }),
 
   calendar: (c) => {

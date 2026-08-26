@@ -218,11 +218,11 @@ export interface FlowStep {
   actor: string;
   label: string;
   note?: string;
-  /** Where it lives — a file path, an endpoint, a saga name. */
+  /** Where it lives — a file path, an endpoint, a queue or handler name. */
   ref?: string;
 }
 
-/** One named path through a project: sign-in, job creation, checkout. */
+/** One named path through a project: sign-in, checkout, a listing going live. */
 export interface ProjectFlow {
   id: string;
   title: string;

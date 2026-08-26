@@ -77,7 +77,6 @@ const OPEN_PRS = (author, org) => `
   }
 }`
 
-const TICKET = /\b(DTP-\d+)\b/
 
 /**
  * When the last review landed, ignoring the author's own review comments — a self-comment
@@ -186,7 +185,16 @@ async function pullQcState(org, prs, token) {
  * reviewDecision is null when a PR has comments but no verdict — kept distinct from "no
  * review at all", because the two mean different things to the author.
  */
-export async function pullOpenPrs({ author, org, jiraBrowseUrl, account, pinnedRepos = [] }) {
+export async function pullOpenPrs({
+  author,
+  org,
+  jiraBrowseUrl,
+  account,
+  pinnedRepos = [],
+  // The project's ticket key belongs in gitignored config, not in a public repo's source.
+  ticketPattern = '\\b[A-Z][A-Z0-9]+-\\d+\\b',
+}) {
+  const ticketKey = new RegExp(ticketPattern)
   const token = await ghToken(account ?? author)
   const data = await graphql(OPEN_PRS(author, org), token)
   // An archived repo cannot be merged into, so an open PR there is history, not work.
@@ -194,7 +202,7 @@ export async function pullOpenPrs({ author, org, jiraBrowseUrl, account, pinnedR
 
   const byRepo = new Map()
   for (const n of nodes) {
-    const ticket = TICKET.exec(n.title)?.[1] ?? null
+    const ticket = ticketKey.exec(n.title)?.[0] ?? null
     const threads = n.reviewThreads?.nodes ?? []
     const reviewedAt = lastReviewAt(n.reviews?.nodes ?? [], author)
     const rework = reworkSince(n.commits?.nodes ?? [], reviewedAt)

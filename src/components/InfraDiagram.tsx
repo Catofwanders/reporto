@@ -24,7 +24,7 @@ export const InfraDiagram = ({ system }: InfraDiagramProps) => {
   const { nodes, edges, width, height, rows } = placeNodes(system);
   const { width: w, height: h } = NODE_SIZE;
   // The gutter holds the layer captions, and those are as long as the domain needs them to
-  // be — a fixed one clipped "Enrolment & booking" to "Enrolment & boo".
+  // be — a fixed one clipped the longest caption to two thirds of its width.
   const labelGutter = Math.max(
     96,
     Math.ceil(Math.max(...system.layers.map((layer) => layer.length)) * 5.6) + 14,

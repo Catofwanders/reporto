@@ -8,7 +8,7 @@ const draft = prsReport.repos[1].prs[2];
 const meta = {
   title: 'Panels/PrRowActions',
   component: PrRowActions,
-  args: { repo: 'billing-api', pr: ready, onChanged: () => {} },
+  args: { repo: 'orders-api', pr: ready, onChanged: () => {} },
 } satisfies Meta<typeof PrRowActions>;
 
 export default meta;
@@ -21,4 +21,4 @@ type Story = StoryObj<typeof meta>;
 export const OpenPr: Story = {};
 
 /** A draft offers "mark ready for review" where an open PR offers "convert to draft". */
-export const DraftPr: Story = { args: { repo: 'storefront', pr: draft } };
+export const DraftPr: Story = { args: { repo: 'shop-web', pr: draft } };

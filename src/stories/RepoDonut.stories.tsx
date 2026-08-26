@@ -7,11 +7,11 @@ const meta = {
   args: {
     month: '2026-05',
     slices: [
-      { repo: 'billing-api', merged: 7 },
-      { repo: 'web-client', merged: 5 },
+      { repo: 'orders-api', merged: 7 },
+      { repo: 'shop-web', merged: 5 },
       { repo: 'search-service', merged: 3 },
-      { repo: 'ops-plan-state', merged: 2 },
-      { repo: 'graphql-gateway', merged: 1 },
+      { repo: 'warehouse-service', merged: 2 },
+      { repo: 'catalog-api', merged: 1 },
     ],
   },
   decorators: [(Story) => <div style={{ maxWidth: '20rem' }}>{Story()}</div>],
@@ -25,7 +25,7 @@ export const Tail: Story = {};
 
 /** Three or fewer and every repo gets its own step of the ramp. */
 export const FewRepos: Story = {
-  args: { slices: [{ repo: 'billing-api', merged: 6 }, { repo: 'web-client', merged: 2 }] },
+  args: { slices: [{ repo: 'orders-api', merged: 6 }, { repo: 'shop-web', merged: 2 }] },
 };
 
 export const NothingMerged: Story = { args: { slices: [] } };

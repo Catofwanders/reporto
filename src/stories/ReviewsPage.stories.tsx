@@ -6,7 +6,7 @@ import { jiraReport } from './fixtures';
 const days = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
 
 const pr = (over: Partial<ReviewPr> & Pick<ReviewPr, 'num' | 'title'>): ReviewPr => ({
-  repo: 'billing-api',
+  repo: 'orders-api',
   url: `https://example.com/${over.num}`,
   author: 'colleague',
   bot: false,

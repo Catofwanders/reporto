@@ -42,7 +42,7 @@ export const RowTones: Story = {
       ...prsReport,
       repos: [
         {
-          repo: 'billing-api',
+          repo: 'orders-api',
           prs: [
             {
               num: 101,

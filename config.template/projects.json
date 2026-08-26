@@ -1,11 +1,11 @@
 {
-  "$comment": "Copy to ./config/projects.json and describe your own work. ./config is gitignored, so repo names, systems and anything employer-specific stay off the remote. Everything below is invented.",
+  "$comment": "Copy to ./config/projects.json and describe your own work. ./config is gitignored, so repo names, systems and anything employer-specific stay off the remote. Everything below is an invented online marketplace, deliberately unrelated to any real project.",
   "projects": [
     {
       "id": "web",
-      "name": "example-web-client",
-      "title": "Customer web",
-      "what": "What customers log into. The surface most tickets land on.",
+      "name": "marketplace-shop-web",
+      "title": "Buyer storefront",
+      "what": "What buyers browse and check out in. The surface most tickets land on.",
       "stack": [
         "React 19",
         "npm",
@@ -13,94 +13,96 @@
       ],
       "role": "client",
       "base": "deploy-qc",
-      "url": "https://github.com/your-org/example-web-client",
+      "url": "https://github.com/your-org/marketplace-shop-web",
       "consumes": [
         "graph"
       ],
       "flows": [
         {
-          "id": "registration",
-          "title": "User registration",
-          "what": "Sign-up, e-mail confirmation, and the first sign-in that follows it. Invented \u2014 replace with yours.",
-          "source": "src/flows/registration.ts",
-          "verified": true,
+          "id": "checkout",
+          "title": "Buyer checkout",
+          "what": "Basket to paid order: stock reserved, card authorised, receipt sent. Invented — replace with yours.",
+          "source": "src/checkout/",
           "actors": [
             {
-              "id": "user",
-              "label": "Visitor"
+              "id": "buyer",
+              "label": "Buyer"
             },
             {
-              "id": "web",
-              "label": "Web client"
+              "id": "shop",
+              "label": "Storefront"
             },
             {
               "id": "api",
-              "label": "API"
+              "label": "Orders API"
             },
             {
-              "id": "mail",
-              "label": "Mail"
+              "id": "pay",
+              "label": "Payments"
             }
           ],
           "steps": [
             {
-              "id": "r1",
-              "actor": "user",
-              "label": "Fills the sign-up form"
+              "id": "basket",
+              "actor": "buyer",
+              "label": "Adds items to the basket",
+              "ref": null
             },
             {
-              "id": "r2",
-              "actor": "web",
-              "label": "Validates and submits",
-              "ref": "POST /accounts"
+              "id": "start",
+              "actor": "shop",
+              "label": "Starts checkout",
+              "ref": "POST /baskets/:id/checkout"
             },
             {
-              "id": "r3",
+              "id": "reserve",
               "actor": "api",
-              "label": "Creates the account",
-              "ref": "state: pending"
+              "label": "Reserves the stock",
+              "ref": "state: reserved"
             },
             {
-              "id": "r4",
-              "actor": "mail",
-              "label": "Sends the confirm link",
-              "ref": "template: confirm-email"
+              "id": "charge",
+              "actor": "pay",
+              "label": "Authorises the card",
+              "ref": "payments: authorize"
             },
             {
-              "id": "r5",
-              "actor": "user",
-              "label": "Opens the link"
-            },
-            {
-              "id": "r6",
+              "id": "confirm",
               "actor": "api",
-              "label": "Marks it confirmed",
-              "ref": "POST /accounts/:id/confirm"
+              "label": "Confirms the order",
+              "ref": "state: paid"
             },
             {
-              "id": "r7",
-              "actor": "web",
-              "label": "Signs the user in",
-              "ref": "POST /auth-sessions"
+              "id": "receipt",
+              "actor": "api",
+              "label": "Sends the receipt",
+              "ref": "template: order-receipt"
+            },
+            {
+              "id": "fulfil",
+              "actor": "api",
+              "label": "Queues fulfilment",
+              "ref": "queue: fulfilment"
             }
           ]
         },
         {
-          "id": "job-creation",
-          "title": "Job creation",
-          "what": "An employer posts a job: draft, validation, moderation, then publication to the search index. Invented \u2014 replace with yours.",
+          "id": "listing",
+          "title": "Listing goes live",
+          "what": "A seller posts a product: draft, validation, moderation, then publication to the search index. Invented — replace with yours.",
+          "source": "src/listings/",
           "actors": [
             {
-              "id": "employer",
-              "label": "Employer"
+              "id": "seller",
+              "label": "Seller"
             },
             {
-              "id": "web",
-              "label": "Web client"
+              "id": "console",
+              "label": "Seller console"
             },
             {
               "id": "api",
-              "label": "API"
+              "label": "Catalog API"
             },
             {
               "id": "worker",
@@ -109,41 +111,43 @@
           ],
           "steps": [
             {
-              "id": "j1",
-              "actor": "employer",
-              "label": "Starts a draft"
+              "id": "draft",
+              "actor": "seller",
+              "label": "Starts a draft listing",
+              "ref": null
             },
             {
-              "id": "j2",
-              "actor": "web",
+              "id": "save",
+              "actor": "console",
               "label": "Saves as it goes",
-              "ref": "PUT /jobs/:id"
+              "ref": "PUT /listings/:id"
             },
             {
-              "id": "j3",
-              "actor": "employer",
-              "label": "Submits for review"
+              "id": "submit",
+              "actor": "seller",
+              "label": "Submits for review",
+              "ref": null
             },
             {
-              "id": "j4",
+              "id": "queue",
               "actor": "api",
               "label": "Queues moderation",
               "ref": "state: in-review"
             },
             {
-              "id": "j5",
+              "id": "checks",
               "actor": "worker",
               "label": "Runs the checks",
-              "ref": "queue: job-moderation"
+              "ref": "queue: listing-moderation"
             },
             {
-              "id": "j6",
+              "id": "publish",
               "actor": "api",
-              "label": "Publishes the job",
+              "label": "Publishes the listing",
               "ref": "state: live"
             },
             {
-              "id": "j7",
+              "id": "index",
               "actor": "worker",
               "label": "Indexes it for search",
               "ref": "queue: search-index"
@@ -154,24 +158,24 @@
     },
     {
       "id": "admin",
-      "name": "example-admin-client",
-      "title": "Admin console",
-      "what": "Internal back-office: accounts, permissions, content.",
+      "name": "marketplace-seller-console",
+      "title": "Seller console",
+      "what": "Where sellers manage listings, orders and payouts.",
       "stack": [
         "React 18",
         "pnpm",
         "Node 20"
       ],
       "role": "client",
-      "url": "https://github.com/your-org/example-admin-client",
+      "url": "https://github.com/your-org/marketplace-seller-console",
       "consumes": [
         "graph"
       ]
     },
     {
       "id": "graph",
-      "name": "example-graphql-service",
-      "title": "GraphQL gateway",
+      "name": "marketplace-catalog-api",
+      "title": "Catalog API",
       "what": "One schema in front of the services. Clients generate types from it.",
       "stack": [
         "Apollo",
@@ -179,23 +183,23 @@
         "Node 18"
       ],
       "role": "service",
-      "url": "https://github.com/your-org/example-graphql-service",
+      "url": "https://github.com/your-org/marketplace-catalog-api",
       "consumes": [
         "core"
       ]
     },
     {
       "id": "core",
-      "name": "example-backend-core",
-      "title": "Backend core",
-      "what": "Domain logic and the database of record. The schema everything else follows.",
+      "name": "marketplace-orders-core",
+      "title": "Orders core",
+      "what": "Baskets, orders and payouts, and the database of record.",
       "stack": [
         "TypeScript",
         "pnpm workspace",
         "Postgres"
       ],
       "role": "service",
-      "url": "https://github.com/your-org/example-backend-core"
+      "url": "https://github.com/your-org/marketplace-orders-core"
     }
   ],
   "workflow": {
@@ -207,13 +211,13 @@
         "note": "not started",
         "statuses": [
           "Backlog",
-          "NEXT"
+          "Selected"
         ]
       },
       {
         "id": "dev",
         "label": "In progress",
-        "note": "branch off, DTP key in the name",
+        "note": "branch off, ticket key in the name",
         "statuses": [
           "In Progress"
         ]
@@ -223,7 +227,7 @@
         "label": "Code review",
         "note": "PR opened against deploy-qc",
         "statuses": [
-          "CODE REVIEW"
+          "In Review"
         ]
       },
       {
@@ -231,8 +235,8 @@
         "label": "QC",
         "note": "merged into deploy-qc; QC tests there",
         "statuses": [
-          "QC READY",
-          "QC Failed"
+          "Testing",
+          "Test Failed"
         ]
       },
       {
@@ -240,7 +244,7 @@
         "label": "Sign-off",
         "note": "client approves",
         "statuses": [
-          "CS Approved"
+          "Approved"
         ]
       },
       {
@@ -248,8 +252,7 @@
         "label": "Release",
         "note": "merged to the release branch",
         "statuses": [
-          "RELEASE READY",
-          "Released to Production"
+          "Ready to Release"
         ]
       }
     ]
@@ -259,8 +262,8 @@
     "systems": [
       {
         "id": "platform",
-        "title": "Shared platform",
-        "note": "High level only \u2014 what talks to what, not how it is deployed.",
+        "title": "Marketplace platform",
+        "note": "High level only — what talks to what, not how it is deployed.",
         "layers": [
           "Clients",
           "Edge",
@@ -270,12 +273,12 @@
         "nodes": [
           {
             "id": "web",
-            "label": "Customer web",
+            "label": "Buyer storefront",
             "layer": "Clients"
           },
           {
             "id": "admin",
-            "label": "Admin console",
+            "label": "Seller console",
             "layer": "Clients"
           },
           {
@@ -286,12 +289,12 @@
           },
           {
             "id": "graph",
-            "label": "GraphQL gateway",
+            "label": "Catalog API",
             "layer": "Edge"
           },
           {
             "id": "core",
-            "label": "Backend core",
+            "label": "Orders core",
             "layer": "Services"
           },
           {
@@ -348,8 +351,8 @@
       },
       {
         "id": "standalone",
-        "title": "Standalone product (self-contained)",
-        "note": "Its own client, API and database. Nothing here reaches the shared platform.",
+        "title": "Standalone shop (self-contained)",
+        "note": "Its own client, API and database. Nothing here reaches the marketplace platform.",
         "layers": [
           "Client",
           "Services",

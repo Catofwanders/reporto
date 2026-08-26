@@ -52,6 +52,25 @@ remote. A fresh checkout therefore starts with no data:
 the cards stay hidden and the action bar reads "never" until you press an update
 button.
 
+## Before pushing
+
+The remote is public and the work behind these reports is not, so a push is gated on a scan
+for confidential words:
+
+```bash
+git config core.hooksPath .githooks    # once per clone
+node scripts/nda-scan.mjs              # what would be pushed: patch + commit messages
+node scripts/nda-scan.mjs --tracked    # every tracked file
+```
+
+The scanner carries no terms of its own — it reads them from the gitignored `config/`, plus
+an optional `.claude/nda-terms.txt`, because a committed list of the words being hidden is
+the leak it exists to prevent. With no terms available it fails rather than passing.
+
+Committed example data — the Storybook fixtures and `config.template/` — is an invented
+online marketplace for the same reason: example data shaped like the real projects describes
+them even when every name is changed.
+
 ## Configuration
 
 ```bash
@@ -488,13 +507,13 @@ generated column, an XOR check constraint, what a missing tenant context returns
 
 ### Flows
 
-A project page draws the paths through it worth knowing — sign-in, a hand-off to a vendor,
-job creation — as lanes and ordered steps: each step sits in the lane of whatever performs
-it, so a hand-off is a crossing you can count. Elbow connectors rather than curves, because
-between two lanes a right angle says "the same step moved sideways" where a bezier suggests
-something smoother than a network call.
+A project page draws the paths through it worth knowing — sign-in, a hand-off to a payment
+provider, a listing going live — as lanes and ordered steps: each step sits in the lane of
+whatever performs it, so a hand-off is a crossing you can count. Elbow connectors rather
+than curves, because between two lanes a right angle says "the same step moved sideways"
+where a bezier suggests something smoother than a network call.
 
-Every flow carries **where it was read from** (`client/src/sagas/auth.ts`) so a reader can
+Every flow carries **where it was read from** (`web/src/checkout/session.ts`) so a reader can
 check it instead of trusting it, and `verified: false` renders as a chip until somebody has
 confirmed it against the running system. That distinction matters more than it looks: a
 diagram read out of code is a claim about the code, not about production.

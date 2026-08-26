@@ -2,6 +2,10 @@
  * Synthetic reports for Storybook. Deliberately invented: the real ones hold meeting
  * links and ticket detail, and are gitignored for that reason — a story file that
  * imported them would put all of it back into the repo.
+ *
+ * The domain is an online marketplace — buyers, sellers, baskets, listings — chosen because
+ * it is nothing like the work these reports actually describe. Fixtures that mirror the real
+ * projects one for one leak them by shape even when every name is changed.
  */
 import type {
   CalendarReport,
@@ -36,7 +40,7 @@ export const calendarReport: CalendarReport = {
     {
       source: 'google',
       calendar: 'Personal',
-      title: 'Platform kick-off',
+      title: 'Checkout kick-off',
       kind: 'kickoff',
       start: AT('15:30'),
       end: AT('16:00'),
@@ -89,16 +93,16 @@ export const jiraReport: JiraReport = {
       title: 'In Progress',
       tickets: [
         {
-          key: 'PROJ-812',
-          url: 'https://jira.example.com/browse/PROJ-812',
+          key: 'SHOP-812',
+          url: 'https://jira.example.com/browse/SHOP-812',
           status: 'In Progress',
           chip: 'open',
-          summary: 'Cache the tenant lookup so cold requests stop hitting the directory',
+          summary: 'Cache the seller catalogue so a cold product page stops hitting search',
           prs: [
             {
-              repo: 'billing-api',
+              repo: 'orders-api',
               num: 77,
-              url: 'https://github.com/example/billing-api/pull/77',
+              url: 'https://github.com/example/orders-api/pull/77',
               state: 'open',
               note: 'approved',
             },
@@ -106,11 +110,11 @@ export const jiraReport: JiraReport = {
           notes: [],
         },
         {
-          key: 'PROJ-644',
-          url: 'https://jira.example.com/browse/PROJ-644',
+          key: 'SHOP-644',
+          url: 'https://jira.example.com/browse/SHOP-644',
           status: 'In Progress',
           chip: 'open',
-          summary: 'Migrate the reporting jobs off the legacy scheduler',
+          summary: 'Move the payout report off the nightly scheduler',
           prs: [],
           notes: [],
         },
@@ -120,16 +124,16 @@ export const jiraReport: JiraReport = {
       title: 'QC READY',
       tickets: [
         {
-          key: 'PROJ-790',
-          url: 'https://jira.example.com/browse/PROJ-790',
+          key: 'SHOP-790',
+          url: 'https://jira.example.com/browse/SHOP-790',
           status: 'QC READY',
           chip: 'open',
-          summary: 'Confirm payment before the success screen renders',
+          summary: 'Confirm payment before the order-confirmation screen renders',
           prs: [
             {
-              repo: 'storefront',
+              repo: 'shop-web',
               num: 512,
-              url: 'https://github.com/example/storefront/pull/512',
+              url: 'https://github.com/example/shop-web/pull/512',
               state: 'merged',
               inQc: true,
             },
@@ -137,16 +141,16 @@ export const jiraReport: JiraReport = {
           notes: [],
         },
         {
-          key: 'PROJ-781',
-          url: 'https://jira.example.com/browse/PROJ-781',
+          key: 'SHOP-781',
+          url: 'https://jira.example.com/browse/SHOP-781',
           status: 'QC READY',
           chip: 'open',
-          summary: 'Reconnect the websocket transport after a terminate frame',
+          summary: 'Reconnect the delivery-tracking socket after a terminate frame',
           prs: [
             {
-              repo: 'storefront',
+              repo: 'shop-web',
               num: 498,
-              url: 'https://github.com/example/storefront/pull/498',
+              url: 'https://github.com/example/shop-web/pull/498',
               state: 'merged',
               // The case the whole deploy-qc check exists for: merged, then a QC reset
               // dropped it, so the ticket reads as done while the work is not on QC.
@@ -161,20 +165,20 @@ export const jiraReport: JiraReport = {
       title: 'BLOCKED',
       tickets: [
         {
-          key: 'PROJ-455',
-          url: 'https://jira.example.com/browse/PROJ-455',
+          key: 'SHOP-455',
+          url: 'https://jira.example.com/browse/SHOP-455',
           status: 'BLOCKED',
           chip: 'bad',
-          summary: 'Provider onboarding needs the new contract fields',
+          summary: 'Seller onboarding needs the new payout fields',
           prs: [
             {
-              repo: 'admin-client',
+              repo: 'seller-console',
               num: 233,
-              url: 'https://github.com/example/admin-client/pull/233',
+              url: 'https://github.com/example/seller-console/pull/233',
               state: 'closed',
             },
           ],
-          notes: ['PR closed unmerged — parked until the contract lands.'],
+          notes: ['PR closed unmerged — parked until the payout contract lands.'],
         },
       ],
     },
@@ -191,9 +195,9 @@ const pr = (
   num,
   title,
   url: `https://github.com/example/repo/pull/${num}`,
-  ticket: /\bPROJ-\d+\b/.exec(title)?.[0] ?? null,
-  ticketUrl: /\bPROJ-\d+\b/.exec(title)
-    ? `https://jira.example.com/browse/${/\bPROJ-\d+\b/.exec(title)?.[0]}`
+  ticket: /\bSHOP-\d+\b/.exec(title)?.[0] ?? null,
+  ticketUrl: /\bSHOP-\d+\b/.exec(title)
+    ? `https://jira.example.com/browse/${/\bSHOP-\d+\b/.exec(title)?.[0]}`
     : null,
   review,
   draft: false,
@@ -208,17 +212,17 @@ export const prsReport: PrsReport = {
   author: 'you',
   repos: [
     {
-      repo: 'billing-api',
+      repo: 'orders-api',
       prs: [
         // One PR per state the pill can show, so the story doubles as a colour reference.
-        pr(77, 'PROJ-812 - cache the tenant lookup', 'APPROVED', {
+        pr(77, 'SHOP-812 - cache the seller catalogue', 'APPROVED', {
           deployQc: { status: 'BEHIND', aheadBy: 0, behindBy: 12 },
           unansweredThreads: 2,
         }),
-        pr(74, 'PROJ-802 - retry the webhook dispatch', 'CHANGES_REQUESTED', {
+        pr(74, 'SHOP-802 - retry the shipment webhook', 'CHANGES_REQUESTED', {
           deployQc: { status: 'DIVERGED', aheadBy: 4, behindBy: 30 },
         }),
-        pr(71, 'PROJ-795 - split the invoice serializer', 'COMMENTED', {
+        pr(71, 'SHOP-795 - split the basket serialiser', 'COMMENTED', {
           lastReviewAt: AT('06:00'),
           lastCommitAt: AT('05:10'),
           deployQc: { status: 'IDENTICAL', aheadBy: 0, behindBy: 0 },
@@ -226,14 +230,14 @@ export const prsReport: PrsReport = {
       ],
     },
     {
-      repo: 'storefront',
+      repo: 'shop-web',
       prs: [
-        pr(512, 'PROJ-790 - confirm payment before the success screen', 'REVIEW_REQUIRED', {
+        pr(512, 'SHOP-790 - confirm payment before the confirmation screen', 'REVIEW_REQUIRED', {
           lastReviewAt: AT('06:00'),
           lastCommitAt: AT('07:30'),
           deployQc: { status: 'DIVERGED', aheadBy: 1, behindBy: 9 },
         }),
-        pr(498, 'PROJ-781 - reconnect the websocket transport', 'REVIEW_REQUIRED'),
+        pr(498, 'SHOP-781 - reconnect the delivery-tracking socket', 'REVIEW_REQUIRED'),
         pr(455, 'Bump the design tokens package', 'NONE', { draft: true, ticket: null }),
       ],
     },
@@ -247,7 +251,7 @@ export const prsReport: PrsReport = {
 const reviewPr = (
   over: Partial<ReviewPr> & Pick<ReviewPr, 'num' | 'title'>,
 ): ReviewPr => ({
-  repo: 'billing-api',
+  repo: 'orders-api',
   url: `https://example.com/pr/${over.num}`,
   author: 'colleague',
   bot: false,
@@ -279,7 +283,7 @@ export const reviewsReport: ReviewsReport = {
   prs: [
     reviewPr({
       num: 88,
-      title: 'PROJ-820 - retry the payment webhook',
+      title: 'SHOP-820 - retry the refund webhook',
       myReviewState: 'APPROVED',
       myReviewAt: AT('06:20'),
       pushedSinceMyReview: true,
@@ -287,18 +291,18 @@ export const reviewsReport: ReviewsReport = {
       reworkBy: 'colleague',
       size: { additions: 610, deletions: 95, files: 22 },
     }),
-    reviewPr({ num: 84, repo: 'storefront', title: 'PROJ-818 - lazy-load the basket panel' }),
+    reviewPr({ num: 84, repo: 'shop-web', title: 'SHOP-818 - lazy-load the recommendations panel' }),
     reviewPr({
       num: 80,
-      title: 'PROJ-810 - move the tenant guard into middleware',
+      title: 'SHOP-810 - move the seller guard into middleware',
       myReviewState: 'CHANGES_REQUESTED',
       myReviewAt: AT('05:30'),
       myUnansweredThreads: 2,
     }),
     reviewPr({
       num: 76,
-      repo: 'storefront',
-      title: 'PROJ-800 - drop the legacy checkout route',
+      repo: 'shop-web',
+      title: 'SHOP-800 - drop the legacy basket route',
       myReviewState: 'APPROVED',
       myReviewAt: AT('05:00'),
       reviewDecision: 'APPROVED',
@@ -330,8 +334,8 @@ const statsMonth = (
     abandoned: 1,
     reviewsGiven: Math.round(merged / 2),
     byRepo: [
-      { repo: 'billing-api', merged: Math.max(1, merged - 4) },
-      { repo: 'web-client', merged: Math.min(4, merged) },
+      { repo: 'orders-api', merged: Math.max(1, merged - 4) },
+      { repo: 'shop-web', merged: Math.min(4, merged) },
     ],
     medianHoursToFirstReview: 6.4,
     medianHoursToMerge: 52.5,
