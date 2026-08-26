@@ -4,6 +4,7 @@ import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import type { JiraReport, PrsReport, ProjectMap } from '../types';
 import { fetchProjectMap } from '../projectMap';
 import { FlowDiagram } from '../components/FlowDiagram';
+import { InfraDiagram } from '../components/InfraDiagram';
 
 interface ProjectPageProps {
   jira: JiraReport | null;
@@ -142,6 +143,39 @@ export const ProjectPage = ({ jira, prs }: ProjectPageProps) => {
           </div>
         </div>
       </section>
+
+      {/* Architecture first: what the thing is, before how any one path runs through it. */}
+      {project.architecture?.sections.map((section) => (
+        <section key={section.title} className="panel">
+          <div className="panel-head">
+            <div>
+              <h2>{section.title}</h2>
+              {section.note && <p className="panel-sub">{section.note}</p>}
+            </div>
+          </div>
+          <ul className="arch-list">
+            {section.items.map((item) => (
+              <li key={item.label}>
+                <strong>{item.label}</strong>
+                {item.detail && <span>{item.detail}</span>}
+                {item.ref && <code>{item.ref}</code>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      {(project.diagrams ?? []).map((diagram) => (
+        <section key={diagram.id} className="panel">
+          <div className="panel-head">
+            <div>
+              <h2>{diagram.title}</h2>
+              <p className="panel-sub">Hover an entity to follow only its own edges</p>
+            </div>
+          </div>
+          <InfraDiagram system={diagram} />
+        </section>
+      ))}
 
       {(project.flows ?? []).map((flow) => (
         <section key={flow.id} className="panel">

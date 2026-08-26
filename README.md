@@ -471,6 +471,19 @@ Three views over the one file:
   renders. An edge naming a node that is not on the map is dropped rather than drawn to
   nowhere.
 
+### Architecture, and a project's own diagrams
+
+A project can also carry an **architecture briefing** — packages, runtime processes, where
+state lives, the conventions that bite — and **its own diagrams**, which is where a domain
+model goes. Same layered renderer as the infrastructure view, so an entity map is layers of
+aggregates with foreign keys as edges.
+
+A domain model runs to dozens of edges, and following one entity through that by eye is
+hopeless, so **hovering an entity dims everything it does not touch**. Nothing is hidden,
+only quietened. Each diagram can also carry `notes`: the rules a picture cannot hold — a
+generated column that cannot be written, an XOR check constraint, what a missing tenant
+context returns.
+
 ### Flows
 
 A project page draws the paths through it worth knowing — sign-in, a hand-off to a vendor,
@@ -500,6 +513,10 @@ be corrected by hand.
 anything happened since I did**. Its own "review requested" list drops a PR the moment a
 review is submitted, so the case most worth seeing — you approved, then the author pushed
 three more commits — is exactly the one it hides. That gets the top lane here.
+
+PRs in **archived** repositories are dropped: an archived repo is read-only, so its PRs can
+never be merged — they are history, not a queue, and one opened three years ago sat at the
+top of the list until it was excluded. The open-PR report drops them for the same reason.
 
 The report is two searches: `review-requested:<me>` and `reviewed-by:<me>` on open PRs.
 Neither is enough alone, and per PR it works out my latest review, whether commits landed

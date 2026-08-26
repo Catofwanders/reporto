@@ -53,7 +53,7 @@ const OPEN_PRS = (author, org) => `
     nodes {
       ... on PullRequest {
         number title url isDraft updatedAt reviewDecision headRefName
-        repository { name }
+        repository { name isArchived }
         reviewThreads(first: 100) { nodes { isResolved } }
         reviews(last: 20) { nodes { submittedAt author { login } } }
         commits(last: 1) { nodes { commit { committedDate pushedDate } } }
@@ -144,7 +144,8 @@ async function pullQcState(org, prs, token) {
 export async function pullOpenPrs({ author, org, jiraBrowseUrl, account, pinnedRepos = [] }) {
   const token = await ghToken(account ?? author)
   const data = await graphql(OPEN_PRS(author, org), token)
-  const nodes = data.search.nodes.filter((n) => n && n.number)
+  // An archived repo cannot be merged into, so an open PR there is history, not work.
+  const nodes = data.search.nodes.filter((n) => n && n.number && !n.repository?.isArchived)
 
   const byRepo = new Map()
   for (const n of nodes) {
@@ -597,7 +598,7 @@ const REVIEW_FIELDS = `
   deletions
   changedFiles
   reviewDecision
-  repository { name }
+  repository { name isArchived }
   author { login }
   commits(last: 1) { nodes { commit { committedDate } } }
   reviews(last: 20) { nodes { author { login } state submittedAt } }
@@ -638,6 +639,10 @@ export async function pullReviewQueue({ author, org, account, ticketPattern }) {
   ]) {
     for (const pr of nodes) {
       if (!pr?.url) continue
+      // An archived repo is read-only, so its PRs can never be merged — they are not a
+      // review queue, they are history, and a three-year-old one at the top of the list is
+      // worse than no list.
+      if (pr.repository?.isArchived) continue
       const existing = seen.get(pr.url)
       if (existing) {
         // A PR can be in both searches: still requested *and* already reviewed once.

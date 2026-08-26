@@ -976,3 +976,20 @@ body { background: var(--canvas); }
 .review-author { color: var(--ink-2); }
 .review-toggle { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; color: var(--ink-2); cursor: pointer; }
 .review-toggle input { accent-color: var(--accent); }
+
+/* Hovering a node in a dense diagram quietens everything it does not touch. */
+.infra.has-focus .infra-node.is-dim { opacity: .28; }
+.infra .infra-node.is-focus rect { stroke: var(--accent); stroke-width: 1.6; }
+.infra.has-focus .infra-edge { opacity: .18; }
+.infra .infra-edge.is-lit { opacity: 1; stroke: var(--accent); }
+
+/* Facts a picture cannot carry: constraints, generated columns, enum values. */
+.arch-list { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .55rem; }
+.arch-list li { display: grid; gap: .1rem; padding-left: .75rem; border-left: 2px solid var(--line); }
+.arch-list strong { font-size: .8rem; font-weight: 600; }
+.arch-list span { font-size: .76rem; color: var(--ink-2); line-height: 1.45; }
+.arch-list code { font-size: .68rem; color: var(--ink-2); opacity: .85; }
+
+.arch-section { margin-top: 1.4rem; }
+.arch-section > h3 { margin: 0; font-size: .82rem; }
+.arch-section > p { margin: .15rem 0 0; font-size: .76rem; color: var(--ink-2); }

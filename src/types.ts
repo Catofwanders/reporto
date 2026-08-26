@@ -238,6 +238,10 @@ export interface ProjectCard {
   flows?: ProjectFlow[];
   /** Why there are no flows, when that is a fact rather than an omission. */
   flowsNote?: string;
+  /** Diagrams that belong to this project alone — its domain model, its processes. */
+  diagrams?: InfraSystem[];
+  /** The briefing a newcomer needs: packages, processes, data, conventions. */
+  architecture?: { sections: { title: string; note?: string; items: ArchFact[] }[] };
 }
 
 export interface WorkflowStage {
@@ -257,6 +261,14 @@ export interface InfraNode {
   layer: string;
 }
 
+/** A fact worth knowing about a project, with where it was read from. */
+export interface ArchFact {
+  label: string;
+  detail?: string;
+  /** File, table, enum or symbol this came from. */
+  ref?: string;
+}
+
 /**
  * One self-contained system: its own layers, nodes and edges.
  *
@@ -271,6 +283,8 @@ export interface InfraSystem {
   layers: string[];
   nodes: InfraNode[];
   edges: [string, string][];
+  /** Rules the picture cannot carry — constraints, generated columns, enum values. */
+  notes?: ArchFact[];
 }
 
 /** The hand-written map of the work: gitignored, because it names an employer's systems. */
