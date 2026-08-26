@@ -7,8 +7,16 @@ import { TicketStatus } from './TicketStatus';
 import { RefreshButton } from './RefreshButton';
 
 // "cs approved" is the board's "Waiting for Merge (CS Approved)" column — the skill writes
-// the short name, so match that.
-const ACTIVE_STATUSES = ['in progress', 'code review', 'qc ready', 'qc failed', 'cs approved'];
+// the short name, so match that. Everything from QC onward is still live work: the ticket is
+// waiting on somebody, and it is still mine until it ships.
+const ACTIVE_STATUSES = [
+  'in progress',
+  'code review',
+  'qc ready',
+  'qc failed',
+  'qc approved',
+  'cs approved',
+];
 
 const isActiveStatus = (status: string) => ACTIVE_STATUSES.includes(status.toLowerCase());
 
