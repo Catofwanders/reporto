@@ -92,8 +92,17 @@ export interface OpenPr {
   unansweredThreads?: number;
   /** Last review submitted by somebody other than the author. Only set by the API puller. */
   lastReviewAt?: string | null;
-  /** Tip commit of the branch. Only set by the API puller. */
+  /** Tip commit of the branch, merge commits included. Only set by the API puller. */
   lastCommitAt?: string | null;
+  /**
+   * Newest commit after the last review that is work rather than a merge of the base
+   * branch — the only kind that makes a PR wait on a reviewer again.
+   */
+  lastReworkAt?: string | null;
+  /** Who wrote it: usually me, but colleagues do push to my branches. */
+  lastReworkBy?: string | null;
+  /** Something landed after the review, and all of it was the base branch coming in. */
+  syncOnlySinceReview?: boolean;
   /** null when the repo has no deploy-qc branch, or the comparison could not be made. */
   deployQc?: DeployQcState | null;
 }

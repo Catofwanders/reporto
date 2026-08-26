@@ -65,8 +65,23 @@ const threads = (pr: OpenPr) => pr.unansweredThreads ?? 0;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-/** The row's one-line reason. Concrete: what is true, and what it implies you do. */
-export const reasonOf = (pr: OpenPr, days: number): string => {
+/**
+ * Said after a state when the only thing that landed since the review was a branch sync.
+ * Naming the merger only when it was somebody else: "by @me" on my own PR says nothing.
+ */
+const syncNote = (pr: OpenPr, me?: string) => {
+  if (!pr.syncOnlySinceReview) return '';
+  const by = pr.lastReworkBy && pr.lastReworkBy !== me ? ` by @${pr.lastReworkBy}` : '';
+  return ` (a base-branch merge${by} since is not a re-review)`;
+};
+
+/**
+ * The row's one-line reason. Concrete: what is true, and what it implies you do.
+ *
+ * `me` is the report's author, so a push by somebody else onto my branch can say who —
+ * "waiting on a re-review" reads very differently when a colleague put the commit there.
+ */
+export const reasonOf = (pr: OpenPr, days: number, me?: string): string => {
   if (pr.draft) return 'draft — mark it ready or close it';
 
   const state = prState(pr);
@@ -78,7 +93,8 @@ export const reasonOf = (pr: OpenPr, days: number): string => {
       : 'changes requested — push a fix';
   }
   if (state === 'commented') {
-    return open > 0 ? `${plural(open, 'comment')} to answer` : 'reviewed — your move';
+    if (open > 0) return `${plural(open, 'comment')} to answer`;
+    return `reviewed — your move${syncNote(pr, me)}`;
   }
   if (state === 'approved') {
     const qc = qcChip(pr.deployQc);
@@ -89,9 +105,11 @@ export const reasonOf = (pr: OpenPr, days: number): string => {
     return 'approved — merge it';
   }
   if (state === 'awaiting-re-review') {
+    // Name the pusher only when it was not me: on my own PR "you pushed" is noise.
+    const who = pr.lastReworkBy && pr.lastReworkBy !== me ? `@${pr.lastReworkBy}` : 'you';
     return days >= 2
-      ? `pushed after review — ${days} days without a look`
-      : 'pushed after review — waiting on a re-review';
+      ? `${who} pushed after review — ${days} days without a look`
+      : `${who} pushed after review — waiting on a re-review`;
   }
   // awaiting-review
   if (days >= 4) return `no review yet — ${days} days, chase it`;
@@ -114,7 +132,7 @@ export const toLanes = (report: PrsReport): Map<LaneId, LanePr[]> => {
         repo: group.repo,
         pr,
         idleDays: days,
-        reason: reasonOf(pr, days),
+        reason: reasonOf(pr, days, report.author),
         mergeReady: approved && qc?.tone === 'qc',
         tone: pr.draft ? ('na' as const) : approved ? ('ok' as const) : null,
       };

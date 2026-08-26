@@ -133,12 +133,20 @@ the difference instead:
 | State | Meaning |
 |---|---|
 | `awaiting review` | nobody but me has reviewed — waiting on a reviewer |
-| `commented` | reviewed, no commit since — waiting on me |
-| `awaiting re-review` | reviewed, and I pushed after that — waiting on a reviewer again |
+| `commented` | reviewed, no work since — waiting on me |
+| `awaiting re-review` | reviewed, and real work landed after — waiting on a reviewer again |
 | `approved` / `changes requested` | GitHub's own verdicts, kept as they are |
 
 `commented` counts as waiting on me, so it is excluded from the "awaiting review" count and
 from the copy-links nudge button.
+
+"Work" is the distinction that matters in the third row. A merge commit is the base branch
+being pulled in — the *Update branch* button, or whatever keeps the branch current — and it
+gives a reviewer nothing to re-read, so it does not flip the state and does not move the PR
+out of the lane that needs me. On one recently merged PR here, five commits landed after the
+review and three of them were merges. The row says as much: *reviewed — your move (a
+base-branch merge since is not a re-review)*, and where somebody else pushed to my branch it
+names them instead of saying "you".
 
 The right half answers "is this branch on `deploy-qc`?" from one aliased ref comparison per
 PR (base `deploy-qc` → head): `aheadBy: 0` means deployed, so both `BEHIND` (QC has moved

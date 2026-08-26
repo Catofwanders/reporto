@@ -6,8 +6,8 @@ import type { DeployQcState, OpenPr } from './types';
  * pushed" into states that read identically in a list, so derive the distinction here:
  *
  * - `awaiting-review`      nobody has reviewed yet — waiting on a reviewer
- * - `commented`            reviewed, and no commit since — waiting on me
- * - `awaiting-re-review`   reviewed, and I pushed after that — waiting on a reviewer again
+ * - `commented`            reviewed, and no work since — waiting on me
+ * - `awaiting-re-review`   reviewed, and real work landed after — waiting on a reviewer again
  *
  * APPROVED and CHANGES_REQUESTED are verdicts rather than open questions, so they keep
  * their own state.
@@ -46,7 +46,18 @@ export const prState = (pr: OpenPr): PrState => {
     return pr.review === 'COMMENTED' ? 'commented' : 'awaiting-review';
   }
 
-  const pushed = pr.lastCommitAt ?? null;
+  /*
+   * Only work counts as a push here. A merge of the base branch — the Update branch button,
+   * or whatever keeps the branch current — gives a reviewer nothing to re-read, and letting
+   * it flip the state moved the PR out of "needs you" while the ball was still mine.
+   *
+   * A report written before the puller separated the two knows neither field, and there the
+   * tip commit is still the best guess. Absent means "not carried", not "nothing happened":
+   * `lastReworkAt` is explicitly null when the puller looked and found no work since, so
+   * falling back on null would put every base-branch merge straight back in.
+   */
+  const knowsRework = pr.lastReworkAt !== undefined || pr.syncOnlySinceReview !== undefined;
+  const pushed = knowsRework ? (pr.lastReworkAt ?? null) : (pr.lastCommitAt ?? null);
   return pushed && pushed > reviewed ? 'awaiting-re-review' : 'commented';
 };
 

@@ -62,7 +62,16 @@ const OPEN_PRS = (author, org) => `
           }
         }
         reviews(last: 20) { nodes { submittedAt author { login } } }
-        commits(last: 1) { nodes { commit { committedDate pushedDate } } }
+        commits(last: 20) {
+          nodes {
+            commit {
+              committedDate
+              pushedDate
+              parents { totalCount }
+              author { name user { login } }
+            }
+          }
+        }
       }
     }
   }
@@ -89,6 +98,36 @@ function lastReviewAt(reviews, author) {
 function lastCommitAt(commits) {
   const commit = commits.at(-1)?.commit
   return commit?.pushedDate ?? commit?.committedDate ?? null
+}
+
+const commitAt = (commit) => commit?.pushedDate ?? commit?.committedDate ?? null
+
+/**
+ * What landed after the last review, split into work and housekeeping.
+ *
+ * A merge commit is the base branch being pulled in — the Update branch button, or an
+ * automation keeping the branch current. It is a push that gives a reviewer nothing to
+ * re-read, so counting it flipped PRs to "awaiting re-review" while the ball was still
+ * mine, and quietly moved them out of the lane that needed me.
+ */
+function reworkSince(commits, reviewedAt) {
+  const nodes = commits.map((node) => node?.commit).filter(Boolean)
+  if (!reviewedAt) return { at: null, by: null, syncOnly: false }
+  const since = new Date(reviewedAt)
+  const after = nodes.filter((commit) => {
+    const at = commitAt(commit)
+    return at && new Date(at) > since
+  })
+  const rework = after.filter((commit) => (commit.parents?.totalCount ?? 1) <= 1)
+  // `at` is the newest *work* commit, so it stays null on a sync-only branch — but `by`
+  // falls back to whoever merged, which is the one thing worth naming in that case.
+  const newest = rework.at(-1) ?? null
+  const author = newest ?? after.at(-1) ?? null
+  return {
+    at: commitAt(newest),
+    by: author?.author?.user?.login ?? author?.author?.name ?? null,
+    syncOnly: after.length > 0 && rework.length === 0,
+  }
 }
 
 const QC_BRANCH = 'deploy-qc'
@@ -157,6 +196,8 @@ export async function pullOpenPrs({ author, org, jiraBrowseUrl, account, pinnedR
   for (const n of nodes) {
     const ticket = TICKET.exec(n.title)?.[1] ?? null
     const threads = n.reviewThreads?.nodes ?? []
+    const reviewedAt = lastReviewAt(n.reviews?.nodes ?? [], author)
+    const rework = reworkSince(n.commits?.nodes ?? [], reviewedAt)
     const pr = {
       num: n.number,
       title: n.title,
@@ -179,8 +220,13 @@ export async function pullOpenPrs({ author, org, jiraBrowseUrl, account, pinnedR
           !t.isOutdated &&
           t.latest?.nodes?.[0]?.author?.login !== author,
       ).length,
-      lastReviewAt: lastReviewAt(n.reviews?.nodes ?? [], author),
+      lastReviewAt: reviewedAt,
       lastCommitAt: lastCommitAt(n.commits?.nodes ?? []),
+      /** Newest commit after the review that is work rather than a base-branch merge. */
+      lastReworkAt: rework.at,
+      lastReworkBy: rework.by,
+      /** Something landed after the review, and all of it was a base-branch merge. */
+      syncOnlySinceReview: rework.syncOnly,
     }
     const list = byRepo.get(n.repository.name) ?? []
     list.push(pr)
