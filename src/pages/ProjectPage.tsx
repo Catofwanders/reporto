@@ -144,9 +144,31 @@ export const ProjectPage = ({ jira, prs }: ProjectPageProps) => {
         </div>
       </section>
 
+      {/* The briefing runs to nine sections on the largest project, so it gets a jump list
+          rather than making you scroll to find out what is even in it. */}
+      {(project.architecture?.sections.length ?? 0) > 2 && (
+        <nav className="page-toc">
+          {project.architecture?.sections.map((section) => (
+            <a key={section.title} href={`#sec-${section.title.replace(/\W+/g, '-')}`}>
+              {section.title}
+            </a>
+          ))}
+          {(project.diagrams ?? []).map((diagram) => (
+            <a key={diagram.id} href={`#${diagram.id}`}>
+              {diagram.title}
+            </a>
+          ))}
+          {(project.flows ?? []).map((flow) => (
+            <a key={flow.id} href={`#${flow.id}`}>
+              {flow.title}
+            </a>
+          ))}
+        </nav>
+      )}
+
       {/* Architecture first: what the thing is, before how any one path runs through it. */}
       {project.architecture?.sections.map((section) => (
-        <section key={section.title} className="panel">
+        <section key={section.title} className="panel" id={`sec-${section.title.replace(/\W+/g, '-')}`}>
           <div className="panel-head">
             <div>
               <h2>{section.title}</h2>
@@ -166,7 +188,7 @@ export const ProjectPage = ({ jira, prs }: ProjectPageProps) => {
       ))}
 
       {(project.diagrams ?? []).map((diagram) => (
-        <section key={diagram.id} className="panel">
+        <section key={diagram.id} className="panel" id={diagram.id}>
           <div className="panel-head">
             <div>
               <h2>{diagram.title}</h2>
@@ -178,7 +200,7 @@ export const ProjectPage = ({ jira, prs }: ProjectPageProps) => {
       ))}
 
       {(project.flows ?? []).map((flow) => (
-        <section key={flow.id} className="panel">
+        <section key={flow.id} className="panel" id={flow.id}>
           <div className="panel-head">
             <div>
               <h2>{flow.title}</h2>

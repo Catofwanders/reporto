@@ -993,3 +993,13 @@ body { background: var(--canvas); }
 .arch-section { margin-top: 1.4rem; }
 .arch-section > h3 { margin: 0; font-size: .82rem; }
 .arch-section > p { margin: .15rem 0 0; font-size: .76rem; color: var(--ink-2); }
+
+/* Jump list for a long project page. */
+.page-toc { display: flex; flex-wrap: wrap; gap: .35rem .5rem; }
+.page-toc a {
+  font-size: .7rem; color: var(--ink-2);
+  border: 1px solid var(--line); border-radius: 99px; padding: .2rem .55rem;
+}
+.page-toc a:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
+/* Anchored sections must not hide under the sticky top bar. */
+.grid > .panel[id] { scroll-margin-top: 5.5rem; }

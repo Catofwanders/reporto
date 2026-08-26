@@ -476,13 +476,18 @@ Three views over the one file:
 A project can also carry an **architecture briefing** — packages, runtime processes, where
 state lives, the conventions that bite — and **its own diagrams**, which is where a domain
 model goes. Same layered renderer as the infrastructure view, so an entity map is layers of
-aggregates with foreign keys as edges.
+aggregates with foreign keys as edges. Past two sections the page grows a jump list, because
+the largest project's briefing runs to nine of them.
+
+Every fact carries the file, table or symbol it came from, so it can be checked rather than
+believed — and the ones worth having are the ones nobody writes down: a dead worker process
+that still runs, a generated column that cannot be written, a CI job that only fires when its
+own paths change so a green run can mean it never executed.
 
 A domain model runs to dozens of edges, and following one entity through that by eye is
 hopeless, so **hovering an entity dims everything it does not touch**. Nothing is hidden,
 only quietened. Each diagram can also carry `notes`: the rules a picture cannot hold — a
-generated column that cannot be written, an XOR check constraint, what a missing tenant
-context returns.
+generated column, an XOR check constraint, what a missing tenant context returns.
 
 ### Flows
 
