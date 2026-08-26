@@ -1,19 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import Button from '@mui/material/Button';
 import type { JiraReport, ReviewsReport } from '../types';
-import {
-  REVIEW_LANES,
-  type ReviewRow,
-  reviewLinks,
-  sizeLabel,
-  sizeTone,
-  toReviewLanes,
-} from '../reviewLanes';
-import { agingTone } from '../prLanes';
-import { formatStatus } from '../jiraStatus';
+import type { ReviewLaneId, ReviewRow } from '../reviewLanes';
+import { REVIEW_LANES, toReviewLanes } from '../reviewLanes';
 import { CopyPrLinks } from '../components/CopyPrLinks';
 import { RefreshButton } from '../components/RefreshButton';
+import { ReviewTable } from '../components/ReviewTable';
 import { useHashTarget } from '../useHashTarget';
 
 interface ReviewsPageProps {
@@ -21,67 +15,44 @@ interface ReviewsPageProps {
   jira: JiraReport | null;
 }
 
-const Row = ({ row }: { row: ReviewRow }) => {
-  const { pr, idleDays, openDays, reason, ticketStatus } = row;
-  return (
-    <article className="pr-row" id={`${pr.repo}-${pr.num}`}>
-      <span
-        className={`pr-age chip-${agingTone(idleDays)}`}
-        title={`last commit ${new Date(
-          pr.lastCommitAt ?? pr.updatedAt,
-        ).toLocaleString('en-GB')} · opened ${openDays}d ago`}
-      >
-        {idleDays === 0 ? 'today' : `${idleDays}d`}
-      </span>
-
-      <div className="pr-row-body">
-        <div className="pr-row-top">
-          <a className="ref" href={pr.url} target="_blank" rel="noopener noreferrer">
-            #{pr.num}
-          </a>
-          <span className="pr-row-repo">{pr.repo}</span>
-          {/* Whose work it is: a review queue is a list of people waiting, not of branches. */}
-          <span className="review-author">@{pr.author}</span>
-          {pr.ticket && <span className="pr-row-ticket">{pr.ticket}</span>}
-          {ticketStatus && (
-            <span className="chip chip-na" title="status of the linked ticket">
-              {formatStatus(ticketStatus)}
-            </span>
-          )}
-          {pr.draft && <span className="chip chip-na">draft</span>}
-          {/* Size decides whether this fits in the gap before the next meeting. */}
-          <span className={`chip chip-${sizeTone(pr)}`} title="how much there is to read">
-            {sizeLabel(pr)}
-          </span>
-          {pr.unresolvedThreads > 0 && (
-            <span className="chip chip-bad" title="unresolved review threads, from anyone">
-              {pr.unresolvedThreads} open
-            </span>
-          )}
-        </div>
-
-        <p className="pr-row-title">
-          <a href={pr.url} target="_blank" rel="noopener noreferrer">
-            {pr.title}
-          </a>
-        </p>
-
-        <p className="pr-row-reason">{reason}</p>
-      </div>
-    </article>
-  );
-};
-
 /**
  * The review queue, sorted by what it needs from me.
  *
  * GitHub's own notion is "review requested", which drops a PR the moment a review is
  * submitted — so the thing you most want to see, a PR you approved and the author then
  * pushed to, is exactly what it hides. That case gets the top lane here.
+ *
+ * The rows are selectable because the queue is an input to something else: tick the PRs
+ * worth a session and hand the urls to an agent. Selection is by url, so it survives a
+ * background refresh and a lane change — a PR that moves from "never looked at" to
+ * "changed since you looked" stays ticked.
  */
 export const ReviewsPage = ({ report, jira }: ReviewsPageProps) => {
   const [hideBots, setHideBots] = useState(true);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   useHashTarget([report]);
+
+  const lanes = useMemo<Map<ReviewLaneId, ReviewRow[]>>(
+    () => (report ? toReviewLanes(report, jira) : new Map()),
+    [report, jira],
+  );
+
+  const toggle = (url: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(url)) next.add(url);
+      return next;
+    });
+
+  const toggleAll = (urls: string[], on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const url of urls) {
+        if (on) next.add(url);
+        else next.delete(url);
+      }
+      return next;
+    });
 
   if (!report) {
     return (
@@ -93,10 +64,15 @@ export const ReviewsPage = ({ report, jira }: ReviewsPageProps) => {
     );
   }
 
-  const lanes = toReviewLanes(report, jira);
-  const links = reviewLinks(lanes);
   const bots = (lanes.get('bots') ?? []).length;
   const mine = report.prs.filter((pr) => !pr.bot).length;
+
+  // Only what is on screen can be copied: a tick left over from a PR that has since merged,
+  // or one hidden by "hide bots", would otherwise ride along invisibly.
+  const shown = REVIEW_LANES.filter((lane) => !(lane.id === 'bots' && hideBots)).flatMap(
+    (lane) => lanes.get(lane.id) ?? [],
+  );
+  const picked = shown.filter((row) => selected.has(row.pr.url)).map((row) => row.pr.url);
 
   return (
     <main className="grid">
@@ -128,6 +104,27 @@ export const ReviewsPage = ({ report, jira }: ReviewsPageProps) => {
           </span>
         </div>
 
+        {/* The one action the ticks feed. It appears with the first tick rather than sitting
+            there disabled, and says how many it would copy. */}
+        {picked.length > 0 && (
+          <div className="review-selection">
+            <span>
+              {picked.length} selected
+            </span>
+            <CopyPrLinks
+              links={picked}
+              label={`Copy ${picked.length} PR url${picked.length === 1 ? '' : 's'}`}
+            />
+            <Button
+              size="small"
+              onClick={() => setSelected(new Set())}
+              sx={{ textTransform: 'none', color: 'var(--ink-2)' }}
+            >
+              Clear
+            </Button>
+          </div>
+        )}
+
         {report.prs.length === 0 && <p className="status">Nothing waiting on your review.</p>}
 
         {REVIEW_LANES.map((lane) => {
@@ -140,13 +137,13 @@ export const ReviewsPage = ({ report, jira }: ReviewsPageProps) => {
                 <h3>{lane.title}</h3>
                 <span className="count">{rows.length}</span>
                 <p className="pr-lane-hint">{lane.hint}</p>
-                {lane.id === 'unseen' && <CopyPrLinks links={links} />}
               </header>
-              <div className="pr-lane-rows">
-                {rows.map((row) => (
-                  <Row key={row.pr.url} row={row} />
-                ))}
-              </div>
+              <ReviewTable
+                rows={rows}
+                selected={selected}
+                onToggle={toggle}
+                onToggleAll={toggleAll}
+              />
             </section>
           );
         })}

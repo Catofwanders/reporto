@@ -160,7 +160,3 @@ export const toReviewLanes = (
   for (const list of lanes.values()) list.sort((a, b) => b.idleDays - a.idleDays);
   return lanes;
 };
-
-/** Links worth copying into a review session: the ones I have never looked at. */
-export const reviewLinks = (lanes: Map<ReviewLaneId, ReviewRow[]>): string[] =>
-  (lanes.get('unseen') ?? []).map((row) => row.pr.url);

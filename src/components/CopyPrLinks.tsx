@@ -6,6 +6,8 @@ import { copyText } from '../copyText';
 interface CopyPrLinksProps {
   /** PR urls to copy, one per line. The button hides itself when there are none. */
   links: string[];
+  /** Overrides the button text where the caller has a better word than "links". */
+  label?: string;
 }
 
 /**
@@ -13,7 +15,7 @@ interface CopyPrLinksProps {
  * panel header, because "copy 0 links" as a permanently disabled control in a header reads
  * as something broken.
  */
-export const CopyPrLinks = ({ links }: CopyPrLinksProps) => {
+export const CopyPrLinks = ({ links, label }: CopyPrLinksProps) => {
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState<string[] | null>(null);
 
@@ -40,7 +42,7 @@ export const CopyPrLinks = ({ links }: CopyPrLinksProps) => {
         sx={{ textTransform: 'none', color: 'var(--accent)', borderColor: 'var(--line)' }}
         variant="outlined"
       >
-        {copied ? 'Copied' : `Copy ${links.length} link${links.length === 1 ? '' : 's'}`}
+        {copied ? 'Copied' : (label ?? `Copy ${links.length} link${links.length === 1 ? '' : 's'}`)}
       </Button>
 
       {failed && (
