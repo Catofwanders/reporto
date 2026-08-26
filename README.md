@@ -524,8 +524,15 @@ never be merged — they are history, not a queue, and one opened three years ag
 top of the list until it was excluded. The open-PR report drops them for the same reason.
 
 The report is two searches: `review-requested:<me>` and `reviewed-by:<me>` on open PRs.
-Neither is enough alone, and per PR it works out my latest review, whether commits landed
-after it, and how many of my own comments nobody has answered.
+Neither is enough alone, and per PR it works out my latest review, what landed after it and
+who put it there, and how many of my own comments nobody has answered.
+
+"Pushed since your review" is not one thing. A merge commit is the base branch being pulled
+in — the *Update branch* button, or whatever keeps branches current — and re-reading a PR
+because master moved is a waste of the one lane meant to be urgent. So only commits with a
+single parent count as work, the row names their author (`@stilet0000 pushed 2 commits`),
+and a PR whose sole push was a merge stays where it was, saying so: *still the author's
+move (only a base-branch merge by @x since)*.
 
 Thread *resolution* is not the test. Reviewers here rarely click resolve, so a count of
 unresolved threads is a count of every comment ever written and never falls — and most of
@@ -536,7 +543,7 @@ demonstrably finished.
 
 | Lane | What it means |
 |---|---|
-| **Changed since you looked** | your verdict is out of date |
+| **Changed since you looked** | somebody pushed real work after your review, and the row names them |
 | **Never looked at** | requested of you, no review from you yet |
 | **Your comments unanswered** | you asked, and nobody has replied or pushed over it |
 | **You approved** | still open, waiting on somebody else |

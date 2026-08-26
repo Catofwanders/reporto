@@ -175,8 +175,15 @@ export interface ReviewPr {
   myReviewState: string | null;
   myReviewAt: string | null;
   myReviewCount: number;
-  /** Commits landed after my last review — the reason to look again. */
+  /** Anything landed after my last review, branch syncs included. */
   pushedSinceMyReview: boolean;
+  /** Of those, the commits that are somebody's work rather than a merge of the base branch. */
+  reworkCommits: number;
+  /** Who authored the newest commit since my review, so a row can name a person. */
+  reworkBy: string | null;
+  reworkHeadline: string | null;
+  /** Something landed, but all of it was the base branch being merged in. */
+  syncOnlySinceMyReview: boolean;
   /** Threads I opened where mine is still the last word, and the hunk still stands. */
   myUnansweredThreads: number;
   size: { additions: number; deletions: number; files: number };

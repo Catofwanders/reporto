@@ -12,6 +12,10 @@ import { idleDays } from './prLanes';
  * Nor does thread *resolution* answer anything: nobody on this team clicks resolve, so a
  * count of unresolved threads is a count of every comment ever written. "Unanswered" here
  * means nobody replied and nobody pushed over the hunk.
+ *
+ * "Pushed" is equally unreliable on its own. A merge of the base branch is a push that
+ * changes nothing to read, so the lanes count only commits that are somebody's work, and
+ * the rows name who wrote them.
  */
 export type ReviewLaneId =
   | 'changed'
@@ -31,7 +35,7 @@ export const REVIEW_LANES: ReviewLaneMeta[] = [
   {
     id: 'changed',
     title: 'Changed since you looked',
-    hint: 'You reviewed, then they pushed — your verdict is out of date',
+    hint: 'You reviewed, then somebody pushed real work — your verdict is out of date',
   },
   { id: 'unseen', title: 'Never looked at', hint: 'Requested of you, no review from you yet' },
   {
@@ -64,7 +68,13 @@ export interface ReviewRow {
 export const laneOfReview = (pr: ReviewPr): ReviewLaneId => {
   // A bot PR is still a review, but it must never compete with a colleague's.
   if (pr.bot) return 'bots';
-  if (pr.myReviewState && pr.pushedSinceMyReview) return 'changed';
+  /*
+   * Only real work pulls a PR back into "changed": a merge commit is the base branch being
+   * pulled in, by the author or by whatever keeps branches current, and re-reading a PR
+   * because master moved is a waste of the one lane that is supposed to be urgent. When
+   * that is all that landed, the PR stays where it was — the author still owes the next move.
+   */
+  if (pr.myReviewState && pr.reworkCommits > 0) return 'changed';
   if (!pr.myReviewState) return 'unseen';
   if (pr.myUnansweredThreads > 0) return 'unanswered';
   if (pr.myReviewState === 'APPROVED') return 'approved';
@@ -74,6 +84,15 @@ export const laneOfReview = (pr: ReviewPr): ReviewLaneId => {
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 const state = (pr: ReviewPr) => (pr.myReviewState ?? '').toLowerCase().replace('_', ' ');
+
+/** Who pushed, named. An unattributed "they" hid whether a person was involved at all. */
+const pusher = (pr: ReviewPr) => (pr.reworkBy ? `@${pr.reworkBy}` : 'somebody');
+
+/** Said after a state when the only thing that landed was a branch sync. */
+const syncNote = (pr: ReviewPr) =>
+  pr.syncOnlySinceMyReview
+    ? ` (only a base-branch merge${pr.reworkBy ? ` by @${pr.reworkBy}` : ''} since)`
+    : '';
 
 /**
  * The row's one line: what is true, and what it implies I do.
@@ -91,9 +110,12 @@ export const reasonOfReview = (
   if (pr.bot) {
     return pr.myReviewState ? `${state(pr)} — bot PR` : 'dependency bump, nobody is waiting';
   }
-  if (pr.myReviewState && pr.pushedSinceMyReview) {
+  if (pr.myReviewState && pr.reworkCommits > 0) {
     const ago = since === null ? '' : since === 0 ? ' today' : ` ${since}d ago`;
-    return `you ${state(pr)}${ago}, then they pushed — look again`;
+    return `you ${state(pr)}${ago}, then ${pusher(pr)} pushed ${plural(
+      pr.reworkCommits,
+      'commit',
+    )} — look again`;
   }
   if (!pr.myReviewState) {
     if (pr.draft) return 'requested, but still a draft';
@@ -110,12 +132,20 @@ export const reasonOfReview = (
     return `${plural(pr.myUnansweredThreads, 'comment')} of yours with no reply`;
   }
   if (pr.myReviewState === 'APPROVED') {
-    return pr.reviewDecision === 'APPROVED'
-      ? 'approved and cleared — waiting on merge'
-      : 'you approved; somebody else has not';
+    const base =
+      pr.reviewDecision === 'APPROVED'
+        ? 'approved and cleared — waiting on merge'
+        : 'you approved; somebody else has not';
+    return `${base}${syncNote(pr)}`;
   }
-  if (pr.myReviewState === 'CHANGES_REQUESTED') return 'changes requested, no push yet';
-  return `${state(pr)} — nothing new since`;
+  if (pr.myReviewState === 'CHANGES_REQUESTED') {
+    return pr.syncOnlySinceMyReview
+      ? `changes requested — still the author's move${syncNote(pr)}`
+      : 'changes requested, no push yet';
+  }
+  return pr.syncOnlySinceMyReview
+    ? `${state(pr)} — nothing new to read${syncNote(pr)}`
+    : `${state(pr)} — nothing new since`;
 };
 
 /** How big the review is, in the terms that decide whether it fits in a coffee break. */

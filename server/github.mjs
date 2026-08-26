@@ -618,7 +618,16 @@ const REVIEW_FIELDS = `
   reviewDecision
   repository { name isArchived }
   author { login }
-  commits(last: 1) { nodes { commit { committedDate } } }
+  commits(last: 30) {
+    nodes {
+      commit {
+        committedDate
+        messageHeadline
+        parents { totalCount }
+        author { name user { login } }
+      }
+    }
+  }
   reviews(last: 20) { nodes { author { login } state submittedAt } }
   reviewThreads(first: 50) {
     nodes {
@@ -677,8 +686,25 @@ export async function pullReviewQueue({ author, org, account, ticketPattern }) {
         .filter((review) => review.author?.login === author && review.submittedAt)
         .sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt))
       const last = mine[mine.length - 1] ?? null
-      const lastCommitAt = pr.commits?.nodes?.[0]?.commit?.committedDate ?? null
+      const commits = (pr.commits?.nodes ?? []).map((node) => node?.commit).filter(Boolean)
+      const lastCommitAt = commits[commits.length - 1]?.committedDate ?? null
       const threads = pr.reviewThreads?.nodes ?? []
+
+      /*
+       * What landed after my review, split by whether it is work or housekeeping.
+       *
+       * A merge commit is the base branch being pulled in — the "Update branch" button, or
+       * an automation doing it — and it is not something to re-read. Treating it as a push
+       * put PRs in "changed since you looked" when the author had not touched them, and the
+       * thing actually being waited on was the author, not me.
+       */
+      const since = last?.submittedAt ? new Date(last.submittedAt) : null
+      const after = since
+        ? commits.filter((commit) => new Date(commit.committedDate) > since)
+        : []
+      const rework = after.filter((commit) => (commit.parents?.totalCount ?? 1) <= 1)
+      const newest = rework[rework.length - 1] ?? after[after.length - 1] ?? null
+      const who = (commit) => commit?.author?.user?.login ?? commit?.author?.name ?? null
 
       seen.set(pr.url, {
         repo: pr.repository?.name ?? 'unknown',
@@ -698,9 +724,14 @@ export async function pullReviewQueue({ author, org, account, ticketPattern }) {
         myReviewAt: last?.submittedAt ?? null,
         myReviewCount: mine.length,
         // "Has anything happened since I looked" — the question the page exists to answer.
-        pushedSinceMyReview: Boolean(
-          last?.submittedAt && lastCommitAt && new Date(lastCommitAt) > new Date(last.submittedAt),
-        ),
+        pushedSinceMyReview: after.length > 0,
+        /** Commits after my review that are somebody's work rather than a branch sync. */
+        reworkCommits: rework.length,
+        /** Who put the newest of them there, so the row can name a person. */
+        reworkBy: who(newest),
+        reworkHeadline: newest?.messageHeadline ?? null,
+        /** Something landed, but all of it was the base branch being merged in. */
+        syncOnlySinceMyReview: after.length > 0 && rework.length === 0,
         /*
          * Threads I opened that nobody has answered — and answered means answered, not
          * merely marked resolved. Reviewers on other people's PRs rarely click resolve, so
