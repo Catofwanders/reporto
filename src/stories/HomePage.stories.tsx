@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { HomePage } from '../pages/HomePage';
-import { calendarReport, jiraReport, prsReport, statsReport } from './fixtures';
+import { calendarReport, jiraReport, prsReport, reviewsReport } from './fixtures';
 
 const minutesAgo = (mins: number) => new Date(Date.now() - mins * 60_000).toISOString();
 
@@ -21,7 +21,7 @@ const meta = {
   component: HomePage,
   args: {
     jira: jiraReport,
-    stats: statsReport,
+    reviews: reviewsReport,
     calendar: calendarReport,
     prs: freshPrs,
   },
@@ -36,5 +36,5 @@ export const Default: Story = {};
 
 /** A fresh checkout, before any report has been written. */
 export const NoReports: Story = {
-  args: { jira: null, calendar: null, prs: null, stats: null },
+  args: { jira: null, calendar: null, prs: null, reviews: null },
 };

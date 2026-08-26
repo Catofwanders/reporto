@@ -9,6 +9,8 @@ import type {
   OpenPr,
   PrsReport,
   ReviewDecision,
+  ReviewPr,
+  ReviewsReport,
   StatsMonth,
   StatsReport,
 } from '../types';
@@ -235,6 +237,69 @@ export const prsReport: PrsReport = {
         pr(455, 'Bump the design tokens package', 'NONE', { draft: true, ticket: null }),
       ],
     },
+  ],
+};
+
+/**
+ * The review queue, one PR per lane that the dashboard and the page care about: reviewed
+ * then pushed to, never looked at, my threads unanswered, approved, quiet, and a bot.
+ */
+const reviewPr = (
+  over: Partial<ReviewPr> & Pick<ReviewPr, 'num' | 'title'>,
+): ReviewPr => ({
+  repo: 'billing-api',
+  url: `https://example.com/pr/${over.num}`,
+  author: 'colleague',
+  bot: false,
+  draft: false,
+  ticket: null,
+  createdAt: AT('06:00'),
+  updatedAt: AT('07:40'),
+  lastCommitAt: AT('07:40'),
+  reviewRequested: true,
+  reviewDecision: null,
+  myReviewState: null,
+  myReviewAt: null,
+  myReviewCount: 0,
+  pushedSinceMyReview: false,
+  unresolvedThreads: 0,
+  myUnresolvedThreads: 0,
+  size: { additions: 40, deletions: 8, files: 3 },
+  ...over,
+});
+
+export const reviewsReport: ReviewsReport = {
+  type: 'reviews',
+  date: DATE,
+  generatedAt: AT('08:30'),
+  reviewer: 'you',
+  prs: [
+    reviewPr({
+      num: 88,
+      title: 'PROJ-820 - retry the payment webhook',
+      myReviewState: 'APPROVED',
+      myReviewAt: AT('06:20'),
+      pushedSinceMyReview: true,
+      size: { additions: 610, deletions: 95, files: 22 },
+    }),
+    reviewPr({ num: 84, repo: 'storefront', title: 'PROJ-818 - lazy-load the basket panel' }),
+    reviewPr({
+      num: 80,
+      title: 'PROJ-810 - move the tenant guard into middleware',
+      myReviewState: 'CHANGES_REQUESTED',
+      myReviewAt: AT('05:30'),
+      unresolvedThreads: 3,
+      myUnresolvedThreads: 2,
+    }),
+    reviewPr({
+      num: 76,
+      repo: 'storefront',
+      title: 'PROJ-800 - drop the legacy checkout route',
+      myReviewState: 'APPROVED',
+      myReviewAt: AT('05:00'),
+      reviewDecision: 'APPROVED',
+    }),
+    reviewPr({ num: 70, title: 'Bump the linter', author: 'dependabot', bot: true }),
   ],
 };
 

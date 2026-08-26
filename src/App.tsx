@@ -178,8 +178,8 @@ export const App = () => {
                   path="/"
                   element={
                     <HomePage
-                      stats={reports.stats}
                       jira={reports.jira}
+                      reviews={reports.reviews}
                       calendar={reports.calendar}
                       prs={reports.prs}
                     />

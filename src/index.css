@@ -206,7 +206,7 @@ body {
 .action-stamp { font-size: .68rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .refresh-slot { display: inline-flex; }
 
-.panel-meta, .widget-more { display: inline-flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
+.panel-meta { display: inline-flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
 
 .status { color: var(--ink-2); }
 .status.error { color: var(--bad-ink); }
@@ -316,12 +316,41 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .item.done { opacity: .55; }
 .item.done .subj { text-decoration: line-through; }
 
-/* home: the KPI band full width, then content | widgets */
-.home { display: grid; gap: 1.6rem; align-items: start; }
-.home-split { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: start; min-width: 0; }
-@media (min-width: 900px) { .home-split { grid-template-columns: minmax(0, 1fr) 21rem; } }
-.home-content { display: grid; gap: 1.6rem; align-items: start; min-width: 0; }
-.home-widgets { display: grid; gap: 1.6rem; align-content: start; }
+/*
+ * home: modules, not pages. Each one is a card of its own, they flow into as many columns
+ * as the window allows, and none of them is tall enough to push the next one off screen.
+ */
+.home { display: grid; gap: 1.4rem; align-items: start; }
+.home-modules {
+  display: grid; gap: 1.2rem; align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+}
+
+.panel-mini { padding: 1rem 1.1rem 1.1rem; display: grid; gap: .7rem; align-content: start; }
+.mini-head { display: flex; align-items: center; gap: .6rem; }
+.mini-head h2 { margin: 0; font-size: .92rem; flex: 1 1 auto; min-width: 0; }
+
+.mini-counts { list-style: none; display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin: 0; padding: 0; }
+.mini-counts li { display: flex; align-items: baseline; gap: .3rem; }
+.mini-count { font-size: .95rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mini-count-label { color: var(--ink-2); font-size: .7rem; }
+
+.mini-rows { list-style: none; display: grid; gap: .5rem; margin: 0; padding: 0; }
+.mini-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .55rem; align-items: start; }
+.mini-row-body { display: grid; gap: .1rem; min-width: 0; }
+.mini-row-body > a, .mini-row-title {
+  font-size: .82rem; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* One line each: a module that reflows as titles grow stops being scannable. */
+.mini-row-meta {
+  color: var(--ink-2); font-size: .72rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mini-rest { margin: 0; color: var(--ink-2); font-size: .72rem; }
+.mini-empty { margin: 0; color: var(--ink-2); font-size: .8rem; }
+/* Pinned to the bottom of the card, so a row of modules ends on one line. */
+.mini-more { align-self: end; font-size: .76rem; }
 
 /* open PRs: summary strip above the repo groups */
 .pr-summary {
@@ -344,45 +373,15 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   font: 500 .76rem/1.5 ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
-/* Jira: compact cards, as many per row as fit — the panel is a scan surface, so a
-   full-width row per ticket wasted most of the width. */
-.ticket-cards {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-  gap: .55rem; margin-top: 1rem;
-}
-.ticket-card {
-  display: flex; flex-direction: column; gap: .3rem;
-  border: 1px solid var(--line); border-radius: .55rem; padding: .55rem .65rem;
-}
-.ticket-card-top { display: flex; align-items: center; gap: .5rem; justify-content: space-between; }
-/* The status chip is the longest thing on the card ("RELEASE READY" plus a caret), so it
-   keeps its full width and the ticket key truncates instead of squeezing it. */
-.ticket-card-top .chip { font-size: .66rem; padding: .2rem .5rem; flex: none; }
-.ticket-card-top .key { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ticket-card-qc .chip { font-size: .62rem; }
-.ticket-card-summary {
-  margin: 0; font-size: .82rem; line-height: 1.3;
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
-}
-
 /* open PRs: one full-width column of repo groups, PR status in each row's right corner */
 .pr-groups { display: grid; gap: .7rem; margin-top: 1rem; }
 .pr-groups .MuiAccordion-root + .MuiAccordion-root { margin-top: 0; }
 
-.widget { background: var(--panel); border: 1px solid var(--line); border-radius: .7rem; padding: 1rem 1.1rem 1.1rem; }
-.widget-head { display: flex; justify-content: space-between; align-items: baseline; }
-.widget-head h3 { margin: 0; font-size: .95rem; }
-.widget-more { font-size: .78rem; }
-.widget-sub { margin: .9rem 0 .3rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); }
-.widget-empty { color: var(--ink-2); font-size: .82rem; }
-.widget-list { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .55rem; }
-.widget-event { display: flex; gap: .5rem; align-items: flex-start; }
-.widget-event-body { display: flex; flex-direction: column; min-width: 0; font-size: .84rem; }
-.widget-event-meta { color: var(--ink-2); font-size: .73rem; }
+.mini-sub { margin: .3rem 0 -.1rem; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); }
 .chip-when { flex: none; font-variant-numeric: tabular-nums; }
 .chip-when .chip { font-size: .68rem; padding: .18rem .45rem; }
-.widget .chip-when { width: 5.4rem; }
-.widget .chip-when .chip { display: block; text-align: center; }
+.mini-row .chip-when { width: 5.2rem; }
+.mini-row .chip-when .chip { display: block; text-align: center; }
 .dot { width: .55rem; height: .55rem; border-radius: 50%; flex: none; margin-top: .35rem; }
 .dot-warn { background: var(--warn-ink); }
 .dot-na { background: var(--na-ink); }
@@ -595,7 +594,7 @@ body { background: var(--canvas); }
 }
 
 /* Apex-style card: hairline border, soft shadow, generous padding. */
-.panel, .summary-card, .widget { box-shadow: var(--card-shadow); border-radius: var(--radius); }
+.panel, .summary-card { box-shadow: var(--card-shadow); border-radius: var(--radius); }
 
 /* KPI cards: label, value, delta, badge, and the spark running to the bottom edge. */
 .kpi-band { display: grid; gap: .8rem; }
@@ -697,7 +696,7 @@ body { background: var(--canvas); }
   display: grid; place-items: center; width: 2rem; height: 2rem;
   border-radius: .55rem; color: var(--ink);
 }
-.widget-head h3 { display: flex; align-items: center; gap: .55rem; }
+
 
 /*
  * Jira board: one column per status, in workflow order, scrolling sideways when the

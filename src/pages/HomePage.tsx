@@ -1,42 +1,39 @@
-import type { CalendarReport, JiraReport, PrsReport, StatsReport } from '../types';
-import { useRefresh } from '../refreshContext';
+import type { CalendarReport, JiraReport, PrsReport, ReviewsReport } from '../types';
 import { CalendarWidget } from '../components/CalendarWidget';
 import { FlowChecks } from '../components/FlowChecks';
+import { HomePrs } from '../components/HomePrs';
+import { HomeReviews } from '../components/HomeReviews';
+import { HomeTickets } from '../components/HomeTickets';
 import { StandupCard } from '../components/StandupCard';
-import { HomeKpis } from '../components/HomeKpis';
-import { JiraActiveList } from '../components/JiraActiveList';
-import { PrLanes } from '../components/PrLanes';
 
 interface HomePageProps {
   jira: JiraReport | null;
-  stats: StatsReport | null;
+  reviews: ReviewsReport | null;
   calendar: CalendarReport | null;
   prs: PrsReport | null;
 }
 
 /**
- * Today's work first, the month's numbers last: the tickets and PRs are what the dashboard
- * is opened for, and the statistics are context you scroll to rather than act on.
+ * The morning's answer to "what needs me", as modules rather than pages.
+ *
+ * Each module carries the few rows worth acting on and links to the page that holds the
+ * rest, so the dashboard is one screen instead of the Jira panel and the PR lanes repeated
+ * in full. The month's statistics used to close it out; they were context you scrolled past
+ * rather than acted on, and the review queue — where somebody else is waiting — earns that
+ * space better.
  */
-export const HomePage = ({ jira, calendar, prs, stats }: HomePageProps) => {
-  const { run } = useRefresh();
+export const HomePage = ({ jira, calendar, prs, reviews }: HomePageProps) => (
+  <main className="home">
+    {/* Contradictions first: they are the only thing here that is silently wrong. */}
+    <FlowChecks jira={jira} prs={prs} />
 
-  return (
-    <main className="home">
-      <div className="home-split">
-        <div className="home-content">
-          {/* Contradictions first: they are the only thing here that is silently wrong. */}
-          <FlowChecks jira={jira} prs={prs} />
-          {jira && <JiraActiveList report={jira} onChanged={() => void run('jira')} />}
-          {prs && <PrLanes report={prs} onChanged={() => void run('prs')} />}
-        </div>
+    <div className="home-modules">
+      {jira && <HomeTickets report={jira} />}
+      {prs && <HomePrs report={prs} />}
+      {reviews && <HomeReviews report={reviews} jira={jira} />}
+      {calendar && <CalendarWidget report={calendar} />}
+    </div>
 
-        <div className="home-widgets">{calendar && <CalendarWidget report={calendar} />}</div>
-      </div>
-
-      <StandupCard jira={jira} prs={prs} calendar={calendar} />
-
-      {stats && <HomeKpis report={stats} />}
-    </main>
-  );
-};
+    <StandupCard jira={jira} prs={prs} calendar={calendar} />
+  </main>
+);
