@@ -52,20 +52,6 @@ remote. A fresh checkout therefore starts with no data:
 the cards stay hidden and the action bar reads "never" until you press an update
 button.
 
-## Committing
-
-This repository belongs to a personal account, and **only that identity commits here** —
-set it repo-locally so it overrides whatever global git identity other projects use:
-
-```bash
-git config user.name  "<personal account name>"
-git config user.email "<personal account noreply address>"
-```
-
-The values are not written down here; take them from the account's GitHub settings, or from
-`git log -1 --format='%an <%ae>'` in this clone. Verify before the first commit of a session
-— a commit authored by a work identity links this project to an employer.
-
 ## Configuration
 
 ```bash
