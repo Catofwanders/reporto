@@ -1,4 +1,10 @@
-import type { CalendarReport, JiraReport, PrsReport, StatsReport } from './types';
+import type {
+  CalendarReport,
+  JiraReport,
+  PrsReport,
+  ReviewsReport,
+  StatsReport,
+} from './types';
 import type { ReportKind } from './reportKinds';
 
 /**
@@ -33,6 +39,11 @@ function validPrs(v: unknown): v is PrsReport {
   return v.repos.every((r) => isObject(r) && typeof r.repo === 'string' && isArray(r.prs));
 }
 
+function validReviews(v: unknown): v is ReviewsReport {
+  if (!isObject(v) || typeof v.date !== 'string' || !isArray(v.prs)) return false;
+  return v.prs.every((pr) => isObject(pr) && typeof pr.num === 'number' && typeof pr.repo === 'string');
+}
+
 function validStats(v: unknown): v is StatsReport {
   if (!isObject(v) || !isArray(v.months)) return false;
   return v.months.every((m) => isObject(m) && typeof m.month === 'string');
@@ -42,6 +53,7 @@ const VALIDATORS: Record<ReportKind, (v: unknown) => boolean> = {
   jira: validJira,
   calendar: validCalendar,
   prs: validPrs,
+  reviews: validReviews,
   stats: validStats,
 };
 

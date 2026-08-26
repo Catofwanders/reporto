@@ -255,90 +255,148 @@
     ]
   },
   "infra": {
-    "note": "High level only \u2014 what talks to what, not how it is deployed.",
-    "layers": [
-      "Clients",
-      "Edge",
-      "Services",
-      "Data"
-    ],
-    "nodes": [
+    "note": "One entry per independent system. Separate stacks get separate diagrams, so a shared layer is never implied where there is none.",
+    "systems": [
       {
-        "id": "web",
-        "label": "Customer web",
-        "layer": "Clients"
+        "id": "platform",
+        "title": "Shared platform",
+        "note": "High level only \u2014 what talks to what, not how it is deployed.",
+        "layers": [
+          "Clients",
+          "Edge",
+          "Services",
+          "Data"
+        ],
+        "nodes": [
+          {
+            "id": "web",
+            "label": "Customer web",
+            "layer": "Clients"
+          },
+          {
+            "id": "admin",
+            "label": "Admin console",
+            "layer": "Clients"
+          },
+          {
+            "id": "cdn",
+            "label": "CDN",
+            "note": "static hosting",
+            "layer": "Edge"
+          },
+          {
+            "id": "graph",
+            "label": "GraphQL gateway",
+            "layer": "Edge"
+          },
+          {
+            "id": "core",
+            "label": "Backend core",
+            "layer": "Services"
+          },
+          {
+            "id": "jobs",
+            "label": "Workers",
+            "note": "queues and scheduled jobs",
+            "layer": "Services"
+          },
+          {
+            "id": "db",
+            "label": "Postgres",
+            "layer": "Data"
+          },
+          {
+            "id": "files",
+            "label": "Object storage",
+            "layer": "Data"
+          }
+        ],
+        "edges": [
+          [
+            "web",
+            "cdn"
+          ],
+          [
+            "web",
+            "graph"
+          ],
+          [
+            "admin",
+            "graph"
+          ],
+          [
+            "graph",
+            "core"
+          ],
+          [
+            "core",
+            "jobs"
+          ],
+          [
+            "core",
+            "db"
+          ],
+          [
+            "jobs",
+            "db"
+          ],
+          [
+            "core",
+            "files"
+          ]
+        ]
       },
       {
-        "id": "admin",
-        "label": "Admin console",
-        "layer": "Clients"
-      },
-      {
-        "id": "cdn",
-        "label": "CDN",
-        "note": "static hosting",
-        "layer": "Edge"
-      },
-      {
-        "id": "graph",
-        "label": "GraphQL gateway",
-        "layer": "Edge"
-      },
-      {
-        "id": "core",
-        "label": "Backend core",
-        "layer": "Services"
-      },
-      {
-        "id": "jobs",
-        "label": "Workers",
-        "note": "queues and scheduled jobs",
-        "layer": "Services"
-      },
-      {
-        "id": "db",
-        "label": "Postgres",
-        "layer": "Data"
-      },
-      {
-        "id": "files",
-        "label": "Object storage",
-        "layer": "Data"
+        "id": "standalone",
+        "title": "Standalone product (self-contained)",
+        "note": "Its own client, API and database. Nothing here reaches the shared platform.",
+        "layers": [
+          "Client",
+          "Services",
+          "Data"
+        ],
+        "nodes": [
+          {
+            "id": "ui",
+            "label": "Web client",
+            "layer": "Client"
+          },
+          {
+            "id": "api",
+            "label": "Own API server",
+            "layer": "Services"
+          },
+          {
+            "id": "cms",
+            "label": "CMS",
+            "note": "content",
+            "layer": "Services"
+          },
+          {
+            "id": "ownpg",
+            "label": "Own Postgres",
+            "layer": "Data"
+          }
+        ],
+        "edges": [
+          [
+            "ui",
+            "api"
+          ],
+          [
+            "ui",
+            "cms"
+          ],
+          [
+            "api",
+            "ownpg"
+          ],
+          [
+            "cms",
+            "ownpg"
+          ]
+        ]
       }
-    ],
-    "edges": [
-      [
-        "web",
-        "cdn"
-      ],
-      [
-        "web",
-        "graph"
-      ],
-      [
-        "admin",
-        "graph"
-      ],
-      [
-        "graph",
-        "core"
-      ],
-      [
-        "core",
-        "jobs"
-      ],
-      [
-        "core",
-        "db"
-      ],
-      [
-        "jobs",
-        "db"
-      ],
-      [
-        "core",
-        "files"
-      ]
     ]
   }
 }

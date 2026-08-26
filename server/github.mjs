@@ -581,3 +581,122 @@ export async function pullMergedSince({ author, org, account, since }) {
     }))
     .sort((a, b) => new Date(b.mergedAt).getTime() - new Date(a.mergedAt).getTime())
 }
+
+/** Logins that are automation rather than a colleague waiting on you. */
+const BOTS = new Set(['dependabot', 'renovate', 'github-actions', 'snyk-bot'])
+const isBot = (login) => !login || login.endsWith('[bot]') || BOTS.has(login)
+
+const REVIEW_FIELDS = `
+  number
+  title
+  url
+  isDraft
+  createdAt
+  updatedAt
+  additions
+  deletions
+  changedFiles
+  reviewDecision
+  repository { name }
+  author { login }
+  commits(last: 1) { nodes { commit { committedDate } } }
+  reviews(last: 20) { nodes { author { login } state submittedAt } }
+  reviewThreads(first: 50) {
+    nodes { isResolved isOutdated comments(first: 1) { nodes { author { login } } } }
+  }`
+
+/**
+ * The review queue: open PRs where I am a requested reviewer, plus the ones I have already
+ * reviewed and that are still open.
+ *
+ * Both halves are needed and neither is enough. A requested review disappears from
+ * `review-requested` the moment it is submitted, so that search alone loses everything I
+ * have looked at — including the ones the author has since pushed to, which are exactly the
+ * ones worth coming back to.
+ */
+export async function pullReviewQueue({ author, org, account, ticketPattern }) {
+  const token = await ghToken(account)
+  const scope = `is:pr is:open org:${org}`
+  const data = await graphql(
+    `query {
+      requested: search(query: "${scope} review-requested:${author}", type: ISSUE, first: 50) {
+        nodes { ... on PullRequest { ${REVIEW_FIELDS} } }
+      }
+      reviewed: search(query: "${scope} reviewed-by:${author} -author:${author}", type: ISSUE, first: 50) {
+        nodes { ... on PullRequest { ${REVIEW_FIELDS} } }
+      }
+    }`,
+    token,
+  )
+
+  const ticket = ticketPattern ? new RegExp(ticketPattern) : null
+  const seen = new Map()
+
+  for (const [source, nodes] of [
+    ['requested', data.requested?.nodes ?? []],
+    ['reviewed', data.reviewed?.nodes ?? []],
+  ]) {
+    for (const pr of nodes) {
+      if (!pr?.url) continue
+      const existing = seen.get(pr.url)
+      if (existing) {
+        // A PR can be in both searches: still requested *and* already reviewed once.
+        existing.reviewRequested = existing.reviewRequested || source === 'requested'
+        continue
+      }
+
+      const mine = (pr.reviews?.nodes ?? [])
+        .filter((review) => review.author?.login === author && review.submittedAt)
+        .sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt))
+      const last = mine[mine.length - 1] ?? null
+      const lastCommitAt = pr.commits?.nodes?.[0]?.commit?.committedDate ?? null
+      const threads = pr.reviewThreads?.nodes ?? []
+
+      seen.set(pr.url, {
+        repo: pr.repository?.name ?? 'unknown',
+        num: pr.number,
+        title: pr.title,
+        url: pr.url,
+        author: pr.author?.login ?? 'unknown',
+        bot: isBot(pr.author?.login),
+        draft: Boolean(pr.isDraft),
+        ticket: ticket ? (pr.title.match(ticket)?.[0] ?? null) : null,
+        createdAt: pr.createdAt,
+        updatedAt: pr.updatedAt,
+        lastCommitAt,
+        reviewRequested: source === 'requested',
+        reviewDecision: pr.reviewDecision ?? null,
+        myReviewState: last?.state ?? null,
+        myReviewAt: last?.submittedAt ?? null,
+        myReviewCount: mine.length,
+        // "Has anything happened since I looked" — the question the page exists to answer.
+        pushedSinceMyReview: Boolean(
+          last?.submittedAt && lastCommitAt && new Date(lastCommitAt) > new Date(last.submittedAt),
+        ),
+        unresolvedThreads: threads.filter((thread) => !thread.isResolved).length,
+        // Threads I started that nobody has resolved: my review, still unanswered.
+        myUnresolvedThreads: threads.filter(
+          (thread) =>
+            !thread.isResolved && thread.comments?.nodes?.[0]?.author?.login === author,
+        ).length,
+        size: {
+          additions: pr.additions ?? 0,
+          deletions: pr.deletions ?? 0,
+          files: pr.changedFiles ?? 0,
+        },
+      })
+    }
+  }
+
+  const prs = [...seen.values()].sort(
+    (a, b) => new Date(a.updatedAt) - new Date(b.updatedAt),
+  )
+
+  return {
+    type: 'reviews',
+    date: new Date().toLocaleDateString('en-CA'),
+    generatedAt: new Date().toISOString(),
+    reviewer: author,
+    prs,
+  }
+}

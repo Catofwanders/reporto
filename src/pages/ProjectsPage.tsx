@@ -90,20 +90,27 @@ export const ProjectsPage = ({ jira, prs, stats }: ProjectsPageProps) => {
         <ProjectGrid map={map} prs={prs} stats={stats} />
       </section>
 
-      <section className="panel">
-        <div className="panel-head">
-          <div className="panel-title">
-            <span className="panel-icon badge-qc" aria-hidden="true">
-              <LayersRoundedIcon fontSize="small" />
-            </span>
-            <div>
-              <h2>Backend, high level</h2>
-              <p className="panel-sub">What talks to what — not how it is deployed</p>
+      {/* One diagram per system, never one diagram with everything in it: these stacks do
+          not share a database, an API or a deployment, and a single set of layers would
+          quietly claim they do. */}
+      {map.infra.systems.map((system) => (
+        <section key={system.id} className="panel">
+          <div className="panel-head">
+            <div className="panel-title">
+              <span className="panel-icon badge-qc" aria-hidden="true">
+                <LayersRoundedIcon fontSize="small" />
+              </span>
+              <div>
+                <h2>{system.title}</h2>
+                <p className="panel-sub">What talks to what — not how it is deployed</p>
+              </div>
             </div>
           </div>
-        </div>
-        <InfraDiagram map={map} />
-      </section>
+          <InfraDiagram system={system} />
+        </section>
+      ))}
+
+      {map.infra.note && <p className="status">{map.infra.note}</p>}
     </main>
   );
 };

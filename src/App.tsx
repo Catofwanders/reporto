@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import type { CalendarReport, JiraReport, PrsReport, ReportIndex, StatsReport } from './types';
+import type {
+  CalendarReport,
+  JiraReport,
+  PrsReport,
+  ReportIndex,
+  ReviewsReport,
+  StatsReport,
+} from './types';
 import type { ReportKind } from './reportKinds';
 import { REPORT_KINDS } from './reportKinds';
 import { RefreshProvider } from './refresh';
@@ -51,11 +58,12 @@ async function fetchIndex(): Promise<ReportIndex> {
 interface Reports {
   jira: JiraReport | null;
   stats: StatsReport | null;
+  reviews: ReviewsReport | null;
   calendar: CalendarReport | null;
   prs: PrsReport | null;
 }
 
-const EMPTY: Reports = { jira: null, calendar: null, prs: null, stats: null };
+const EMPTY: Reports = { jira: null, calendar: null, prs: null, reviews: null, stats: null };
 
 type KindErrors = Partial<Record<ReportKind, string>>;
 
@@ -77,7 +85,7 @@ async function fetchKind(index: ReportIndex, kind: ReportKind) {
     try {
       const value = await fetchJson<unknown>(file);
       assertReport(kind, value);
-      return value as JiraReport | CalendarReport | PrsReport | StatsReport;
+      return value as JiraReport | CalendarReport | PrsReport | ReviewsReport | StatsReport;
     } catch (err) {
       firstError ??= err;
     }
@@ -142,6 +150,7 @@ export const App = () => {
 
   const generatedAt = {
     stats: reports.stats?.generatedAt,
+    reviews: reports.reviews?.generatedAt,
     jira: reports.jira?.generatedAt,
     calendar: reports.calendar?.generatedAt,
     prs: reports.prs?.generatedAt,

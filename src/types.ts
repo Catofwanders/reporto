@@ -149,6 +149,44 @@ export interface StatsReport {
   notes: string[];
 }
 
+/** An open PR that is in my review queue — requested of me, or already reviewed by me. */
+export interface ReviewPr {
+  repo: string;
+  num: number;
+  title: string;
+  url: string;
+  author: string;
+  /** Automation rather than a colleague: dependabot and friends. */
+  bot: boolean;
+  draft: boolean;
+  ticket: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** Tip commit, for judging whether anything moved since I looked. */
+  lastCommitAt: string | null;
+  /** GitHub still lists me as a requested reviewer. */
+  reviewRequested: boolean;
+  reviewDecision: string | null;
+  /** My latest review on it, if I have reviewed at all. */
+  myReviewState: string | null;
+  myReviewAt: string | null;
+  myReviewCount: number;
+  /** Commits landed after my last review — the reason to look again. */
+  pushedSinceMyReview: boolean;
+  unresolvedThreads: number;
+  /** Unresolved threads I started: my review, still unanswered. */
+  myUnresolvedThreads: number;
+  size: { additions: number; deletions: number; files: number };
+}
+
+export interface ReviewsReport {
+  type: 'reviews';
+  date: string;
+  generatedAt: string;
+  reviewer: string;
+  prs: ReviewPr[];
+}
+
 /** A lane in a flow diagram: who or what performs a step. */
 export interface FlowActor {
   id: string;
@@ -219,11 +257,27 @@ export interface InfraNode {
   layer: string;
 }
 
+/**
+ * One self-contained system: its own layers, nodes and edges.
+ *
+ * Separate systems get separate diagrams rather than separate colours in one, because a
+ * single stack of layers implies everything in it shares them — which was wrong the first
+ * time this was drawn, and is the kind of wrong nobody notices in a picture.
+ */
+export interface InfraSystem {
+  id: string;
+  title: string;
+  note?: string;
+  layers: string[];
+  nodes: InfraNode[];
+  edges: [string, string][];
+}
+
 /** The hand-written map of the work: gitignored, because it names an employer's systems. */
 export interface ProjectMap {
   projects: ProjectCard[];
   workflow: { stages: WorkflowStage[]; note?: string };
-  infra: { layers: string[]; nodes: InfraNode[]; edges: [string, string][]; note?: string };
+  infra: { note?: string; systems: InfraSystem[] };
 }
 
 /** What moved since the last working day, from the APIs rather than from a snapshot. */
@@ -275,6 +329,13 @@ export interface KitReport {
 }
 
 export interface ReportIndex {
-  latest: { jira?: string; calendar?: string; prs?: string; stats?: string };
-  history: { date: string; jira?: string; calendar?: string; prs?: string; stats?: string }[];
+  latest: { jira?: string; calendar?: string; prs?: string; stats?: string; reviews?: string };
+  history: {
+    date: string;
+    jira?: string;
+    calendar?: string;
+    prs?: string;
+    stats?: string;
+    reviews?: string;
+  }[];
 }

@@ -59,3 +59,11 @@ export function pullMergedSince(options: {
   /** ISO date; PRs merged on or after it are returned. */
   since: string;
 }): Promise<{ repo: string; num: number; title: string; url: string; mergedAt: string }[]>;
+
+export function pullReviewQueue(options: {
+  author: string;
+  org: string;
+  account?: string;
+  /** Regex source matching a ticket key in a PR title. */
+  ticketPattern?: string;
+}): Promise<import('../src/types').ReviewsReport>;

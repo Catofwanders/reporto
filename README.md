@@ -463,7 +463,7 @@ Three views over the one file:
   disk. That last part is why this is not a README.
 - **A page per project** — click a card's title. What it is, what it depends on and what
   depends on it, what of mine is open in it right now, and a lane diagram per flow.
-- **Backend, high level** — a layered diagram, one row per layer, drawn as inline SVG. Not a
+- **One diagram per system** — a layered diagram each, drawn as inline SVG. Not a
   diagramming dependency and not a force layout: the layer of every node is stated rather
   than solved, because a diagram you read every day must not rearrange itself between
   renders. An edge naming a node that is not on the map is dropped rather than drawn to
@@ -482,9 +482,15 @@ check it instead of trusting it, and `verified: false` renders as a chip until s
 confirmed it against the running system. That distinction matters more than it looks: a
 diagram read out of code is a claim about the code, not about production.
 
-The infrastructure rows are a **sketch** and say so on the page — deployment topology is not
-documented anywhere the app can read, so it is seeded from what the local skill docs state
-and is meant to be corrected by hand.
+**Separate systems get separate diagrams.** One stack of layers with everything in it
+quietly claims they share those layers, and that claim was wrong the first time this was
+drawn: a product that has its own client, API server, CMS and database had been drawn hanging
+off the shared backend. Now each system is its own entry with its own layers, so a
+cross-system edge is impossible by construction rather than by discipline.
+
+Rows the app cannot verify are labelled a **sketch** on the page — deployment topology is not
+documented anywhere it can read, so it is seeded from what the local docs state and meant to
+be corrected by hand.
 
 ## Security model
 

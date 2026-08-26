@@ -1,8 +1,8 @@
-import type { ProjectMap } from '../types';
+import type { InfraSystem } from '../types';
 import { NODE_SIZE, placeNodes } from '../projectMap';
 
 interface InfraDiagramProps {
-  map: ProjectMap;
+  system: InfraSystem;
 }
 
 /**
@@ -13,8 +13,8 @@ interface InfraDiagramProps {
  * dozen nodes, the positions are stated rather than solved, and the whole thing has to
  * follow the palette tokens like everything else on the page.
  */
-export const InfraDiagram = ({ map }: InfraDiagramProps) => {
-  const { nodes, edges, width, height, rows } = placeNodes(map);
+export const InfraDiagram = ({ system }: InfraDiagramProps) => {
+  const { nodes, edges, width, height, rows } = placeNodes(system);
   const { width: w, height: h } = NODE_SIZE;
   const labelGutter = 96;
 
@@ -28,7 +28,7 @@ export const InfraDiagram = ({ map }: InfraDiagramProps) => {
         viewBox={`${-labelGutter} 0 ${width + labelGutter} ${height}`}
         className="infra-plot"
         role="img"
-        aria-label={`Infrastructure: ${map.infra.layers
+        aria-label={`${system.title}: ${system.layers
           .map((layer) => `${layer} — ${nodes.filter((n) => n.layer === layer).map((n) => n.label).join(', ')}`)
           .join('; ')}`}
       >
@@ -68,7 +68,7 @@ export const InfraDiagram = ({ map }: InfraDiagramProps) => {
           </g>
         ))}
       </svg>
-      {map.infra.note && <p className="panel-foot">{map.infra.note}</p>}
+      {system.note && <p className="panel-foot">{system.note}</p>}
     </div>
   );
 };

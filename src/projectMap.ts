@@ -1,4 +1,4 @@
-import type { InfraNode, ProjectMap } from './types';
+import type { InfraNode, InfraSystem, ProjectMap } from './types';
 
 /** Client for the hand-written map. Dev-server only; a static build has no API. */
 export async function fetchProjectMap(): Promise<ProjectMap> {
@@ -38,8 +38,8 @@ const PAD = 12;
  * every node is stated rather than inferred, and a force layout would move things between
  * renders — which is the one thing a diagram you read every day must not do.
  */
-export function placeNodes(map: ProjectMap): Placement {
-  const { layers, nodes, edges } = map.infra;
+export function placeNodes(system: InfraSystem): Placement {
+  const { layers, nodes, edges } = system;
   const widest = Math.max(...layers.map((layer) => nodes.filter((n) => n.layer === layer).length), 1);
   const width = PAD * 2 + widest * NODE_W + (widest - 1) * GAP_X;
 

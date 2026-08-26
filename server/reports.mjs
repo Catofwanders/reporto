@@ -7,7 +7,7 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
-import { pullOpenPrs, pullTicketPrs } from './github.mjs'
+import { pullOpenPrs, pullReviewQueue, pullTicketPrs } from './github.mjs'
 import { pullJira } from './jira.mjs'
 import { pullStats } from './stats.mjs'
 import { pullGoogleCalendar } from './googleCalendar.mjs'
@@ -106,6 +106,14 @@ export const PULLERS = {
       },
       months: c.statsMonths ?? 6,
       previous: readReport('stats'),
+    }),
+
+  reviews: (c) =>
+    pullReviewQueue({
+      author: c.githubAuthor ?? '',
+      org: c.githubOrg ?? '',
+      account: c.githubAccount,
+      ticketPattern: c.ticketPattern ?? '\\b[A-Z][A-Z0-9]+-\\d+\\b',
     }),
 
   prs: (c) =>
