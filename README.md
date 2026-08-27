@@ -26,6 +26,12 @@ you. So each row carries a three-word reason and names its source, and the rows 
 one-word verb: **Your move · Review · Answer · Merge · Unstick**. The verb is what makes a
 merged list legible, because it says what a group wants before any row is read.
 
+The shell is a fixed-height frame — rail, top bar, then a content area that scrolls — rather
+than a page that grows. That is what makes "one screen" true rather than aspirational: the
+dashboard's middle row takes whatever height is left and the queue scrolls inside it, so a
+busy day lengthens the list instead of the page. Every other route scrolls in the content area
+as before.
+
 **~130 words on one screen**, against 341 over 1.25 screens before. Nothing was dropped —
 every row links to the page that owns it, and those pages carry the full sentence. The queue
 is the one part whose length is not ours to choose, so it scrolls inside its own card rather
