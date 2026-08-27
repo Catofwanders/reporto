@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { JiraReport, Pr, PrsReport, Ticket } from '../types';
 import { formatStatus, statusTone } from '../jiraStatus';
 import { useHashTarget } from '../useHashTarget';
@@ -6,7 +5,7 @@ import { TicketStatus } from './TicketStatus';
 import { agingOf } from '../ticketAging';
 import { useCapabilities } from '../capabilitiesContext';
 import { useRefresh } from '../refreshContext';
-import { TicketDrawer } from './TicketDrawer';
+import { useTicketReader } from './useTicketReader';
 
 interface JiraBoardProps {
   report: JiraReport;
@@ -99,7 +98,7 @@ const BoardCard = ({
     <article className="board-card" id={ticket.key}>
       {/* The summary is the handle: reading a ticket is what a card click means, and the key
           link beside it still goes to Jira for anybody who wants the real thing. */}
-      <button type="button" className="board-card-open" onClick={onOpen} title="read this ticket">
+      <button type="button" className="ticket-open" onClick={onOpen} title="read this ticket">
         <p className="board-card-summary" title={ticket.summary}>
           {ticket.summary}
         </p>
@@ -156,12 +155,7 @@ const BoardCard = ({
 export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => {
   useHashTarget([report]);
   const pendingPrs = Boolean(report.partial && report.pending?.includes('prs'));
-  const [reading, setReading] = useState<string | null>(null);
-  // Looked up by key each render rather than stored: a refetch after a transition replaces
-  // the report, and a held copy would leave the drawer showing the old status.
-  const open = report.groups
-    .flatMap((group) => group.tickets)
-    .find((ticket) => ticket.key === reading);
+  const { read, drawer } = useTicketReader({ report, prs, onChanged });
 
   const columns = [...report.groups]
     .filter((group) => group.tickets.length > 0)
@@ -188,7 +182,7 @@ export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => 
                   key={ticket.key}
                   ticket={ticket}
                   onChanged={onChanged}
-                  onOpen={() => setReading(ticket.key)}
+                  onOpen={() => read(ticket.key)}
                   pendingPrs={pendingPrs}
                 />
               ))}
@@ -197,14 +191,7 @@ export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => 
         ))}
       </div>
 
-      {open && (
-        <TicketDrawer
-          ticket={open}
-          prs={prs}
-          onClose={() => setReading(null)}
-          onChanged={onChanged}
-        />
-      )}
+      {drawer}
     </>
   );
 };

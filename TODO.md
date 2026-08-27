@@ -327,8 +327,12 @@ priority, parent, labels, age), the PRs on the ticket with their review state fr
 `prState`/`laneOf`, and the same status control the card carries. `GET /api/jira/<KEY>` reads
 it; Esc closes and puts focus back on the card.
 
+Both views open it — the board card's summary and the list row's, through one shared
+`useTicketReader` hook, because two copies of "which key is open" is how one of them ends up
+showing a status the other already changed.
+
 Left undone: commenting from the drawer — see the open question below, it is a write with no
-undo and wants its own change. The list view still has no drawer; only the board does.
+undo and wants its own change.
 
 The sketch this came from:
 

@@ -80,7 +80,9 @@ export const JiraPage = ({ report, prs = null }: JiraPageProps) => {
       </section>
 
       {/* The list keeps the detail a board card cannot hold — every note, every PR remark. */}
-      {view === 'list' && <JiraReportView report={report} onChanged={() => void run('jira')} />}
+      {view === 'list' && (
+        <JiraReportView report={report} prs={prs} onChanged={() => void run('jira')} />
+      )}
     </main>
   );
 };

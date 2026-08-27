@@ -1414,9 +1414,11 @@ body { background: var(--canvas); }
 .adf-table { border-collapse: collapse; font-size: .78rem; }
 .adf-table th, .adf-table td { border: 1px solid var(--line); padding: .25rem .4rem; text-align: left; }
 
-/* The card body is the handle for the drawer; the key link and status chip stay their own. */
-.board-card-open {
+/* The summary is the handle for the drawer, on a board card and in the list alike; the key
+   link and the status chip stay their own controls. */
+.ticket-open {
   display: block; width: 100%; text-align: left; padding: 0;
   background: none; border: none; color: inherit; font: inherit; cursor: pointer;
 }
-.board-card-open:hover .board-card-summary { color: var(--accent); }
+.ticket-open:hover .board-card-summary,
+.ticket-open:hover .subj { color: var(--accent); }
