@@ -148,13 +148,40 @@ export function scoreItem(item: PaletteItem, query: string): number {
   return best;
 }
 
+/**
+ * A row that does something rather than goes somewhere. Read off the action itself rather
+ * than the group name, so a new source of rows is classified by what selecting it does.
+ */
+const doesSomething = (item: PaletteItem) =>
+  item.action.kind === 'refresh' || item.action.kind === 'copy';
+
+export interface PaletteQuery {
+  /** `>` leading the query, the way editors do: actions only, no places. */
+  actionsOnly: boolean;
+  /** What is left to match on. */
+  text: string;
+}
+
+export const parseQuery = (raw: string): PaletteQuery => {
+  const trimmed = raw.trimStart();
+  if (!trimmed.startsWith('>')) return { actionsOnly: false, text: raw.trim() };
+  return { actionsOnly: true, text: trimmed.slice(1).trim() };
+};
+
 export const matchItems = (items: PaletteItem[], query: string, limit = 40): PaletteItem[] => {
-  if (!query.trim()) {
-    // Nothing typed yet: offer the things that are always useful rather than an empty box.
-    return items.filter((item) => item.group === 'Pages' || item.group === 'Update').slice(0, limit);
+  const { actionsOnly, text } = parseQuery(query);
+  const pool = actionsOnly ? items.filter(doesSomething) : items;
+
+  if (!text) {
+    // A bare `>` is a menu of everything runnable — that is the whole point of the mode, so
+    // it lists rather than waits for more typing. Otherwise: the things that are always
+    // useful, rather than an empty box.
+    if (actionsOnly) return pool.slice(0, limit);
+    return pool.filter((item) => item.group === 'Pages' || item.group === 'Update').slice(0, limit);
   }
-  return items
-    .map((item) => ({ item, score: scoreItem(item, query) }))
+
+  return pool
+    .map((item) => ({ item, score: scoreItem(item, text) }))
     .filter((entry) => entry.score >= 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)

@@ -4,7 +4,7 @@ import type { JiraReport, KitEntry, PrsReport } from '../types';
 import { useRefresh } from '../refreshContext';
 import { fetchKit } from '../kit';
 import { copyText } from '../copyText';
-import { buildItems, matchItems, type PaletteItem } from '../paletteItems';
+import { buildItems, matchItems, parseQuery, type PaletteItem } from '../paletteItems';
 import { useCapabilities } from '../capabilitiesContext';
 
 interface CommandPaletteProps {
@@ -57,6 +57,7 @@ export const CommandPalette = ({ jira, prs }: CommandPaletteProps) => {
   const { usable } = useCapabilities();
   const items = useMemo(() => buildItems(jira, prs, kit, usable), [jira, prs, kit, usable]);
   const shown = useMemo(() => matchItems(items, query), [items, query]);
+  const { actionsOnly } = parseQuery(query);
 
   const choose = async (item: PaletteItem) => {
     const { action } = item;
@@ -100,8 +101,8 @@ export const CommandPalette = ({ jira, prs }: CommandPaletteProps) => {
           ref={inputRef}
           className="palette-input"
           value={query}
-          placeholder="Ticket, PR, page, command…"
-          aria-label="search tickets, PRs, pages and commands"
+          placeholder="Ticket, PR, page, command… or > for actions only"
+          aria-label="search tickets, PRs, pages and commands; type > for actions only"
           onChange={(event) => {
             setQuery(event.target.value);
             setCursor(0);
@@ -143,6 +144,8 @@ export const CommandPalette = ({ jira, prs }: CommandPaletteProps) => {
         <p className="palette-foot">
           {copied ? (
             <span className="palette-copied">copied {copied}</span>
+          ) : actionsOnly ? (
+            <>actions only · ↑↓ to move · ⏎ to run · esc to close</>
           ) : (
             <>↑↓ to move · ⏎ to choose · esc to close</>
           )}

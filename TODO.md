@@ -285,8 +285,9 @@ the deploy-branch ancestry check, which is GitHub-side and can reuse the same to
 ## 6. Command palette (⌘K) — **built**
 
 Shipped: ⌘K over tickets, PRs, pages, update actions and the kit listing, with scored
-matching, hash-deep-links that scroll to and flash the row, and copy-the-invocation for
-commands. Left undone from the sketch below: the `>`-for-actions-only mode.
+matching, hash-deep-links that scroll to and flash the row, copy-the-invocation for commands,
+and `>` for actions only — everything runnable, nowhere to go, which is read off each row's
+action rather than its group name so a new source of rows classifies itself.
 
 
 Jump anywhere by typing: a ticket key, a PR number, a repo, a command from `/commands`, or
@@ -315,6 +316,8 @@ substring match is probably enough before reaching for a library.
 - Does selecting a *command* copy the invocation or do something more? The app cannot run
   a slash command — that happens in a Claude session — so copy is the honest action.
 - Whether ⌘K should also accept `>` for actions only, the way editors do. Probably later.
+  **Answered: yes, and it is in.** A bare `>` lists rather than waiting for more typing —
+  a menu of everything runnable is the point of the mode.
 
 ## 7. Ticket detail drawer
 
