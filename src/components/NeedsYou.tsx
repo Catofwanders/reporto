@@ -63,36 +63,38 @@ export const NeedsYou = ({ items, total }: NeedsYouProps) => {
       {groups.length === 0 ? (
         <p className="mini-empty">Nothing is waiting on you.</p>
       ) : (
-        groups.map((group) => (
-          <div key={group.action} className="needs-group">
-            <p className="needs-verb">
-              {ACTION_LABEL[group.action]}
-              <span className="needs-verb-count">{group.rows.length}</span>
-            </p>
-            <ul className="needs-list">
-              {group.rows.map((item) => {
-                const Icon = ICON[item.source];
-                return (
-                  <li key={item.id} className={`needs-row is-${item.tone}`}>
-                    <Link to={item.to} title={item.detail}>
-                      <Icon className={`needs-icon is-${item.source}`} fontSize="small" />
-                      <span className="needs-body">
-                        <span className="needs-label">{item.label}</span>
-                        <span className="needs-why">
-                          <span className="needs-source">{SOURCE_LABEL[item.source]}</span>
-                          {item.why}
+        <div className="needs-scroll">
+          {groups.map((group) => (
+            <div key={group.action} className="needs-group">
+              <p className="needs-verb">
+                {ACTION_LABEL[group.action]}
+                <span className="needs-verb-count">{group.rows.length}</span>
+              </p>
+              <ul className="needs-list">
+                {group.rows.map((item) => {
+                  const Icon = ICON[item.source];
+                  return (
+                    <li key={item.id} className={`needs-row is-${item.tone}`}>
+                      <Link to={item.to} title={item.detail}>
+                        <Icon className={`needs-icon is-${item.source}`} fontSize="small" />
+                        <span className="needs-body">
+                          <span className="needs-label">{item.label}</span>
+                          <span className="needs-why">
+                            <span className="needs-source">{SOURCE_LABEL[item.source]}</span>
+                            {item.why}
+                          </span>
                         </span>
-                      </span>
-                      <span className={`needs-age chip-${item.tone}`}>
-                        {item.days === 0 ? 'today' : `${item.days}d`}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))
+                        <span className={`needs-age chip-${item.tone}`}>
+                          {item.days === 0 ? 'today' : `${item.days}d`}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
       )}
 
       {total > items.length && (

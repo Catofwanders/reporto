@@ -344,7 +344,15 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 
 /* The queue takes the width it needs; the day and the conflicts ride alongside. */
 .home-split { display: flex; flex-wrap: wrap; gap: 1rem; align-items: start; }
+/*
+ * The queue is the one part whose length is not ours to choose — it is however much is
+ * waiting. So it scrolls inside its own card rather than pushing the page past one screen,
+ * which is the whole promise of this layout. The head stays put while the rows move.
+ */
 .needs-you { flex: 1 1 30rem; min-width: 0; padding: .8rem 1rem .85rem; }
+.needs-scroll { max-height: 56vh; overflow-y: auto; padding-right: .2rem; }
+/* A thin scrollbar, so a list that scrolls does not announce it in the layout. */
+.needs-scroll { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .home-aside { flex: 1 1 22rem; min-width: 0; display: grid; gap: .8rem; align-content: start; }
 
 .needs-you .mini-head { margin-bottom: .5rem; }
@@ -683,7 +691,12 @@ body { background: var(--canvas); }
 /* A failed pull keeps the button, tinted: the tooltip carries the reason. */
 .shell-top-action.has-error { background: var(--bad-ink); }
 
-.shell-content { padding: 1.5rem 1.75rem 3.5rem; max-width: 88rem; width: 100%; }
+/*
+ * 3.5rem of bottom padding was room for a scrolling page to breathe. The dashboard is meant
+ * to end inside one screen, and that padding alone was pushing it 20px past — so the space
+ * below the content is smaller, and pages that do scroll still clear their last card.
+ */
+.shell-content { padding: 1.5rem 1.75rem 1.75rem; max-width: 88rem; width: 100%; }
 
 /* Under a laptop width the rail becomes a scrolling strip above the content. */
 @media (max-width: 60rem) {

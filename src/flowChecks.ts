@@ -139,17 +139,39 @@ function approvedAndSitting(report: PrsReport): FlowFinding[] {
 }
 
 /** An open PR naming no ticket: real work that no report about tickets can see. */
+/**
+ * Work that legitimately has no Jira ticket, said in the branch name.
+ *
+ * Not every PR comes from a ticket: a hotfix, a chore, a revert, a dependency bump. Flagging
+ * those was this check's whole output — seven of seven findings on one board — and a check
+ * that is wrong every time trains you to ignore the card it sits in. The branch prefix is the
+ * signal, because it is what the author already declares; a missing key on its own says
+ * nothing about whether a key was owed.
+ */
+const NO_TICKET_OK =
+  /^(chore|hotfix|fix|bugfix|revert|deps|dependabot|docs|test|ci|build|refactor|style|release)[/\-_]/i;
+
+/** Conventional-commit titles declare the same thing: "chore: …", "fix(scope): …". */
+const NO_TICKET_TITLE =
+  /^(chore|hotfix|fix|bugfix|revert|deps|docs|test|ci|build|refactor|style|release)(\([^)]*\))?!?:/i;
+
+const ticketOwed = (pr: OpenPr) =>
+  !pr.ticket &&
+  !pr.draft &&
+  !NO_TICKET_OK.test(pr.branch ?? '') &&
+  !NO_TICKET_TITLE.test(pr.title);
+
 function prWithoutTicket(report: PrsReport): FlowFinding[] {
   return report.repos.flatMap((group) =>
-    group.prs
-      .filter((pr) => !pr.draft && !pr.ticket)
-      .map((pr) => ({
-        id: `pr-no-ticket:${pr.url}`,
-        severity: 'warn' as const,
-        title: `${group.repo}#${pr.num} names no ticket`,
-        detail: 'Work nobody tracking Jira can see. Put the key in the title.',
-        prs: [{ label: `${group.repo}#${pr.num}`, url: pr.url }],
-      })),
+    group.prs.filter(ticketOwed).map((pr) => ({
+      id: `pr-no-ticket:${pr.url}`,
+      severity: 'warn' as const,
+      title: `${group.repo}#${pr.num} names no ticket`,
+      detail:
+        'Work nobody tracking Jira can see. Put the key in the title, or name the branch ' +
+        'chore/ or hotfix/ if it is deliberately ticketless.',
+      prs: [{ label: `${group.repo}#${pr.num}`, url: pr.url }],
+    })),
   );
 }
 

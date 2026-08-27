@@ -26,8 +26,26 @@ you. So each row carries a three-word reason and names its source, and the rows 
 one-word verb: **Your move · Review · Answer · Merge · Unstick**. The verb is what makes a
 merged list legible, because it says what a group wants before any row is read.
 
-**133 words on one screen**, against 341 over 1.25 screens before. Nothing was dropped —
-every row links to the page that owns it, and those pages carry the full sentence. Rendered from the synthetic fixtures in
+**~130 words on one screen**, against 341 over 1.25 screens before. Nothing was dropped —
+every row links to the page that owns it, and those pages carry the full sentence. The queue
+is the one part whose length is not ours to choose, so it scrolls inside its own card rather
+than pushing the page past one screen.
+
+What the tiles count, since a two-word label cannot define itself (each spells it out on
+hover):
+
+- **re-reviews** — PRs I reviewed that have been pushed to since. A review request the whole
+  team was copied on is *not* counted: most of those are somebody else's to take, and counting
+  them made the dashboard claim work that was not mine. They are still on the queue page under
+  *Never looked at*.
+- **tickets sitting too long** — past the days-in-status limit set for that status in
+  `config/reporto.json`, which is why a week in CODE REVIEW is a problem and a week in QC READY
+  is not.
+- **Jira and GitHub disagree** — the flow checks. A PR with no ticket key only counts when the
+  branch does not already declare it ticketless: `chore/`, `hotfix/`, `fix/`, `revert/` and
+  friends, or a conventional-commit title. That one rule took this from seven findings to zero
+  on a board where all seven were chores — and a check that is wrong every time teaches you to
+  ignore the card it sits in. Rendered from the synthetic fixtures in
 `src/stories/fixtures.ts` via the `Pages/Home` story, not from real reports — those hold
 meeting links and ticket detail and never leave your disk. The fixtures describe an invented
 online marketplace for the same reason. The same story in the Nord palette:

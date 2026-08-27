@@ -214,6 +214,7 @@ export async function pullOpenPrs({
       ticketUrl: ticket ? `${jiraBrowseUrl}/${ticket}` : null,
       review: n.reviewDecision ?? (threads.length ? 'COMMENTED' : 'NONE'),
       draft: n.isDraft,
+      branch: n.headRefName ?? null,
       updatedAt: n.updatedAt,
       /*
        * A question actually waiting on me: somebody else had the last word, the hunk has

@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import type { SvgIconComponent } from '@mui/icons-material';
 import AltRouteRoundedIcon from '@mui/icons-material/AltRouteRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
-import ForumRoundedIcon from '@mui/icons-material/ForumRounded';
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import HourglassBottomRoundedIcon from '@mui/icons-material/HourglassBottomRounded';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
@@ -21,16 +20,61 @@ interface Tile {
   to: string;
   /** The tone a non-zero count deserves: some numbers are neutral, some are a problem. */
   tone: 'accent' | 'warn' | 'bad';
+  /** Spelled out on hover, because a two-word label cannot define what it counts. */
+  title: string;
   needs?: 'prs' | 'reviews' | 'slack' | 'jira';
 }
 
 const TILES: Tile[] = [
-  { key: 'prs', label: 'my open PRs', icon: AltRouteRoundedIcon, to: '/prs', tone: 'accent', needs: 'prs' },
-  { key: 'reviews', label: "reviews I owe", icon: VisibilityRoundedIcon, to: '/reviews', tone: 'warn', needs: 'reviews' },
-  { key: 'slack', label: 'Slack replies I owe', icon: ForumRoundedIcon, to: '/slack', tone: 'warn', needs: 'slack' },
-  { key: 'tickets', label: 'my active tickets', icon: ConfirmationNumberRoundedIcon, to: '/jira', tone: 'accent', needs: 'jira' },
-  { key: 'stuck', label: 'stuck past their limit', icon: HourglassBottomRoundedIcon, to: '/jira', tone: 'bad', needs: 'jira' },
-  { key: 'conflicts', label: 'Jira/GitHub conflicts', icon: ReportProblemRoundedIcon, to: '/jira', tone: 'bad' },
+  {
+    key: 'prs',
+    label: 'my open PRs',
+    icon: AltRouteRoundedIcon,
+    to: '/prs',
+    tone: 'accent',
+    title: 'Every pull request of mine that is still open',
+    needs: 'prs',
+  },
+  {
+    key: 'reviews',
+    label: 're-reviews',
+    icon: VisibilityRoundedIcon,
+    to: '/reviews',
+    tone: 'warn',
+    title: 'PRs I reviewed that have been pushed to since — my verdict is out of date',
+    needs: 'reviews',
+  },
+  {
+    key: 'tickets',
+    label: 'my active tickets',
+    icon: ConfirmationNumberRoundedIcon,
+    to: '/jira',
+    tone: 'accent',
+    title: 'Tickets assigned to me that are in flight rather than in the backlog',
+    needs: 'jira',
+  },
+  {
+    key: 'stuck',
+    label: 'tickets sitting too long',
+    icon: HourglassBottomRoundedIcon,
+    to: '/jira',
+    tone: 'bad',
+    title:
+      'Tickets that have been in one status longer than the limit set for it in ' +
+      'config/reporto.json — a week in CODE REVIEW is not the same as a week in QC READY',
+    needs: 'jira',
+  },
+  {
+    key: 'conflicts',
+    label: 'Jira and GitHub disagree',
+    icon: ReportProblemRoundedIcon,
+    to: '/jira',
+    tone: 'bad',
+    title:
+      'Places where the board and the repositories contradict each other: merged work missing ' +
+      'from deploy-qc, a finished ticket with an unmerged PR, an unanswered question about ' +
+      'live work',
+  },
 ];
 
 /**
@@ -49,6 +93,7 @@ export const KpiStrip = ({ counts, usable }: KpiStripProps) => (
         <Link
           key={tile.key}
           to={tile.to}
+          title={tile.title}
           className={`kpi-tile${value > 0 ? ` is-${tile.tone}` : ' is-zero'}`}
         >
           <tile.icon className="kpi-icon" fontSize="small" />

@@ -155,7 +155,14 @@ export function needsYou({
 
   if (reviews) {
     for (const [lane, rows] of toReviewLanes(reviews, jira)) {
-      if (lane !== 'changed' && lane !== 'unseen' && lane !== 'unanswered') continue;
+      /*
+       * Only "changed since you looked". A review request I have never opened is on the queue
+       * page, not here: requests land on whole teams, so most of them are somebody else's to
+       * take, and counting them made the dashboard claim work that was not mine. A PR I
+       * reviewed and that has since been pushed to is unambiguously mine — my verdict is the
+       * thing that is out of date.
+       */
+      if (lane !== 'changed') continue;
       for (const row of rows) {
         items.push({
           id: `review:${row.pr.url}`,
@@ -229,8 +236,8 @@ export const needsYouTotal = (args: Parameters<typeof needsYou>[0]): number =>
 export interface Kpis {
   prs: number;
   reviews: number;
-  slack: number;
   tickets: number;
+  /** Tickets past the days-in-status limit configured for their status. */
   stuck: number;
   conflicts: number;
 }
@@ -238,14 +245,14 @@ export interface Kpis {
 export const kpis = ({
   prs,
   reviews,
-  slack,
   jira,
   aging = {},
   conflicts = 0,
 }: {
   prs: PrsReport | null;
   reviews: ReviewsReport | null;
-  slack: SlackReport | null;
+  /** Accepted and ignored: Slack has no tile, since the queue below already carries it. */
+  slack?: SlackReport | null;
   jira: JiraReport | null;
   aging?: AgingLimits;
   conflicts?: number;
@@ -256,14 +263,8 @@ export const kpis = ({
   return {
     // Open PRs of mine that are not finished — the number in the sidebar's PR row.
     prs: (prs?.repos ?? []).reduce((n, group) => n + group.prs.length, 0),
-    reviews:
-      (reviewLanes.get('changed') ?? []).length +
-      (reviewLanes.get('unseen') ?? []).length +
-      (reviewLanes.get('unanswered') ?? []).length,
-    slack: (slack?.rows ?? []).filter((row) => {
-      const lane = laneOfSlack(row);
-      return lane === 'asked' || lane === 'dms' || lane === 'stale';
-    }).length,
+    // Same rule as the feed: my verdict is out of date, not "somebody asked the team".
+    reviews: (reviewLanes.get('changed') ?? []).length,
     tickets: active.length,
     stuck: active.filter((ticket) => agingOf(ticket, aging)?.over).length,
     conflicts,

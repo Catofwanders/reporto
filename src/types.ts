@@ -107,6 +107,11 @@ export interface OpenPr {
   unansweredThreads?: number;
   /** Last review submitted by somebody other than the author. Only set by the API puller. */
   lastReviewAt?: string | null;
+  /**
+   * Head branch name. It is the honest signal for "this work has no ticket on purpose": a
+   * `chore/` or `hotfix/` branch says so, where a missing ticket key alone says nothing.
+   */
+  branch?: string | null;
   /** Tip commit of the branch, merge commits included. Only set by the API puller. */
   lastCommitAt?: string | null;
   /**
