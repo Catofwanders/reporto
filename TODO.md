@@ -1,9 +1,22 @@
 # Feature requests
 
-Ideas not yet built. Each entry states what it should do, how it would likely work, and
-what has to be settled first.
+Each entry states what it should do, how it would likely work, and what had to be settled
+first. Headings say **built** where the thing shipped — the sketch is kept underneath, because
+what was settled and why is the part worth re-reading.
 
-## 1. Change a Jira ticket's status from the dashboard
+**Actually open right now:** commenting from the ticket drawer (request 7), and conditional
+requests for the pullers (request 9), which is a rewrite to save a rate-limit budget nothing is
+short of. Everything else here is built.
+
+## 1. Change a Jira ticket's status from the dashboard — **built**
+
+**Built.** The status chip on a board card, a list row and now the ticket drawer is the
+control: it asks Jira for the transitions valid from the current status when the menu opens
+(workflows differ per project and per status, so the list cannot be derived here), and
+`POST /api/jira/<KEY>/transition` applies one by the id Jira just returned — the request never
+names a status string, and `statusChoices` in config bounds what is offered.
+
+The sketch this came from:
 
 Move a ticket between statuses (for example `CODE REVIEW` → `QC READY`) without leaving
 the dashboard. Today the Jira card is read-only; every transition means opening the
@@ -34,7 +47,7 @@ the same shape as `/api/refresh`, with the cross-site guard applied.
 - Optimistic update or wait for Jira to confirm? Given how slow the round trip is,
   optimistic with rollback (the pattern already used for mail todos) is probably right.
 
-## 2. Change a PR's status
+## 2. Change a PR's status — **built**
 
 **Built.** Each PR row has a menu: mark ready for review / convert to draft, and close with
 a confirmation naming the repo, number and title. `POST /api/pr/<repo>/<num>/<action>`
@@ -90,7 +103,7 @@ API, so each new subcommand has to be added there explicitly.
 - Should closed PRs stay visible in the list for the rest of the day (so the action is
   undoable in place) or vanish on the next refresh?
 
-## 3. Summary widget in "My open PRs", with copy-unapproved-links button
+## 3. Summary widget in "My open PRs", with copy-unapproved-links button — **built**
 
 **Built.** The strip sits above the repo accordions: counts for awaiting review / approved /
 changes requested / drafts, and a button copying the links of PRs awaiting *someone else's*
@@ -138,7 +151,7 @@ permission. The report already carries `review` and `url` per PR, so the filter 
   secure, so this works in dev, but the fallback (select-and-copy from a textarea) is
   worth having if the write is rejected.
 
-## 5. Pull Jira and GitHub data from APIs instead of driving an agent
+## 5. Pull Jira and GitHub data from APIs instead of driving an agent — **built**
 
 Mail and calendar stay as they are — read by the `/email` skill in an interactive session,
 which needs the Chrome extension and is not worth replacing. This request covers only the
@@ -202,16 +215,20 @@ Measured 1.5s against 11 PRs, versus roughly three minutes for the `/jira` agent
 PRs card picks it automatically (bolt icon) and no longer marks the Jira card busy.
 
 Two things learned while building it:
-- The thread count covers *inline* threads only. A review left as a top-level body — as on
-  #987 — has zero threads, so request 4's button cannot key off this number alone.
+- The thread count covers *inline* threads only. A review left as a top-level body has zero
+  threads, so a count alone never tells you whether a PR has comments waiting.
 - Resolution state turned out to be useless here: nobody on this team clicks resolve, so
   the count only ever grew. What the reports carry instead is "nobody replied and nobody
   pushed over the hunk" — see `unansweredThreads` in `server/github.mjs`.
 - The API result can be fresher than the skill's: #1791 merged at 06:45 UTC and vanished
   from the open list within the same session.
 
-Still to do here: the `jira` puller, which needs the Atlassian token. The report also wants
-the deploy-branch ancestry check, which is GitHub-side and can reuse the same token.
+**Both pullers shipped since.** `server/jira.mjs` reads the board over REST with a personal
+API token, in two phases — the search writes the board immediately, then PR matching and
+time-in-status fill in behind a skeleton. The deploy-branch ancestry check landed with it and
+is what the `deployQc` chips and the "not on deploy-qc" warnings read.
+
+Nothing is left open in this item.
 
 ## 6. Command palette (⌘K) — **built**
 
@@ -320,7 +337,7 @@ report read the next morning would otherwise still claim "2 days".
 
 The original sketch follows.
 
-## 8. Ticket aging digest (original sketch)
+### 8. Ticket aging digest — the original sketch
 
 The PR lanes now say "no review yet — 6 days, chase it". Tickets have no equivalent: a
 ticket can sit in CODE REVIEW for a week and the board looks the same on day one and day
@@ -378,7 +395,7 @@ budget, which would make a short interval cheap — but the PR and review puller
 which has no equivalent, so it would mean rewriting them against REST to save a budget nothing
 is currently short of.
 
-## 9b. Live updates — the original sketch
+### 9b. Live updates — the original sketch
 
 Every report is a file on disk that changes only when something pulls it, so the app shows
 whatever the last pull found. Today that means the auto-refresh in `src/autoRefresh.ts`
