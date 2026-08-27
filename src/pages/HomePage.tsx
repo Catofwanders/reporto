@@ -38,15 +38,22 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps)
 
   return (
     <main className="home">
-      {/* Contradictions first: they are the only thing here that is silently wrong. */}
-      <FlowChecks jira={jira} prs={prs} slack={usable('slack') ? slack : null} />
+      {/*
+        Contradictions and the day, side by side. They answer different questions — what is
+        silently wrong, and what the clock demands — and both are read once at the top rather
+        than worked through, so neither earns a full-width row of its own. Either one alone
+        takes the whole width, which is why this row is flex rather than two fixed columns.
+      */}
+      <div className="home-top">
+        <FlowChecks jira={jira} prs={prs} slack={usable('slack') ? slack : null} />
+        {calendar && usable('calendar') && <CalendarWidget report={calendar} />}
+      </div>
 
       <div className="home-modules">
         {jira && usable('jira') && <HomeTickets report={jira} />}
         {prs && usable('prs') && <HomePrs report={prs} />}
         {reviews && usable('reviews') && <HomeReviews report={reviews} jira={jira} />}
         {slack && usable('slack') && <HomeSlack report={slack} />}
-        {calendar && usable('calendar') && <CalendarWidget report={calendar} />}
       </div>
 
       <StandupCard jira={jira} prs={prs} calendar={calendar} />

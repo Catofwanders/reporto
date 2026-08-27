@@ -321,6 +321,13 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
  * as the window allows, and none of them is tall enough to push the next one off screen.
  */
 .home { display: grid; gap: 1.4rem; align-items: start; }
+/*
+ * "Worth a look" and today's calendar share the top row, half each. Flex rather than two
+ * grid columns so that when one of them has nothing to say — no contradictions, or the
+ * calendar switched off — the other grows into the whole width instead of leaving a hole.
+ */
+.home-top { display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: start; }
+.home-top > * { flex: 1 1 22rem; min-width: 0; }
 .home-modules {
   display: grid; gap: 1.2rem; align-items: start;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));

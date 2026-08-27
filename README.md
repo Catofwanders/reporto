@@ -10,7 +10,10 @@ calendar, each rendered from a JSON report on disk.
 queue and today's calendar, and the stand-up note](docs/home.jpg)
 
 One screen of modules rather than embedded pages: each carries the few rows worth acting on
-and links to the page holding the rest. Rendered from the synthetic fixtures in
+and links to the page holding the rest. The top row pairs the two things that are read rather
+than worked through — what is silently wrong, and what the clock demands — at half the width
+each; when either has nothing to say the other takes the whole row, which is why that row is
+flex and not two fixed columns. Rendered from the synthetic fixtures in
 `src/stories/fixtures.ts` via the `Pages/Home` story, not from real reports — those hold
 meeting links and ticket detail and never leave your disk. The fixtures describe an invented
 online marketplace for the same reason. The same story in the Nord palette:
