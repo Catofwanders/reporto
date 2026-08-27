@@ -440,27 +440,29 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
  */
 .day-panel { padding: .8rem 1rem .85rem; }
 .day-more { margin-left: auto; font-size: .74rem; }
-.day-track { position: relative; height: 4.6rem; margin: .7rem 0 .1rem; }
+.day-track { position: relative; margin: .7rem 0 .1rem; }
+/* Height comes from the component: it is however many pill rows the day needed. */
+.day-plot { position: relative; }
 .day-line {
-  position: absolute; left: 0; right: 0; top: 2rem; height: 2px;
+  position: absolute; left: 0; right: 0; top: 50%; height: 2px; transform: translateY(-1px);
   background: var(--line); border-radius: 1px;
 }
 /* Now is a full-height hairline: it reads as a position in the day, not as another event. */
 .day-now {
-  position: absolute; top: .35rem; bottom: 1.1rem; width: 2px; transform: translateX(-1px);
+  position: absolute; top: 0; bottom: 0; width: 2px; transform: translateX(-1px);
   background: var(--accent); border-radius: 1px;
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent);
 }
 
+/* --day-row is how far off the line this pill's row sits; the component packs the rows. */
 .day-pill {
-  position: absolute; top: .35rem; transform: translateX(-50%);
+  position: absolute; bottom: calc(50% + 5px + var(--day-row, 0px)); transform: translateX(-50%);
   display: inline-flex; align-items: baseline; gap: .35rem; max-width: 11rem;
   padding: .18rem .45rem; border-radius: .4rem;
   background: var(--panel); border: 1px solid var(--warn-line);
   color: var(--ink); font-size: .72rem; line-height: 1.25;
 }
-/* Alternating sides keeps two nearby meetings apart without a collision pass. */
-.day-pill.is-below { top: auto; bottom: 1.1rem; }
+.day-pill.is-below { bottom: auto; top: calc(50% + 5px + var(--day-row, 0px)); }
 .day-pill:hover { text-decoration: none; border-color: var(--accent); }
 .day-pill.kind-kickoff { border-color: var(--bad-line); background: var(--bad-bg); }
 .day-pill.is-past { opacity: .5; }
@@ -468,8 +470,9 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .day-pill-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The hour scale, under everything, quiet enough to be read only when looked for. */
+.day-scale { position: relative; height: 1rem; }
 .day-tick {
-  position: absolute; bottom: 0; transform: translateX(-50%);
+  position: absolute; top: .1rem; transform: translateX(-50%);
   color: var(--ink-2); font-size: .62rem; font-variant-numeric: tabular-nums; opacity: .7;
 }
 
