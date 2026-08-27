@@ -16,15 +16,17 @@ import { CapabilitiesContext } from './capabilitiesContext';
  */
 export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
   const [modules, setModules] = useState<Capability[]>([]);
+  const [statusAging, setStatusAging] = useState<Record<string, number>>({});
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetch('/api/settings')
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { modules?: Capability[] } | null) => {
+      .then((body: { modules?: Capability[]; statusAging?: Record<string, number> } | null) => {
         if (cancelled) return;
         if (body?.modules) setModules(body.modules);
+        if (body?.statusAging) setStatusAging(body.statusAging);
         setLoaded(true);
       })
       .catch(() => {
@@ -75,8 +77,8 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const value = useMemo(
-    () => ({ modules, usable, of, loaded, setEnabled, saveSecret }),
-    [modules, usable, of, loaded, setEnabled, saveSecret],
+    () => ({ modules, statusAging, usable, of, loaded, setEnabled, saveSecret }),
+    [modules, statusAging, usable, of, loaded, setEnabled, saveSecret],
   );
 
   return <CapabilitiesContext.Provider value={value}>{children}</CapabilitiesContext.Provider>;

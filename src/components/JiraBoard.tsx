@@ -2,6 +2,8 @@ import type { JiraReport, Pr, Ticket } from '../types';
 import { formatStatus, statusTone } from '../jiraStatus';
 import { useHashTarget } from '../useHashTarget';
 import { TicketStatus } from './TicketStatus';
+import { agingOf } from '../ticketAging';
+import { useCapabilities } from '../capabilitiesContext';
 
 interface JiraBoardProps {
   report: JiraReport;
@@ -49,7 +51,11 @@ const droppedFromQc = (ticket: Ticket) =>
   ticket.prs.filter((pr) => pr.state === 'merged' && pr.inQc === false);
 
 const BoardCard = ({ ticket, onChanged }: { ticket: Ticket; onChanged?: () => void }) => {
+  const { statusAging } = useCapabilities();
   const dropped = droppedFromQc(ticket);
+  // Only shown once it is over the limit for its status: a pill on every card is wallpaper,
+  // and the number that matters is the one somebody should act on.
+  const age = agingOf(ticket, statusAging);
   return (
     // The id is what /jira#<KEY> scrolls to.
     <article className="board-card" id={ticket.key}>
@@ -84,6 +90,11 @@ const BoardCard = ({ ticket, onChanged }: { ticket: Ticket; onChanged?: () => vo
         <a className="key" href={ticket.url} target="_blank" rel="noopener noreferrer">
           {ticket.key}
         </a>
+        {age?.over && (
+          <span className={`pr-age chip-${age.tone}`} title={age.title}>
+            {age.label}
+          </span>
+        )}
         <TicketStatus ticket={ticket} onChanged={onChanged} />
       </div>
     </article>

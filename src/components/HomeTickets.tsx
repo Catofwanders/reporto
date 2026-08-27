@@ -1,6 +1,8 @@
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import type { JiraReport } from '../types';
 import { activeTickets } from '../jiraActive';
+import { agingOf } from '../ticketAging';
+import { useCapabilities } from '../capabilitiesContext';
 import { formatStatus, statusTone } from '../jiraStatus';
 import { MiniPanel } from './MiniPanel';
 
@@ -16,7 +18,9 @@ const SHOWN = 5;
  * has to be readable in the two seconds before deciding where the morning goes.
  */
 export const HomeTickets = ({ report }: HomeTicketsProps) => {
+  const { statusAging } = useCapabilities();
   const tickets = activeTickets(report);
+  const overdue = tickets.filter((ticket) => agingOf(ticket, statusAging)?.over).length;
 
   return (
     <MiniPanel
@@ -26,6 +30,16 @@ export const HomeTickets = ({ report }: HomeTicketsProps) => {
       kind="jira"
       to="/jira"
       linkLabel={`Board · ${tickets.length} active`}
+      summary={
+        overdue > 0 ? (
+          <ul className="mini-counts">
+            <li>
+              <span className="mini-count">{overdue}</span>
+              <span className="mini-count-label">stuck too long</span>
+            </li>
+          </ul>
+        ) : undefined
+      }
       count={tickets.length}
       empty="Nothing in flight."
     >
@@ -40,7 +54,10 @@ export const HomeTickets = ({ report }: HomeTicketsProps) => {
                 {ticket.key}
               </a>
               <span className="mini-row-meta" title={ticket.summary}>
-                {ticket.summary}
+                {(() => {
+                  const age = agingOf(ticket, statusAging);
+                  return age?.over ? `${age.days}d in status · ${ticket.summary}` : ticket.summary;
+                })()}
               </span>
             </div>
           </li>

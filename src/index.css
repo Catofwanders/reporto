@@ -736,7 +736,9 @@ body { background: var(--canvas); }
 .board-card-prs { display: flex; flex-wrap: wrap; gap: .3rem; margin: 0; font-size: .7rem; }
 .board-card-warn { margin: 0; font-size: .68rem; color: var(--bad-ink); }
 .board-card-foot { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
-.board-card-foot .key { font-size: .72rem; }
+.board-card-foot .key { font-size: .72rem; white-space: nowrap; }
+/* The aging pill shares the card's foot with the key and the status chip, so it runs small. */
+.board-card-foot .pr-age { min-width: auto; padding: .15rem .32rem; font-size: .64rem; }
 
 .dot-ok { background: var(--ok-ink); }
 .dot-bad { background: var(--bad-ink); }

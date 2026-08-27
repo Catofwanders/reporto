@@ -55,6 +55,26 @@ remote. A fresh checkout therefore starts with no data:
 the cards stay hidden and the action bar reads "never" until you press an update
 button.
 
+## Ticket aging
+
+The PR lanes have said "no review yet — 6 days, chase it" for a while. Tickets had no
+equivalent: the board looked identical on day one and day seven of CODE REVIEW, so work could
+rot in a status nobody owns.
+
+Time-in-status is only in the changelog, and the search endpoint refuses
+`expand: ["changelog"]`, so it costs one request per ticket. That is why **only the statuses
+named in `statusAging` are measured** — a backlog item's age says nothing, and forty requests
+per pull would earn a 429. A ticket that never transitioned falls back to when it was created.
+
+Limits are per status because a fixed number would cry wolf: QC READY is meant to wait on
+somebody else, CODE REVIEW is not. They live in `config/reporto.json`, which also keeps the
+employer's workflow vocabulary out of this repo. Past the limit a card grows a pill; past
+twice the limit the pill turns red — one needs a nudge, the other needs a decision.
+
+Days are derived when the page renders, never stored: a report read tomorrow must not still
+claim "2 days". The stand-up note lists the overdue ones under blockers, excluding tickets
+already flagged BLOCKED so nothing is said twice.
+
 ## Slack mentions
 
 A fifth report: who named you, and whether the last word is still theirs. Slack's own answer

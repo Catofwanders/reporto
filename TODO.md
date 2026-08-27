@@ -347,7 +347,21 @@ should degrade to a link rather than trying to fetch an attachment).
   undo, so it wants the same confirmation the PR close action got.
 - Attachments and images: probably a link out, since the drawer has no auth to fetch them.
 
-## 8. Ticket aging digest
+## 8. Ticket aging digest — **built**
+
+The board cards carry a pill once a ticket is past the limit for its status, red past twice
+it; the stand-up note lists the overdue ones under blockers. Limits are per status in
+`config/reporto.json` (`statusAging`), which is also what decides which statuses cost a
+changelog read — six on this machine's board, about 20 seconds of pull.
+
+Two things settled while building it. `statuscategorychangedate` looked like a free answer but
+is useless here: In Progress → CODE REVIEW → QC READY are all one category, so it never moves
+for the transitions that matter. And days are derived at render rather than stored, because a
+report read the next morning would otherwise still claim "2 days".
+
+The original sketch follows.
+
+## 8. Ticket aging digest (original sketch)
 
 The PR lanes now say "no review yet — 6 days, chase it". Tickets have no equivalent: a
 ticket can sit in CODE REVIEW for a week and the board looks the same on day one and day

@@ -589,7 +589,16 @@ function settingsPlugin(): Plugin {
         const route = (req.url ?? '/').split('?')[0]
 
         if (req.method === 'GET' && (route === '/' || route === '')) {
-          res.end(JSON.stringify({ modules: capabilities() }))
+          // Alongside the modules, the handful of config values the UI needs to render
+          // honestly. Never secrets — thresholds and vocabulary, which the client would
+          // otherwise have to hardcode, putting the employer's status names in this repo.
+          const config = loadConfig()
+          res.end(
+            JSON.stringify({
+              modules: capabilities(),
+              statusAging: config.statusAging ?? {},
+            }),
+          )
           return
         }
 

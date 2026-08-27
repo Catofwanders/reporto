@@ -33,5 +33,11 @@
     "inProgress": "In Progress"
   },
   "statsMonths": 6,
-  "slackStandupChannel": ""
+  "slackStandupChannel": "",
+  "statusAging": {
+    "In Progress": 5,
+    "In Review": 2,
+    "Testing": 3,
+    "default": 7
+  }
 }

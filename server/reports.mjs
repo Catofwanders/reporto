@@ -160,6 +160,8 @@ export const PULLERS = {
     )
     return pullJira({
       site: c.jiraSite,
+      // Only the statuses a human is waiting on: aging a backlog item says nothing.
+      agingStatuses: Object.keys(c.statusAging ?? {}).filter((key) => key !== 'default'),
       email: process.env.JIRA_EMAIL,
       apiToken: process.env.JIRA_API_TOKEN,
       jql: c.jiraJql ?? DEFAULT_JQL,

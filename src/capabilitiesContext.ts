@@ -16,6 +16,12 @@ export interface Capability {
 
 export interface CapabilitiesValue {
   modules: Capability[];
+  /**
+   * Days a ticket may sit in a status before the board says so, by status name, plus an
+   * optional `default`. Comes from config so the employer's workflow vocabulary stays out of
+   * this repo; empty means no ticket is ever called old.
+   */
+  statusAging: Record<string, number>;
   /** Configured *and* switched on — the test for showing a nav row, a module or a card. */
   usable: (kind: ReportKind) => boolean;
   of: (kind: ReportKind) => Capability | null;
@@ -33,6 +39,7 @@ export interface CapabilitiesValue {
  */
 export const CapabilitiesContext = createContext<CapabilitiesValue>({
   modules: [],
+  statusAging: {},
   usable: () => true,
   of: () => null,
   loaded: false,

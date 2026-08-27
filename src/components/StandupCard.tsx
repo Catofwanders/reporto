@@ -25,7 +25,7 @@ interface StandupCardProps {
  * once a day.
  */
 export const StandupCard = ({ jira, prs, calendar }: StandupCardProps) => {
-  const { usable } = useCapabilities();
+  const { usable, statusAging } = useCapabilities();
   const [since, setSince] = useState<StandupSince | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +59,7 @@ export const StandupCard = ({ jira, prs, calendar }: StandupCardProps) => {
     }
   };
 
-  const note = since ? buildStandup(since, jira, prs, calendar) : null;
+  const note = since ? buildStandup(since, jira, prs, calendar, statusAging) : null;
 
   /**
    * Posts the note as me, into the channel config names. Two clicks by design: the first

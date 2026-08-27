@@ -24,6 +24,12 @@ export interface Ticket {
   summary: string;
   prs: Pr[];
   notes: string[];
+  /**
+   * When the ticket entered its current status. Only set for the statuses configured as
+   * worth aging, since each one costs a changelog request. Days are derived live rather than
+   * stored: a report read tomorrow must not still claim "2 days".
+   */
+  statusSince?: string | null;
 }
 
 export interface TicketGroup {

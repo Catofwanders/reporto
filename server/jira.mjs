@@ -68,7 +68,7 @@ async function searchIssues({ site, email, apiToken, jql }) {
       },
       body: JSON.stringify({
         jql,
-        fields: ['summary', 'status'],
+        fields: ['summary', 'status', 'created'],
         maxResults: 100,
         ...(nextPageToken ? { nextPageToken } : {}),
       }),
@@ -164,7 +164,41 @@ export async function jiraTransition({ site, email, apiToken, key, transitionId,
   throw new Error(`Jira transition for ${key} failed: ${res.status} ${text.slice(0, 200)}`)
 }
 
-export async function pullJira({ site, email, apiToken, jql, jiraBrowseUrl, resolvePrs }) {
+/** At most this many changelogs per pull: one request each, and a board is not a quarter. */
+const AGING_LOOKUPS = 40
+
+/**
+ * When the ticket entered the status it is in now.
+ *
+ * The board looks identical on day one and day seven of CODE REVIEW, which is the whole
+ * problem: a ticket can sit in review for a week and nothing on screen says so. The changelog
+ * is the only place that knows, at one request per ticket — so only tickets whose status is
+ * worth aging get one, and a ticket that never transitioned falls back to when it was created.
+ */
+async function statusSinceFor({ site, email, apiToken, key, status, created }) {
+  try {
+    const history = await jiraStatusHistory({ site, email, apiToken, key })
+    // Oldest first, so the last entry into this status is the one that still holds.
+    const entries = history.filter(
+      (entry) => (entry.to ?? '').trim().toLowerCase() === status.trim().toLowerCase(),
+    )
+    return entries.length ? entries[entries.length - 1].at : (created ?? null)
+  } catch {
+    // One unreadable changelog costs that ticket's pill, not the report.
+    return created ?? null
+  }
+}
+
+export async function pullJira({
+  site,
+  email,
+  apiToken,
+  jql,
+  jiraBrowseUrl,
+  resolvePrs,
+  /** Statuses where time-in-status is worth a changelog read; empty means none are. */
+  agingStatuses = [],
+}) {
   if (!site) throw new Error('no Jira site configured — set jiraSite in config/reporto.json')
   if (!email || !apiToken) {
     throw new Error(
@@ -198,8 +232,28 @@ export async function pullJira({ site, email, apiToken, jql, jiraBrowseUrl, reso
       prs: ticketPrs?.get(issue.key) ?? [],
       // An API pull has no opinion to add; notes are for a human or an agent to fill.
       notes: [],
+      created: issue.fields?.created ?? null,
     }
   })
+
+  // Sequential rather than parallel: these share one token with the searches above, and a
+  // burst of forty requests is how a pull earns a 429.
+  const aging = new Set(agingStatuses.map((name) => name.trim().toLowerCase()))
+  let lookups = 0
+  for (const ticket of tickets) {
+    if (lookups >= AGING_LOOKUPS) break
+    if (!aging.has(ticket.status.trim().toLowerCase())) continue
+    lookups += 1
+    ticket.statusSince = await statusSinceFor({
+      site,
+      email,
+      apiToken,
+      key: ticket.key,
+      status: ticket.status,
+      created: ticket.created,
+    })
+  }
+  for (const ticket of tickets) delete ticket.created
 
   return {
     type: 'jira',

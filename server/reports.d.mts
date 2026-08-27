@@ -48,6 +48,11 @@ export interface ReportoConfig {
   slackChannelsExcluded?: string[];
   /** Where the stand-up note posts. A name or an id; the browser never names a channel. */
   slackStandupChannel?: string;
+  /**
+   * Days a ticket may sit in a status before the board says so, per status name, plus an
+   * optional `default`. Only the statuses named here cost a changelog read.
+   */
+  statusAging?: Record<string, number>;
   /** How many months the statistics report carries, newest first. */
   statsMonths?: number;
   commandGroups: CommandGroup[];

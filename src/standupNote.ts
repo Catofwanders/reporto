@@ -1,5 +1,6 @@
 import type { CalendarReport, JiraReport, PrsReport, StandupSince, Ticket } from './types';
 import { formatStatus } from './jiraStatus';
+import { type AgingLimits, overdueTickets } from './ticketAging';
 import { idleDays, laneOf } from './prLanes';
 
 /**
@@ -43,6 +44,8 @@ export function buildStandup(
   jira: JiraReport | null,
   prs: PrsReport | null,
   calendar: CalendarReport | null,
+  /** Days-in-status limits per status, so a ticket stuck too long can be said out loud. */
+  aging: AgingLimits = {},
 ): StandupNote {
   const yesterday = [
     ...(since?.moved ?? []).map(
@@ -69,6 +72,18 @@ export function buildStandup(
     ...allTickets(jira)
       .filter((ticket) => has(BLOCKED, ticket.status))
       .map((ticket) => `${ticket.key} — ${formatStatus(ticket.status)}: ${ticket.summary}`),
+    /*
+     * Stuck in a status past its limit. Not "blocked" in Jira's sense — nobody set a flag —
+     * which is exactly why it is worth saying: a ticket in CODE REVIEW for six days is the
+     * thing a stand-up exists to surface, and the board looked the same on day one.
+     */
+    ...overdueTickets(
+      allTickets(jira).filter((ticket) => !has(BLOCKED, ticket.status)),
+      aging,
+    ).map(
+      ({ ticket, age }) =>
+        `${ticket.key} — ${age.days} days in ${formatStatus(ticket.status)}: ${ticket.summary}`,
+    ),
     // Waiting on somebody for two days or more is the point at which it is worth saying out
     // loud; below that it is just a PR in review.
     ...(prs?.repos ?? []).flatMap((group) =>
