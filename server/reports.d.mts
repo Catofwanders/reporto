@@ -70,4 +70,6 @@ export const PULLABLE: string[];
 export function pullReport(
   kind: string,
   config?: ReportoConfig,
+  /** `phase: 'fast'` asks the Jira puller for the board alone, PRs and ages left for later. */
+  options?: { phase?: 'fast' | 'full' },
 ): Promise<{ kind: string; file: string; date: string; durationMs: number }>;

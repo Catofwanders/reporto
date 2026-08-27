@@ -43,6 +43,13 @@ export interface JiraReport {
   generatedAt: string;
   banner?: { tone: Chip; text: string };
   groups: TicketGroup[];
+  /**
+   * Written by the fast half of a two-phase pull: the board is complete, the slow parts are
+   * not. Views render a skeleton for whatever `pending` names rather than an empty space,
+   * which would read as "there are none".
+   */
+  partial?: boolean;
+  pending?: ('prs' | 'aging')[];
   restNote?: string;
   footer?: string;
 }

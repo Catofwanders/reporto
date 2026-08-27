@@ -951,6 +951,35 @@ body { background: var(--canvas); }
 .flow-step-label { fill: var(--ink); font-size: 10.5px; font-weight: 600; }
 .flow-step-ref { fill: var(--ink-2); font-size: 8.5px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
 
+/*
+ * Skeletons. Only where a fact is being fetched: an empty space and "not loaded yet" look
+ * identical, and here the wrong reading is the dangerous one — a card with no PR chip means
+ * "no PR on this ticket", which is something the flow checks act on.
+ */
+.skeleton {
+  display: inline-block; border-radius: .35rem;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--ink-2) 12%, transparent),
+    color-mix(in oklab, var(--ink-2) 26%, transparent),
+    color-mix(in oklab, var(--ink-2) 12%, transparent)
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+.skeleton-chip { width: 6.5rem; height: .82rem; }
+/* Nothing in flight: a still placeholder, so the shimmer never lies about waiting. */
+.skeleton.is-idle { animation: none; opacity: .5; }
+@keyframes skeleton-sweep {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+/* A sweeping gradient is decoration; for anybody who asked for less motion it just sits. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+.panel-pending { color: var(--ink-2); }
+
 /* Slack: answering from the queue. The destination is stated in words before the send. */
 .slack-actions { display: flex; align-items: center; gap: .2rem; }
 .slack-sent { color: var(--ok-ink); font-size: .74rem; font-weight: 600; }

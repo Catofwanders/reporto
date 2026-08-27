@@ -4,6 +4,7 @@ import { useHashTarget } from '../useHashTarget';
 import { TicketStatus } from './TicketStatus';
 import { agingOf } from '../ticketAging';
 import { useCapabilities } from '../capabilitiesContext';
+import { useRefresh } from '../refreshContext';
 
 interface JiraBoardProps {
   report: JiraReport;
@@ -50,7 +51,37 @@ const prLabel = (pr: Pr) => `${pr.repo.split('/').pop()}#${pr.num}`;
 const droppedFromQc = (ticket: Ticket) =>
   ticket.prs.filter((pr) => pr.state === 'merged' && pr.inQc === false);
 
-const BoardCard = ({ ticket, onChanged }: { ticket: Ticket; onChanged?: () => void }) => {
+/**
+ * Where a fact is still being fetched, a shimmer rather than an empty space.
+ *
+ * Empty and "not loaded yet" look identical, and the wrong reading is the dangerous one: a
+ * card with no PR chip means "no PR on this ticket", which is one of the things the flow
+ * checks are about. Only cards that could plausibly have one get a placeholder — a backlog
+ * item with no PR is not a gap.
+ */
+const PrSkeleton = ({ loading }: { loading: boolean }) => (
+  <p className="board-card-prs">
+    <span
+      // A shimmer claims something is in flight. When the second pass is not running — it
+      // failed, or the page was opened on a partial report — the placeholder holds still, so
+      // the gap reads as "not fetched" rather than as "any moment now".
+      className={`skeleton skeleton-chip${loading ? '' : ' is-idle'}`}
+      aria-label={loading ? 'pull requests still loading' : 'pull requests not fetched'}
+    />
+  </p>
+);
+
+const BoardCard = ({
+  ticket,
+  onChanged,
+  pendingPrs = false,
+}: {
+  ticket: Ticket;
+  onChanged?: () => void;
+  /** The report is the fast half of a pull, so PRs are not absent — just not here yet. */
+  pendingPrs?: boolean;
+}) => {
+  const { running } = useRefresh();
   const { statusAging } = useCapabilities();
   const dropped = droppedFromQc(ticket);
   // Only shown once it is over the limit for its status: a pill on every card is wallpaper,
@@ -62,6 +93,10 @@ const BoardCard = ({ ticket, onChanged }: { ticket: Ticket; onChanged?: () => vo
       <p className="board-card-summary" title={ticket.summary}>
         {ticket.summary}
       </p>
+
+      {ticket.prs.length === 0 && pendingPrs && statusTone(ticket) !== 'na' && (
+        <PrSkeleton loading={running.has('jira')} />
+      )}
 
       {ticket.prs.length > 0 && (
         <p className="board-card-prs">
@@ -109,6 +144,7 @@ const BoardCard = ({ ticket, onChanged }: { ticket: Ticket; onChanged?: () => vo
  */
 export const JiraBoard = ({ report, onChanged }: JiraBoardProps) => {
   useHashTarget([report]);
+  const pendingPrs = Boolean(report.partial && report.pending?.includes('prs'));
 
   const columns = [...report.groups]
     .filter((group) => group.tickets.length > 0)
@@ -127,7 +163,12 @@ export const JiraBoard = ({ report, onChanged }: JiraBoardProps) => {
           </header>
           <div className="board-col-body">
             {group.tickets.map((ticket) => (
-              <BoardCard key={ticket.key} ticket={ticket} onChanged={onChanged} />
+              <BoardCard
+                key={ticket.key}
+                ticket={ticket}
+                onChanged={onChanged}
+                pendingPrs={pendingPrs}
+              />
             ))}
           </div>
         </section>

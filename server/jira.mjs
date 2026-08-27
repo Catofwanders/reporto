@@ -189,6 +189,18 @@ async function statusSinceFor({ site, email, apiToken, key, status, created }) {
   }
 }
 
+/**
+ * The board, in two passes.
+ *
+ * The search itself is fast — one request, and it carries everything the board needs to draw:
+ * key, summary, status. What is slow is everything after it: a GitHub search to match PRs,
+ * and a changelog read per aged ticket. Waiting for those before writing anything meant
+ * twenty seconds of an empty page for data that was ready in one.
+ *
+ * So `phase: 'fast'` writes the board as soon as the search answers, marked `partial` with a
+ * list of what is still missing, and `phase: 'full'` does the whole thing and overwrites it.
+ * The client runs them in that order and shows skeletons where the gaps are.
+ */
 export async function pullJira({
   site,
   email,
@@ -198,6 +210,7 @@ export async function pullJira({
   resolvePrs,
   /** Statuses where time-in-status is worth a changelog read; empty means none are. */
   agingStatuses = [],
+  phase = 'full',
 }) {
   if (!site) throw new Error('no Jira site configured — set jiraSite in config/reporto.json')
   if (!email || !apiToken) {
@@ -210,9 +223,11 @@ export async function pullJira({
   const issues = await searchIssues({ site, email, apiToken, jql })
   const browse = (jiraBrowseUrl || `${site.replace(/\/$/, '')}/browse`).replace(/\/$/, '')
 
+  const fast = phase === 'fast'
+
   // PRs are resolved after the search, so the resolver can spend its per-ticket fallback
   // budget on the statuses that matter instead of the whole backlog.
-  const ticketPrs = resolvePrs
+  const ticketPrs = resolvePrs && !fast
     ? await resolvePrs(
         issues.map((issue) => ({
           key: issue.key,
@@ -238,7 +253,7 @@ export async function pullJira({
 
   // Sequential rather than parallel: these share one token with the searches above, and a
   // burst of forty requests is how a pull earns a 429.
-  const aging = new Set(agingStatuses.map((name) => name.trim().toLowerCase()))
+  const aging = new Set(fast ? [] : agingStatuses.map((name) => name.trim().toLowerCase()))
   let lookups = 0
   for (const ticket of tickets) {
     if (lookups >= AGING_LOOKUPS) break
@@ -255,14 +270,21 @@ export async function pullJira({
   }
   for (const ticket of tickets) delete ticket.created
 
+  // Named so a view can tell "not fetched yet" from "fetched, and there is none".
+  const pending = fast
+    ? [...(resolvePrs ? ['prs'] : []), ...(agingStatuses.length ? ['aging'] : [])]
+    : []
+
   return {
     type: 'jira',
     date: new Date().toLocaleDateString('en-CA'),
     generatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
     groups: groupByStatus(tickets),
+    ...(pending.length ? { partial: true, pending } : {}),
     footer:
       `${tickets.length} ticket${tickets.length === 1 ? '' : 's'} for ` +
-      `${me.displayName ?? email} from JQL, PRs matched by key in title.`,
+      `${me.displayName ?? email} from JQL` +
+      (fast ? ', PRs and ages still loading.' : ', PRs matched by key in title.'),
   }
 }
 

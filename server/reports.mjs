@@ -83,6 +83,10 @@ function writeJsonAtomic(file, value) {
   fs.renameSync(tmp, file)
 }
 
+/**
+ * `options` is how a caller asks for less work: the Jira puller takes `phase: 'fast'` to
+ * answer with the board alone, leaving PRs and ticket ages for a second call.
+ */
 export const PULLERS = {
   // Settled months are read back from the last report instead of being recomputed: the
   // cycle-time medians cost one changelog request per ticket, and a month that has ended
@@ -154,11 +158,12 @@ export const PULLERS = {
     })
   },
 
-  jira: (c) => {
+  jira: (c, options = {}) => {
     const fallbackStatuses = (c.fallbackStatuses ?? DEFAULT_FALLBACK_STATUSES).map((s) =>
       s.toLowerCase(),
     )
     return pullJira({
+      phase: options.phase ?? 'full',
       site: c.jiraSite,
       // Only the statuses a human is waiting on: aging a backlog item says nothing.
       agingStatuses: Object.keys(c.statusAging ?? {}).filter((key) => key !== 'default'),
@@ -188,7 +193,7 @@ export const PULLABLE = Object.keys(PULLERS)
  * Pulls one report and files it: `<kind>-<date>.json`, `index.latest` pointed at it, and
  * the day kept in `index.history` so a later failure can fall back to it.
  */
-export async function pullReport(kind, config = loadConfig()) {
+export async function pullReport(kind, config = loadConfig(), options = {}) {
   const puller = PULLERS[kind]
   if (!puller) throw new Error(`no API puller for "${kind}"`)
   if (!config.githubAuthor || !config.githubOrg) {
@@ -196,7 +201,7 @@ export async function pullReport(kind, config = loadConfig()) {
   }
 
   const started = Date.now()
-  const report = await puller(config)
+  const report = await puller(config, options)
   const file = `${kind}-${report.date}.json`
   fs.mkdirSync(REPORTS, { recursive: true })
   writeJsonAtomic(path.join(REPORTS, file), report)

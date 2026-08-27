@@ -13,7 +13,7 @@ interface JiraPageProps {
 type View = 'board' | 'list';
 
 export const JiraPage = ({ report }: JiraPageProps) => {
-  const { run } = useRefresh();
+  const { run, running } = useRefresh();
   const [view, setView] = useState<View>('board');
 
   if (!report) {
@@ -38,6 +38,13 @@ export const JiraPage = ({ report }: JiraPageProps) => {
               <h2>Board</h2>
               <p className="panel-sub">
                 {total} tickets across {report.groups.length} statuses
+                {/* Says what the shimmering cards are waiting for, so the gaps read as
+                    "loading" rather than as "none". */}
+                {report.partial && (
+                  <span className="panel-pending">
+                    {running.has('jira') ? ' · PRs and ages loading…' : ' · PRs and ages not fetched'}
+                  </span>
+                )}
               </p>
             </div>
           </div>

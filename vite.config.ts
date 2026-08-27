@@ -263,9 +263,13 @@ function pullPlugin(): Plugin {
           return
         }
 
+        // ?phase=fast asks for the cheap half of a two-phase pull; anything else is a full
+        // one, which is what cron and every other kind do.
+        const phase = /[?&]phase=fast(&|$)/.test(req.url ?? '') ? 'fast' : 'full'
+
         // The pull itself, the file it writes and the index bookkeeping all live in
         // server/reports.mjs, so `npm run pull` from cron does exactly what this button does.
-        void pullReport(kind).then(
+        void pullReport(kind, undefined, { phase }).then(
           (result) => res.end(JSON.stringify({ ok: true, ...result, writes: [kind] })),
           (err: Error) => {
             res.statusCode = 500

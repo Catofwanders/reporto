@@ -3,6 +3,7 @@ import type { JiraReport } from '../types';
 import { activeTickets } from '../jiraActive';
 import { agingOf } from '../ticketAging';
 import { useCapabilities } from '../capabilitiesContext';
+import { useRefresh } from '../refreshContext';
 import { formatStatus, statusTone } from '../jiraStatus';
 import { MiniPanel } from './MiniPanel';
 
@@ -19,6 +20,7 @@ const SHOWN = 5;
  */
 export const HomeTickets = ({ report }: HomeTicketsProps) => {
   const { statusAging } = useCapabilities();
+  const { running } = useRefresh();
   const tickets = activeTickets(report);
   const overdue = tickets.filter((ticket) => agingOf(ticket, statusAging)?.over).length;
 
@@ -65,6 +67,11 @@ export const HomeTickets = ({ report }: HomeTicketsProps) => {
       </ul>
       {tickets.length > SHOWN && (
         <p className="mini-rest">{tickets.length - SHOWN} more on the board</p>
+      )}
+      {report.partial && (
+        <p className="mini-rest">
+          {running.has('jira') ? 'PRs and ages still loading…' : 'PRs and ages not fetched'}
+        </p>
       )}
     </MiniPanel>
   );

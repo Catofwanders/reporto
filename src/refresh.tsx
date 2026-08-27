@@ -85,15 +85,27 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
         return next;
       });
 
+      const pull = async (query = '') => {
+        const res = await fetch(`/api/pull/${kind}${query}`, {
+          method: 'POST',
+          headers: { 'X-Reporto-Write': '1' },
+        });
+        const body = (await res.json()) as RefreshResult;
+        if (!res.ok || !body.ok) throw new Error(body.error ?? `exit ${res.status}`);
+        await onReload(body.writes ?? [kind]);
+      };
+
       try {
         if (apiKinds.has(kind)) {
-          const res = await fetch(`/api/pull/${kind}`, {
-            method: 'POST',
-            headers: { 'X-Reporto-Write': '1' },
-          });
-          const body = (await res.json()) as RefreshResult;
-          if (!res.ok || !body.ok) throw new Error(body.error ?? `exit ${res.status}`);
-          await onReload(body.writes ?? [kind]);
+          /*
+           * Jira in two passes. The search answers in about a second and carries everything
+           * the board draws; matching PRs and reading a changelog per aged ticket take twenty
+           * more. Waiting for the second before showing the first meant twenty seconds of
+           * nothing, so the fast pass lands first and the page fills in behind it — the
+           * spinner stays on until both are done, because the data is not complete until then.
+           */
+          if (kind === 'jira') await pull('?phase=fast');
+          await pull();
           return;
         }
 

@@ -61,6 +61,30 @@ remote. A fresh checkout therefore starts with no data:
 the cards stay hidden and the action bar reads "never" until you press an update
 button.
 
+## The Jira pull, in two passes
+
+The search is fast — one request, and it carries everything the board draws: key, summary,
+status. Everything *after* it is slow: a GitHub search to match PRs onto tickets, and a
+changelog read per aged ticket. Waiting for those before writing anything meant twenty seconds
+of an empty page for data that was ready in one and a half.
+
+So the pull has two phases and the client runs both:
+
+1. `POST /api/pull/jira?phase=fast` — the search alone, written immediately and marked
+   `partial` with a `pending` list of what is missing. **~1.5s.**
+2. `POST /api/pull/jira` — the whole thing, overwriting it. **~15s.**
+
+The board is therefore on screen while the rest fills in behind it, and the spinner stays on
+until both are done because the data is not complete until then. `npm run pull` from cron does
+the full pass only: nobody is watching, so a partial write would be noise.
+
+Where a fact is still coming, the card shows a **skeleton rather than an empty space** —
+"empty" and "not loaded" look identical, and a card with no PR chip means "no PR on this
+ticket", which is something the flow checks act on. Only cards that could plausibly have one
+get a placeholder; a backlog item with no PR is not a gap. And the shimmer stops when nothing
+is in flight: on a partial report with no pull running — it failed, or the page was just
+opened — the placeholder holds still and the header says *not fetched* rather than *loading*.
+
 ## Ticket aging
 
 The PR lanes have said "no review yet — 6 days, chase it" for a while. Tickets had no
