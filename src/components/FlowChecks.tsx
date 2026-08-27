@@ -17,20 +17,43 @@ interface FlowChecksProps {
   prs: PrsReport | null;
   /** Optional: with it, the checks can also see questions nobody answered. */
   slack?: SlackReport | null;
+  /**
+   * Start folded, showing only the count. On the dashboard a contradiction is worth knowing
+   * about rather than worth reading through, and the strip above already carries the number.
+   */
+  collapsed?: boolean;
 }
 
 /**
  * Where Jira and GitHub disagree. Renders nothing when they agree — a permanent "0 issues"
  * card trains you to stop reading it, and then it is worthless on the day it has something.
  */
-export const FlowChecks = ({ jira, prs, slack = null }: FlowChecksProps) => {
+export const FlowChecks = ({ jira, prs, slack = null, collapsed = false }: FlowChecksProps) => {
   const [expanded, setExpanded] = useState(false);
+  const [open, setOpen] = useState(!collapsed);
   const findings = flowFindings(jira, prs, slack);
   if (findings.length === 0) return null;
 
   const serious = findings.filter((finding) => finding.severity === 'bad').length;
   const shown = expanded ? findings : findings.slice(0, SHOWN);
   const hidden = findings.length - shown.length;
+
+  // Folded: one line that says how many and how bad, and opens on a click.
+  if (!open) {
+    return (
+      <button type="button" className="flow-folded" onClick={() => setOpen(true)}>
+        <span className="panel-icon badge-bad" aria-hidden="true">
+          <ReportProblemRoundedIcon fontSize="small" />
+        </span>
+        <strong>{findings.length}</strong>
+        <span className="flow-folded-label">
+          {findings.length === 1 ? 'conflict' : 'conflicts'}
+          {serious > 0 && `, ${serious} serious`}
+        </span>
+        <span className="flow-folded-open">show</span>
+      </button>
+    );
+  }
 
   return (
     <section className="panel flow-checks">
@@ -79,11 +102,18 @@ export const FlowChecks = ({ jira, prs, slack = null }: FlowChecksProps) => {
         ))}
       </ul>
 
-      {(hidden > 0 || expanded) && (
-        <button type="button" className="module-more" onClick={() => setExpanded(!expanded)}>
-          {expanded ? 'Show fewer' : `${hidden} more`}
-        </button>
-      )}
+      <p className="flow-actions">
+        {(hidden > 0 || expanded) && (
+          <button type="button" className="module-more" onClick={() => setExpanded(!expanded)}>
+            {expanded ? 'Show fewer' : `${hidden} more`}
+          </button>
+        )}
+        {collapsed && (
+          <button type="button" className="module-more" onClick={() => setOpen(false)}>
+            Hide
+          </button>
+        )}
+      </p>
     </section>
   );
 };

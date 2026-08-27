@@ -6,12 +6,13 @@ import type {
   SlackReport,
 } from '../types';
 import { useCapabilities } from '../capabilitiesContext';
-import { CalendarWidget } from '../components/CalendarWidget';
+import { flowFindings } from '../flowChecks';
+import { kpis, needsYou, needsYouTotal } from '../needsYou';
+import { DayTimeline } from '../components/DayTimeline';
 import { FlowChecks } from '../components/FlowChecks';
-import { HomePrs } from '../components/HomePrs';
-import { HomeReviews } from '../components/HomeReviews';
-import { HomeSlack } from '../components/HomeSlack';
-import { HomeTickets } from '../components/HomeTickets';
+import { KpiStrip } from '../components/KpiStrip';
+import { NeedsYou } from '../components/NeedsYou';
+import { PrMix } from '../components/PrMix';
 import { StandupCard } from '../components/StandupCard';
 
 interface HomePageProps {
@@ -23,40 +24,54 @@ interface HomePageProps {
 }
 
 /**
- * The morning's answer to "what needs me", as modules rather than pages.
+ * One screen: six numbers, one queue, and the day.
  *
- * Each module carries the few rows worth acting on and links to the page that holds the
- * rest, so the dashboard is one screen instead of the Jira panel and the PR lanes repeated
- * in full. The month's statistics used to close it out; they were context you scrolled past
- * rather than acted on, and the review queue — where somebody else is waiting — earns that
- * space better.
+ * What was here before was five cards of the same shape — a title, a count line, then four
+ * lines of prose each. Measured: 341 words over 1.25 screens, with "waiting for a first
+ * review" appearing four times. Worse than the length was the structure, which left the reader
+ * interleaving four parallel lists by hand to answer the only question a morning asks, which
+ * is what to do first.
+ *
+ * So the four lists become one, ordered by how much each thing is blocking; the counts move
+ * into a strip that is read in a second; and today becomes a timeline, because "how long until
+ * the next thing" is a distance rather than a sentence. Nothing is lost — every item links to
+ * the page that owns it. This screen decides where to look; it does not do the work.
  */
 export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps) => {
-  // A module whose credentials are missing, or which has been switched off in Settings, is
-  // not shown at all: an empty card that can never fill reads as a broken card.
-  const { usable } = useCapabilities();
+  const { usable, statusAging } = useCapabilities();
+
+  // A module switched off in Settings, or one whose credentials are missing, contributes
+  // nothing — not an empty row, not a zero in the strip.
+  const sources = {
+    jira: usable('jira') ? jira : null,
+    prs: usable('prs') ? prs : null,
+    reviews: usable('reviews') ? reviews : null,
+    slack: usable('slack') ? slack : null,
+    aging: statusAging,
+  };
+
+  const findings = flowFindings(sources.jira, sources.prs, sources.slack);
+  const items = needsYou(sources);
+  const total = needsYouTotal(sources);
+  const counts = kpis({ ...sources, conflicts: findings.length });
 
   return (
     <main className="home">
-      {/*
-        Contradictions and the day, side by side. They answer different questions — what is
-        silently wrong, and what the clock demands — and both are read once at the top rather
-        than worked through, so neither earns a full-width row of its own. Either one alone
-        takes the whole width, which is why this row is flex rather than two fixed columns.
-      */}
-      <div className="home-top">
-        <FlowChecks jira={jira} prs={prs} slack={usable('slack') ? slack : null} />
-        {calendar && usable('calendar') && <CalendarWidget report={calendar} />}
+      <KpiStrip counts={counts} usable={usable} />
+
+      <div className="home-split">
+        <NeedsYou items={items} total={total} />
+
+        <div className="home-aside">
+          {calendar && usable('calendar') && <DayTimeline report={calendar} />}
+          {sources.prs && <PrMix report={sources.prs} />}
+          {/* Folded by default: a contradiction is worth knowing about, not worth a third of
+              the screen every morning, and its count is already in the strip above. */}
+          <FlowChecks jira={sources.jira} prs={sources.prs} slack={sources.slack} collapsed />
+        </div>
       </div>
 
-      <div className="home-modules">
-        {jira && usable('jira') && <HomeTickets report={jira} />}
-        {prs && usable('prs') && <HomePrs report={prs} />}
-        {reviews && usable('reviews') && <HomeReviews report={reviews} jira={jira} />}
-        {slack && usable('slack') && <HomeSlack report={slack} />}
-      </div>
-
-      <StandupCard jira={jira} prs={prs} calendar={calendar} />
+      <StandupCard jira={sources.jira} prs={sources.prs} calendar={calendar} />
     </main>
   );
 };

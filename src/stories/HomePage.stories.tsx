@@ -47,6 +47,15 @@ type Story = StoryObj<typeof meta>;
 /** The dashboard on invented data — safe to screenshot and share. */
 export const Default: Story = {};
 
+/** A quiet morning: nothing waiting, no conflicts. The strip still holds its shape. */
+export const NothingWaiting: Story = {
+  args: {
+    prs: { ...prsReport, repos: [] },
+    reviews: { ...reviewsReport, prs: [] },
+    slack: { ...slackReport, rows: [] },
+  },
+};
+
 /** A fresh checkout, before any report has been written. */
 export const NoReports: Story = {
   args: { jira: null, calendar: null, prs: null, reviews: null, slack: null },

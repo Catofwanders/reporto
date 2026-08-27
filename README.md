@@ -9,11 +9,17 @@ calendar, each rendered from a JSON report on disk.
 ![The dashboard: a flow-check card, then modules for active tickets, my open PRs, the review
 queue and today's calendar, and the stand-up note](docs/home.jpg)
 
-One screen of modules rather than embedded pages: each carries the few rows worth acting on
-and links to the page holding the rest. The top row pairs the two things that are read rather
-than worked through — what is silently wrong, and what the clock demands — at half the width
-each; when either has nothing to say the other takes the whole row, which is why that row is
-flex and not two fixed columns. Rendered from the synthetic fixtures in
+One screen: six numbers, one queue, and the day. The version before this was five cards of
+identical shape — a title, a count, then four lines of prose each — which measured 341 words
+over 1.25 screens and printed "waiting for a first review" four times. Worse than the length
+was the structure: four parallel lists left the reader interleaving them by hand to answer the
+only question a morning asks, which is what to do first.
+
+So the lists became one, ordered by how much each thing is blocking; the counts moved into a
+strip read in a second; today became a timeline, because "how long until the next thing" is a
+distance rather than a sentence; and the contradictions folded to a single line with a count.
+The same data now takes **82 words on one screen**. Nothing was dropped — every row links to
+the page that owns it, and those pages carry the detail. Rendered from the synthetic fixtures in
 `src/stories/fixtures.ts` via the `Pages/Home` story, not from real reports — those hold
 meeting links and ticket detail and never leave your disk. The fixtures describe an invented
 online marketplace for the same reason. The same story in the Nord palette:
