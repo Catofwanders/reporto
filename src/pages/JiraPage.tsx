@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
-import type { JiraReport } from '../types';
+import type { JiraReport, PrsReport } from '../types';
 import { useRefresh } from '../refreshContext';
 import { JiraBoard } from '../components/JiraBoard';
 import { JiraReportView } from '../components/JiraReportView';
@@ -8,11 +8,13 @@ import { RefreshButton } from '../components/RefreshButton';
 
 interface JiraPageProps {
   report: JiraReport | null;
+  /** Passed through to the board's ticket drawer, for PR review state. */
+  prs?: PrsReport | null;
 }
 
 type View = 'board' | 'list';
 
-export const JiraPage = ({ report }: JiraPageProps) => {
+export const JiraPage = ({ report, prs = null }: JiraPageProps) => {
   const { run, running } = useRefresh();
   const [view, setView] = useState<View>('board');
 
@@ -72,7 +74,9 @@ export const JiraPage = ({ report }: JiraPageProps) => {
           <p className={`banner banner-${report.banner.tone}`}>{report.banner.text}</p>
         )}
 
-        {view === 'board' && <JiraBoard report={report} onChanged={() => void run('jira')} />}
+        {view === 'board' && (
+          <JiraBoard report={report} prs={prs} onChanged={() => void run('jira')} />
+        )}
       </section>
 
       {/* The list keeps the detail a board card cannot hold — every note, every PR remark. */}

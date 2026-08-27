@@ -319,7 +319,18 @@ substring match is probably enough before reaching for a library.
   **Answered: yes, and it is in.** A bare `>` lists rather than waiting for more typing —
   a menu of everything runnable is the point of the mode.
 
-## 7. Ticket detail drawer
+## 7. Ticket detail drawer — **built, read-only**
+
+Shipped: clicking a card's summary opens a drawer over the board with the description and the
+last five comments rendered from ADF, the fields a card has no room for (assignee, reporter,
+priority, parent, labels, age), the PRs on the ticket with their review state from
+`prState`/`laneOf`, and the same status control the card carries. `GET /api/jira/<KEY>` reads
+it; Esc closes and puts focus back on the card.
+
+Left undone: commenting from the drawer — see the open question below, it is a write with no
+undo and wants its own change. The list view still has no drawer; only the board does.
+
+The sketch this came from:
 
 Click a board card and read the ticket in place: description, comments, the PRs on it, and
 the transitions the workflow allows. Today the board shows key, summary, PR chips and
@@ -347,8 +358,18 @@ should degrade to a link rather than trying to fetch an attachment).
 **Open questions**
 
 - Whether to allow commenting from the drawer. That is a write to a shared board with no
-  undo, so it wants the same confirmation the PR close action got.
+  undo, so it wants the same confirmation the PR close action got. **Still open — the drawer
+  shipped read-only.**
 - Attachments and images: probably a link out, since the drawer has no auth to fetch them.
+  **Answered:** a `mediaSingle` renders as one line saying to open the ticket in Jira. The
+  drawer has no Jira session, so fetching the file would 401.
+
+**What ADF actually contains here**, measured across the whole board rather than guessed:
+`paragraph`, `text`, `hardBreak`, `heading`, `bulletList`/`orderedList`/`listItem`,
+`blockquote`, `codeBlock`, `rule`, `mention`, `inlineCard`, `mediaSingle`/`media`, `date`, and
+the marks `link`, `code`, `strong`, `strike`, `underline`. `date` is the one that had to be
+found by looking: it carries a timestamp in `attrs` and has no children, so a renderer that
+falls through to children drops a due date silently.
 
 ## 8. Ticket aging digest — **built**
 

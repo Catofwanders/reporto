@@ -5,7 +5,7 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import type { PrActionName } from './server/github.mjs'
 import { PR_ACTIONS, prAction } from './server/github.mjs'
-import { jiraTransition, jiraTransitions } from './server/jira.mjs'
+import { jiraIssueDetail, jiraTransition, jiraTransitions } from './server/jira.mjs'
 import { readKit } from './server/kit.mjs'
 import { readStandup } from './server/standup.mjs'
 import { PULLABLE, loadConfig, pullReport, readReport } from './server/reports.mjs'
@@ -281,8 +281,9 @@ function pullPlugin(): Plugin {
   }
 }
 
-// Jira transition API: GET /api/jira/<KEY>/transitions lists what the workflow allows now,
-// POST /api/jira/<KEY>/transition applies one. This writes to a shared board, so the key
+// Jira ticket API: GET /api/jira/<KEY> reads one issue for the drawer, GET
+// /api/jira/<KEY>/transitions lists what the workflow allows now, POST
+// /api/jira/<KEY>/transition applies one. The write path touches a shared board, so the key
 // is validated against the configured ticket pattern and the transition id comes from the
 // list Jira itself just returned — the request never names a status string.
 function jiraTransitionPlugin(): Plugin {
@@ -297,7 +298,7 @@ function jiraTransitionPlugin(): Plugin {
         const [key, verb] = parts
         if (!key || !KEY.test(key)) {
           res.statusCode = 400
-          res.end('{"error":"expected /api/jira/<TICKET-KEY>/transitions"}')
+          res.end('{"error":"expected /api/jira/<TICKET-KEY>[/transitions]"}')
           return
         }
 
@@ -308,6 +309,19 @@ function jiraTransitionPlugin(): Plugin {
           apiToken: process.env.JIRA_API_TOKEN,
           key,
           allow: config.statusChoices ?? [],
+        }
+
+        if (req.method === 'GET' && !verb) {
+          // Read-only, so no cross-site guard: this answers with data the page already had
+          // the key for, and a GET cannot be made to move a ticket.
+          void jiraIssueDetail({ ...creds, browseUrl: config.jiraBrowseUrl }).then(
+            (ticket) => res.end(JSON.stringify({ ok: true, ticket })),
+            (err: Error) => {
+              res.statusCode = err.message.startsWith('no such ticket') ? 404 : 500
+              res.end(JSON.stringify({ ok: false, key, error: err.message }))
+            },
+          )
+          return
         }
 
         if (req.method === 'GET' && verb === 'transitions') {
@@ -323,7 +337,7 @@ function jiraTransitionPlugin(): Plugin {
 
         if (req.method !== 'POST' || verb !== 'transition') {
           res.statusCode = 405
-          res.end('{"error":"use GET <key>/transitions or POST <key>/transition"}')
+          res.end('{"error":"use GET <key>, GET <key>/transitions or POST <key>/transition"}')
           return
         }
 

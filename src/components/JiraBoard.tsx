@@ -1,15 +1,19 @@
-import type { JiraReport, Pr, Ticket } from '../types';
+import { useState } from 'react';
+import type { JiraReport, Pr, PrsReport, Ticket } from '../types';
 import { formatStatus, statusTone } from '../jiraStatus';
 import { useHashTarget } from '../useHashTarget';
 import { TicketStatus } from './TicketStatus';
 import { agingOf } from '../ticketAging';
 import { useCapabilities } from '../capabilitiesContext';
 import { useRefresh } from '../refreshContext';
+import { TicketDrawer } from './TicketDrawer';
 
 interface JiraBoardProps {
   report: JiraReport;
   /** Refetch after a status change, so the card moves column on the next pull. */
   onChanged?: () => void;
+  /** Open PRs, so the drawer can say a PR's review state rather than just open or merged. */
+  prs?: PrsReport | null;
 }
 
 /**
@@ -74,10 +78,13 @@ const PrSkeleton = ({ loading }: { loading: boolean }) => (
 const BoardCard = ({
   ticket,
   onChanged,
+  onOpen,
   pendingPrs = false,
 }: {
   ticket: Ticket;
   onChanged?: () => void;
+  /** Ask for the drawer on this ticket. */
+  onOpen: () => void;
   /** The report is the fast half of a pull, so PRs are not absent — just not here yet. */
   pendingPrs?: boolean;
 }) => {
@@ -90,9 +97,13 @@ const BoardCard = ({
   return (
     // The id is what /jira#<KEY> scrolls to.
     <article className="board-card" id={ticket.key}>
-      <p className="board-card-summary" title={ticket.summary}>
-        {ticket.summary}
-      </p>
+      {/* The summary is the handle: reading a ticket is what a card click means, and the key
+          link beside it still goes to Jira for anybody who wants the real thing. */}
+      <button type="button" className="board-card-open" onClick={onOpen} title="read this ticket">
+        <p className="board-card-summary" title={ticket.summary}>
+          {ticket.summary}
+        </p>
+      </button>
 
       {ticket.prs.length === 0 && pendingPrs && statusTone(ticket) !== 'na' && (
         <PrSkeleton loading={running.has('jira')} />
@@ -142,9 +153,15 @@ const BoardCard = ({
  * to move a ticket — dragging would need a drop target per column and a transition guess
  * per drop, and the chip already asks Jira what the workflow allows.
  */
-export const JiraBoard = ({ report, onChanged }: JiraBoardProps) => {
+export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => {
   useHashTarget([report]);
   const pendingPrs = Boolean(report.partial && report.pending?.includes('prs'));
+  const [reading, setReading] = useState<string | null>(null);
+  // Looked up by key each render rather than stored: a refetch after a transition replaces
+  // the report, and a held copy would leave the drawer showing the old status.
+  const open = report.groups
+    .flatMap((group) => group.tickets)
+    .find((ticket) => ticket.key === reading);
 
   const columns = [...report.groups]
     .filter((group) => group.tickets.length > 0)
@@ -153,26 +170,41 @@ export const JiraBoard = ({ report, onChanged }: JiraBoardProps) => {
   if (columns.length === 0) return <p className="status">No tickets in this report.</p>;
 
   return (
-    <div className="board" role="list">
-      {columns.map((group) => (
-        <section key={group.title} className="board-col" role="listitem">
-          <header className="board-col-head">
-            <span className={`board-col-dot dot-${statusTone(group.tickets[0])}`} aria-hidden="true" />
-            <h3>{formatStatus(group.title)}</h3>
-            <span className="count">{group.tickets.length}</span>
-          </header>
-          <div className="board-col-body">
-            {group.tickets.map((ticket) => (
-              <BoardCard
-                key={ticket.key}
-                ticket={ticket}
-                onChanged={onChanged}
-                pendingPrs={pendingPrs}
+    <>
+      <div className="board" role="list">
+        {columns.map((group) => (
+          <section key={group.title} className="board-col" role="listitem">
+            <header className="board-col-head">
+              <span
+                className={`board-col-dot dot-${statusTone(group.tickets[0])}`}
+                aria-hidden="true"
               />
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
+              <h3>{formatStatus(group.title)}</h3>
+              <span className="count">{group.tickets.length}</span>
+            </header>
+            <div className="board-col-body">
+              {group.tickets.map((ticket) => (
+                <BoardCard
+                  key={ticket.key}
+                  ticket={ticket}
+                  onChanged={onChanged}
+                  onOpen={() => setReading(ticket.key)}
+                  pendingPrs={pendingPrs}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      {open && (
+        <TicketDrawer
+          ticket={open}
+          prs={prs}
+          onClose={() => setReading(null)}
+          onChanged={onChanged}
+        />
+      )}
+    </>
   );
 };

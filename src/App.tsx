@@ -213,7 +213,7 @@ export const App = () => {
                     path="/jira"
                     element={
                       <ModuleGate kind="jira">
-                        <JiraPage report={reports.jira} />
+                        <JiraPage report={reports.jira} prs={reports.prs} />
                       </ModuleGate>
                     }
                   />

@@ -341,3 +341,91 @@ export async function jiraStatusHistory({ site, email, apiToken, key }) {
     )
     .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
 }
+
+/** Comments per drawer. Newest first, and few enough to read rather than scroll. */
+const DETAIL_COMMENTS = 5
+
+/** The fields the drawer draws. Asked for by name so a wide issue is not fetched whole. */
+const DETAIL_FIELDS =
+  'summary,status,description,issuetype,priority,assignee,reporter,created,updated,labels,parent'
+
+const personOf = (who) =>
+  who ? { name: who.displayName ?? null, avatar: who.avatarUrls?.['24x24'] ?? null } : null
+
+/**
+ * One issue in full, for the ticket drawer: the description, the last few comments, and the
+ * fields a card has no room for.
+ *
+ * Two calls rather than one — Jira will inline comments via `fields=comment`, but it returns
+ * every comment on the issue with no ordering control, which on a long-running ticket is a
+ * hundred entries to transfer for the five that get read. The `/comment` endpoint takes
+ * `orderBy` and `maxResults`.
+ *
+ * Bodies come back as Atlassian Document Format, and are passed through untouched: the client
+ * has the renderer, and flattening ADF to text here would throw away the links and code blocks
+ * that make a description worth reading in place.
+ */
+export async function jiraIssueDetail({
+  site,
+  email,
+  apiToken,
+  key,
+  comments = DETAIL_COMMENTS,
+  browseUrl,
+}) {
+  const { base, auth } = requireAuth({ site, email, apiToken })
+  const headers = { Authorization: auth, Accept: 'application/json' }
+
+  const issueRes = await fetch(
+    `${base}/rest/api/3/issue/${encodeURIComponent(key)}?fields=${DETAIL_FIELDS}`,
+    { headers },
+  )
+  if (issueRes.status === 404) throw new Error(`no such ticket: ${key}`)
+  if (!issueRes.ok) {
+    throw new Error(`Jira issue ${key} failed: ${issueRes.status} ${issueRes.statusText}`)
+  }
+  const issue = await issueRes.json()
+  const fields = issue.fields ?? {}
+
+  // A ticket with an unreadable comment list is still worth opening, so this half fails soft.
+  let commentList = []
+  try {
+    const res = await fetch(
+      `${base}/rest/api/3/issue/${encodeURIComponent(key)}/comment` +
+        `?orderBy=-created&maxResults=${Math.max(1, Math.min(20, comments))}`,
+      { headers },
+    )
+    if (res.ok) {
+      const body = await res.json()
+      commentList = (body.comments ?? []).map((comment) => ({
+        id: String(comment.id),
+        author: personOf(comment.author),
+        at: comment.created ?? null,
+        body: comment.body ?? null,
+      }))
+    }
+  } catch {
+    commentList = []
+  }
+
+  const status = fields.status?.name ?? 'unknown'
+  return {
+    key: issue.key ?? key,
+    url: `${(browseUrl ?? `${base}/browse`).replace(/\/$/, '')}/${issue.key ?? key}`,
+    summary: fields.summary ?? '',
+    status,
+    chip: statusChip(status, fields.status?.statusCategory?.name),
+    type: fields.issuetype?.name ?? null,
+    priority: fields.priority?.name ?? null,
+    assignee: personOf(fields.assignee),
+    reporter: personOf(fields.reporter),
+    created: fields.created ?? null,
+    updated: fields.updated ?? null,
+    labels: fields.labels ?? [],
+    parent: fields.parent
+      ? { key: fields.parent.key, summary: fields.parent.fields?.summary ?? '' }
+      : null,
+    description: fields.description ?? null,
+    comments: commentList,
+  }
+}

@@ -56,3 +56,53 @@ export function jiraStatusHistory(options: {
   apiToken: string | undefined;
   key: string;
 }): Promise<JiraStatusChange[]>;
+
+/** An Atlassian Document Format node, as Jira returns it. Rendered client-side. */
+export interface AdfNode {
+  type: string;
+  text?: string;
+  content?: AdfNode[];
+  marks?: { type: string; attrs?: Record<string, unknown> }[];
+  attrs?: Record<string, unknown>;
+}
+
+export interface JiraPerson {
+  name: string | null;
+  avatar: string | null;
+}
+
+export interface JiraComment {
+  id: string;
+  author: JiraPerson | null;
+  at: string | null;
+  body: AdfNode | null;
+}
+
+export interface JiraIssueDetail {
+  key: string;
+  url: string;
+  summary: string;
+  status: string;
+  chip: 'ok' | 'open' | 'bad' | 'na';
+  type: string | null;
+  priority: string | null;
+  assignee: JiraPerson | null;
+  reporter: JiraPerson | null;
+  created: string | null;
+  updated: string | null;
+  labels: string[];
+  parent: { key: string; summary: string } | null;
+  description: AdfNode | null;
+  comments: JiraComment[];
+}
+
+export function jiraIssueDetail(options: {
+  site: string | undefined;
+  email: string | undefined;
+  apiToken: string | undefined;
+  key: string;
+  /** How many comments, newest first. Clamped to 1–20. */
+  comments?: number;
+  /** Base for the browse link, when the site is reached through a different host. */
+  browseUrl?: string;
+}): Promise<JiraIssueDetail>;

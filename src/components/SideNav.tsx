@@ -11,6 +11,7 @@ import TerminalRoundedIcon from '@mui/icons-material/TerminalRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import type { ReportKind } from '../reportKinds';
 import { useCapabilities } from '../capabilitiesContext';
+import { timeAgo } from '../timeAgo';
 import { RefreshButton } from './RefreshButton';
 
 interface SideNavProps {
@@ -56,20 +57,6 @@ const SECTIONS: { title: string; rows: NavRow[] }[] = [
 ];
 
 /**
- * How old a report is, in the shortest form that still says it: minutes inside the hour,
- * hours inside the day, then the date. "never" is a real state — a fresh checkout has no
- * reports at all.
- */
-const age = (iso: string | undefined): string => {
-  if (!iso) return 'never';
-  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  if (mins < 60 * 24) return `${Math.round(mins / 60)}h ago`;
-  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-};
-
-/**
  * A row for a report this machine cannot fetch leads to a page that can only apologise, so
  * rows are dropped when their module is unconfigured or switched off. Sections empty
  * themselves out the same way rather than leaving a heading over nothing.
@@ -106,7 +93,7 @@ export const SideNav = ({ generatedAt, running }: SideNavProps) => {
                     <span className="shell-nav-label">{row.label}</span>
                     {row.kind && (
                       <span className="shell-nav-stamp">
-                        {running.has(row.kind) ? 'updating…' : age(generatedAt[row.kind])}
+                        {running.has(row.kind) ? 'updating…' : timeAgo(generatedAt[row.kind])}
                       </span>
                     )}
                   </NavLink>

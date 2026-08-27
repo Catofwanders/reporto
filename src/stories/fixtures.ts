@@ -7,6 +7,7 @@
  * it is nothing like the work these reports actually describe. Fixtures that mirror the real
  * projects one for one leak them by shape even when every name is changed.
  */
+import type { AdfNode, TicketDetail } from '../ticketDetail';
 import type {
   CalendarReport,
   JiraReport,
@@ -483,3 +484,137 @@ export const freshSlack = (): SlackReport => ({
     lastAt: hoursAgo(2 + i * 30),
   })),
 });
+
+
+/**
+ * A description in Atlassian Document Format, carrying every node type the renderer handles —
+ * including a `date`, which has no children and so rendered as nothing until it got a case,
+ * and an invented node type to show that an unknown one degrades to its own text rather than
+ * blanking the ticket.
+ */
+export const adfDescription: AdfNode = {
+  type: 'doc',
+  content: [
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Problem' }] },
+    {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'A cold ' },
+        { type: 'text', text: 'listing page', marks: [{ type: 'strong' }] },
+        { type: 'text', text: ' hits ' },
+        { type: 'text', text: 'search', marks: [{ type: 'code' }] },
+        { type: 'text', text: ' on every request. See ' },
+        {
+          type: 'text',
+          text: 'the seller catalogue doc',
+          marks: [{ type: 'link', attrs: { href: 'https://example.com/catalogue' } }],
+        },
+        { type: 'text', text: ', raised by ' },
+        { type: 'mention', attrs: { text: '@dana' } },
+        { type: 'text', text: ' before ' },
+        { type: 'date', attrs: { timestamp: '1780531200000' } },
+        { type: 'text', text: '.' },
+      ],
+    },
+    {
+      type: 'bulletList',
+      content: [
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'cache the catalogue per seller' }] }] },
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'invalidate on a listing write' }] }] },
+      ],
+    },
+    {
+      type: 'orderedList',
+      content: [
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'measure the cold page first' }] }] },
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'then add the cache' }] }] },
+      ],
+    },
+    { type: 'codeBlock', content: [{ type: 'text', text: 'GET /listings?seller=42&page=1' }] },
+    {
+      type: 'blockquote',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'QC saw 4s on a cold basket.' }] }],
+    },
+    { type: 'panel', attrs: { panelType: 'warning' }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Do not cache signed download links.' }] }] },
+    { type: 'rule' },
+    {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'was 2s', marks: [{ type: 'strike' }] },
+        { type: 'text', text: ' now 4s', marks: [{ type: 'underline' }] },
+        { type: 'hardBreak' },
+        { type: 'text', text: 'italic aside', marks: [{ type: 'em' }] },
+      ],
+    },
+    { type: 'status', attrs: { text: 'needs sizing' } },
+    { type: 'inlineCard', attrs: { url: 'https://example.com/orders-api/pull/77' } },
+    {
+      type: 'table',
+      content: [
+        {
+          type: 'tableRow',
+          content: [
+            { type: 'tableHeader', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'page' }] }] },
+            { type: 'tableHeader', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'cold' }] }] },
+          ],
+        },
+        {
+          type: 'tableRow',
+          content: [
+            { type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'listing' }] }] },
+            { type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: '4.1s' }] }] },
+          ],
+        },
+      ],
+    },
+    { type: 'mediaSingle', content: [{ type: 'media', attrs: { id: 'x', type: 'file' } }] },
+    // Not a real ADF type: stands in for whatever Atlassian adds next.
+    { type: 'someFutureNode', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'unknown node, text kept' }] }] },
+  ],
+};
+
+/** The drawer's own fixture: the marketplace ticket the board fixture already shows. */
+export const ticketDetail: TicketDetail = {
+  key: 'SHOP-812',
+  url: 'https://jira.example.com/browse/SHOP-812',
+  summary: 'Cache the seller catalogue so a cold product page stops hitting search',
+  status: 'In Progress',
+  chip: 'open',
+  type: 'Story',
+  priority: 'Normal',
+  assignee: { name: 'You', avatar: null },
+  reporter: { name: 'Dana Okafor', avatar: null },
+  created: AT('08:00'),
+  updated: AT('09:30'),
+  labels: ['performance', 'catalogue'],
+  parent: { key: 'SHOP-700', summary: 'Marketplace performance' },
+  description: adfDescription,
+  comments: [
+    {
+      id: '1',
+      author: { name: 'Dana Okafor', avatar: null },
+      at: AT('09:30'),
+      body: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              { type: 'mention', attrs: { text: '@you' } },
+              { type: 'text', text: ' the cold page is still 4s on staging.' },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      id: '2',
+      author: { name: 'Ola Berg', avatar: null },
+      at: `2026-05-13T16:10:00+02:00`,
+      body: {
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Basket serialiser lands first.' }] }],
+      },
+    },
+  ],
+};
