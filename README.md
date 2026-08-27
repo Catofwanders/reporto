@@ -348,6 +348,31 @@ written before the puller carried QC data, and empty versions of every panel.
 Storybook 10 and Vite 8 both need Node 20.19+, which is why `.nvmrc` exists; the repo
 otherwise runs on whatever `node` you have.
 
+## Keeping the page current
+
+Nothing polls on a timer. Push is not available here for four of the five sources — GitHub and
+Jira webhooks need a public URL, Google Calendar needs a verified HTTPS callback, and this
+server is loopback-only on purpose — so the trigger is **attention** instead: on load, on
+navigation, and when the window regains focus, the reports the current route shows are
+refetched if they are past their own age limit.
+
+| Report | Stays believable for | Why |
+|---|---|---|
+| Slack | 5 min | Somebody waiting on a reply is the most time-sensitive thing here |
+| PRs, reviews | 10 min | Review state changes in minutes |
+| Jira | 30 min | A board moves a few times a day |
+| Calendar | 2 h | Today's meetings rarely move |
+| Statistics | 1 day | Monthly counts, and the most expensive pull |
+
+A page showing no report — Settings, Commands — fetches nothing. Kinds run one at a time, and
+a per-kind minimum gap means a window that flaps focus cannot turn into a burst of pulls. The
+whole thing is one checkbox in Settings, which also lists those limits so the behaviour is not
+a mystery.
+
+Slack *could* push, over Socket Mode with an app-level token and no public URL. It needs a bot
+user and event subscriptions the app does not have, and a WebSocket held open in the dev
+server; TODO 9 has the details and the reasons it is not worth it yet.
+
 ## Update buttons
 
 Every card can be refreshed from the dashboard; the calendar's Outlook half is the one

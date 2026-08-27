@@ -390,7 +390,36 @@ The first is the honest one. What has to be settled first is the threshold per s
 "normal" for CODE REVIEW is not "normal" for QC READY, and a fixed number of days would cry
 wolf on the statuses that are meant to be slow.
 
-## 9. Live updates instead of polling — research
+## 9. Live updates instead of polling — **researched, and the polling half built**
+
+**What the research found.** Push is not available to this app for four of the five sources,
+and the reason is the same each time: a webhook needs a public URL, and this server is
+loopback-only by design (see the security model). GitHub and Jira webhooks are out for that
+reason; Google Calendar's push needs a verified HTTPS callback domain, which is the same wall.
+
+Slack is the exception — **Socket Mode** delivers events over an outbound WebSocket with no
+public URL, using an app-level `xapp-` token. It is the one real push option here, and it is
+*not* free: Socket Mode delivers what Event Subscriptions are subscribed to, and message
+events want a bot user with its own scopes. The app as installed has user scopes only and no
+bot user, so turning this on means editing the Slack app (bot user, `channels:history` and
+friends on the bot token, `socket_mode_enabled: true`, an app-level token) and holding a
+WebSocket open in the dev server — which keeps state between requests, something nothing here
+does today. Worth doing for Slack alone only if the mention queue starts feeling late.
+
+**What was built instead**, because it covers every source and needs no external setup: the
+trigger is attention rather than time. On load, on navigation, and when the window regains
+focus, the reports *the current route shows* are refetched if they are past their own
+freshness ceiling — 5 minutes for Slack, 10 for PRs and reviews, 30 for the board, 2 hours for
+the calendar, a day for statistics. Nothing runs on a timer, nothing is fetched for a page
+nobody is on, kinds run one at a time, and a per-kind minimum gap survives a window that flaps
+focus. See `src/freshness.ts` and `src/components/LiveRefresh.tsx`.
+
+Still open from this item: conditional requests. A GitHub REST `304` costs no rate-limit
+budget, which would make a short interval cheap — but the PR and review pullers are GraphQL,
+which has no equivalent, so it would mean rewriting them against REST to save a budget nothing
+is currently short of.
+
+## 9b. Live updates — the original sketch
 
 Every report is a file on disk that changes only when something pulls it, so the app shows
 whatever the last pull found. Today that means the auto-refresh in `src/autoRefresh.ts`

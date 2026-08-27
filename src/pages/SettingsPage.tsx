@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PALETTES, applyPalette, readPalette } from '../theme';
-import { STALE_HOURS, autoRefreshEnabled, setAutoRefresh } from '../autoRefresh';
+import { autoRefreshEnabled, setAutoRefresh } from '../autoRefresh';
+import { FRESH_MINUTES, freshnessLabel } from '../freshness';
 import { ModuleSettings } from '../components/ModuleSettings';
 
 export const SettingsPage = () => {
@@ -43,13 +44,23 @@ export const SettingsPage = () => {
         <label className="setting-row">
           <input type="checkbox" checked={auto} onChange={toggleAuto} />
           <span>
-            <strong>Update stale reports when I open the dashboard</strong>
+            <strong>Keep the page I am looking at current</strong>
             <em>
-              Anything older than {STALE_HOURS} hours is refetched once per session — only
-              the reports the server can pull itself, never an agent run.
+              On load, on navigation and when this window regains focus, the reports the
+              current page shows are refetched if they are past their own age limit. Nothing
+              is fetched on a timer, and nothing is fetched for a page you are not on.
             </em>
           </span>
         </label>
+
+        <ul className="freshness-list">
+          {(Object.keys(FRESH_MINUTES) as (keyof typeof FRESH_MINUTES)[]).map((kind) => (
+            <li key={kind}>
+              <span className="freshness-kind">{kind}</span>
+              <span className="freshness-age">{freshnessLabel(kind)}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="panel">

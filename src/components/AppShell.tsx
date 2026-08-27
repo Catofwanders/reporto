@@ -4,7 +4,7 @@ import type { ReportKind } from '../reportKinds';
 import { useRefresh } from '../refreshContext';
 import { CommandPalette } from './CommandPalette';
 import { SideNav } from './SideNav';
-import { StaleRefresh } from './StaleRefresh';
+import { LiveRefresh } from './LiveRefresh';
 import { TopBar } from './TopBar';
 
 interface AppShellProps {
@@ -87,7 +87,7 @@ export const AppShell = ({ generatedAt, jira, prs, children }: AppShellProps) =>
 
   return (
     <div className="shell">
-      <StaleRefresh generatedAt={generatedAt} />
+      <LiveRefresh generatedAt={generatedAt} />
       <CommandPalette jira={jira} prs={prs} />
       <SideNav generatedAt={generatedAt} running={running} />
       <div className="shell-main">

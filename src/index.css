@@ -996,6 +996,15 @@ body { background: var(--canvas); }
 /* The hint takes its own line: with it inline, Send was pushed out of the column. */
 .slack-composer-row .module-hint { flex-basis: 100%; }
 
+/* Settings: what each report's age limit is, so the automatic refetch is not a mystery. */
+.freshness-list {
+  list-style: none; display: flex; flex-wrap: wrap; gap: .4rem .9rem;
+  margin: .6rem 0 0; padding: 0; font-size: .74rem;
+}
+.freshness-list li { display: flex; align-items: baseline; gap: .35rem; }
+.freshness-kind { color: var(--ink-2); text-transform: capitalize; }
+.freshness-age { font-variant-numeric: tabular-nums; }
+
 /*
  * Settings → Modules. One row per report kind: a switch, what it needs, and the fields to
  * paste it into. Fields are write-only — nothing here ever displays a stored value.
