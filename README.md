@@ -21,6 +21,9 @@ online marketplace for the same reason. The same story in the Nord palette:
 
 ## Running it
 
+Node **20.19 or newer** (`.nvmrc` pins 20.19.5). Storybook refuses to start below that, and
+`engines` in package.json says so — `nvm use` in this directory picks it up.
+
 ```bash
 npm install
 npm run dev          # http://127.0.0.1:5173
