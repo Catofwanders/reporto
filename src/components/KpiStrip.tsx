@@ -25,12 +25,12 @@ interface Tile {
 }
 
 const TILES: Tile[] = [
-  { key: 'prs', label: 'open PRs', icon: AltRouteRoundedIcon, to: '/prs', tone: 'accent', needs: 'prs' },
-  { key: 'reviews', label: 'to review', icon: VisibilityRoundedIcon, to: '/reviews', tone: 'warn', needs: 'reviews' },
-  { key: 'slack', label: 'to reply', icon: ForumRoundedIcon, to: '/slack', tone: 'warn', needs: 'slack' },
-  { key: 'tickets', label: 'active tickets', icon: ConfirmationNumberRoundedIcon, to: '/jira', tone: 'accent', needs: 'jira' },
-  { key: 'stuck', label: 'stuck too long', icon: HourglassBottomRoundedIcon, to: '/jira', tone: 'bad', needs: 'jira' },
-  { key: 'conflicts', label: 'conflicts', icon: ReportProblemRoundedIcon, to: '/jira', tone: 'bad' },
+  { key: 'prs', label: 'my open PRs', icon: AltRouteRoundedIcon, to: '/prs', tone: 'accent', needs: 'prs' },
+  { key: 'reviews', label: "reviews I owe", icon: VisibilityRoundedIcon, to: '/reviews', tone: 'warn', needs: 'reviews' },
+  { key: 'slack', label: 'Slack replies I owe', icon: ForumRoundedIcon, to: '/slack', tone: 'warn', needs: 'slack' },
+  { key: 'tickets', label: 'my active tickets', icon: ConfirmationNumberRoundedIcon, to: '/jira', tone: 'accent', needs: 'jira' },
+  { key: 'stuck', label: 'stuck past their limit', icon: HourglassBottomRoundedIcon, to: '/jira', tone: 'bad', needs: 'jira' },
+  { key: 'conflicts', label: 'Jira/GitHub conflicts', icon: ReportProblemRoundedIcon, to: '/jira', tone: 'bad' },
 ];
 
 /**

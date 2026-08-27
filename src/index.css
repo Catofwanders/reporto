@@ -320,7 +320,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
  * home: six numbers, one queue, the day. Sized to fit one screen without scrolling, which is
  * the whole point — a dashboard you scroll is a page, and a page is what the sub-routes are.
  */
-.home { display: grid; gap: 1rem; align-items: start; }
+.home { display: grid; gap: .85rem; align-items: start; }
 
 /* The strip: read in a second, so icon and figure carry it and nothing wraps. */
 .kpi-strip { display: grid; gap: .7rem; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); }
@@ -328,7 +328,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
   gap: 0 .55rem; align-items: center;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-  box-shadow: var(--card-shadow); padding: .7rem .85rem; color: var(--ink);
+  box-shadow: var(--card-shadow); padding: .6rem .85rem; color: var(--ink);
   transition: border-color .15s ease;
 }
 .kpi-tile:hover { text-decoration: none; border-color: var(--accent); }
@@ -344,7 +344,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 
 /* The queue takes the width it needs; the day and the conflicts ride alongside. */
 .home-split { display: flex; flex-wrap: wrap; gap: 1rem; align-items: start; }
-.needs-you { flex: 1 1 30rem; min-width: 0; padding: .9rem 1rem; }
+.needs-you { flex: 1 1 30rem; min-width: 0; padding: .8rem 1rem .85rem; }
 .home-aside { flex: 1 1 22rem; min-width: 0; display: grid; gap: .8rem; align-content: start; }
 
 .needs-you .mini-head { margin-bottom: .5rem; }
@@ -352,20 +352,43 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   margin-left: auto; font-size: .78rem; font-weight: 600; color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
-.needs-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+/* Grouped by verb: the heading says what the rows below want doing. */
+.needs-group + .needs-group { margin-top: .45rem; }
+.needs-verb {
+  display: flex; align-items: baseline; gap: .4rem; margin: 0 0 .2rem;
+  font-size: .66rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-2);
+}
+.needs-verb-count { font-size: .66rem; font-weight: 600; opacity: .8; }
+
+.needs-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .2rem; }
 .needs-row a {
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .55rem;
-  padding: .42rem .5rem; border-radius: .45rem; color: var(--ink);
+  padding: .34rem .5rem; border-radius: .45rem; color: var(--ink);
   border-left: 3px solid transparent;
 }
 .needs-row a:hover { text-decoration: none; background: var(--bg); }
 .needs-row.is-warn a { border-left-color: var(--warn-ink); }
 .needs-row.is-bad a { border-left-color: var(--bad-ink); }
 .needs-row.is-na a { border-left-color: color-mix(in oklab, var(--ink-2) 40%, transparent); }
-.needs-icon { color: var(--ink-2); }
+/* One hue per source, so the icon confirms in a glance what the row says in words. */
+.needs-icon.is-pr { color: var(--open-ink); }
+.needs-icon.is-review { color: var(--qcout-ink); }
+.needs-icon.is-slack { color: var(--qc-ink); }
+.needs-icon.is-ticket { color: var(--warn-ink); }
+.needs-body { display: grid; gap: 0; min-width: 0; }
 .needs-label {
-  font-size: .84rem; font-weight: 600;
+  font-size: .82rem; font-weight: 600;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.needs-why {
+  display: flex; align-items: center; gap: .35rem;
+  color: var(--ink-2); font-size: .7rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.needs-source {
+  border: 1px solid var(--line); border-radius: .25rem; padding: 0 .25rem;
+  font-size: .62rem; text-transform: uppercase; letter-spacing: .04em; flex: none;
 }
 .needs-age {
   font-size: .7rem; font-weight: 600; padding: .12rem .4rem; border-radius: .35rem;
@@ -374,9 +397,9 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .needs-more { color: var(--ink-2); font-size: .74rem; padding: .2rem .5rem; }
 
 /* Today, as a line: position answers "how long until the next thing" without arithmetic. */
-.day-panel { padding: .9rem 1rem 1rem; }
+.day-panel { padding: .8rem 1rem .85rem; }
 .day-more { margin-left: auto; font-size: .74rem; }
-.day-track { position: relative; height: 6.8rem; margin: .9rem 0 .2rem; }
+.day-track { position: relative; height: 6.4rem; margin: .8rem 0 .2rem; }
 .day-line {
   position: absolute; left: 0; right: 0; top: .55rem; height: 2px;
   background: var(--line); border-radius: 1px;

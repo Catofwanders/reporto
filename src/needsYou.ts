@@ -1,4 +1,13 @@
-import type { JiraReport, PrsReport, ReviewsReport, SlackReport } from './types';
+import type {
+  JiraReport,
+  OpenPr,
+  PrsReport,
+  ReviewPr,
+  ReviewsReport,
+  SlackReport,
+  SlackRow,
+} from './types';
+import { prState } from './prState';
 import { idleDays, laneOf, reasonOf } from './prLanes';
 import { laneOfReview, reasonOfReview, toReviewLanes } from './reviewLanes';
 import { laneOfSlack, reasonOfSlack } from './slackLanes';
@@ -18,11 +27,33 @@ import { type AgingLimits, agingOf } from './ticketAging';
  */
 export type FeedSource = 'pr' | 'review' | 'slack' | 'ticket';
 
+/**
+ * What the row wants doing, as one word. Rows are grouped under it, which is what makes a
+ * merged list legible: without it, seven rows of "name + age" say what each thing *is* and
+ * nothing about why it is in front of you.
+ */
+export type FeedAction = 'push' | 'review' | 'answer' | 'merge' | 'unstick';
+
+export const ACTION_LABEL: Record<FeedAction, string> = {
+  push: 'Your move',
+  review: 'Review',
+  answer: 'Answer',
+  merge: 'Merge',
+  unstick: 'Unstick',
+};
+
 export interface FeedItem {
   id: string;
   source: FeedSource;
+  action: FeedAction;
   /** Short enough to scan: a repo and number, a ticket key, or a Slack handle. */
   label: string;
+  /**
+   * Why it is here, in three or four words — "changes requested", "never looked at". Not the
+   * full sentence: that is `detail`, and it belongs in a tooltip. A row with no reason at all
+   * turned out to be unreadable, which is what this field exists to fix.
+   */
+  why: string;
   /** The full sentence, for the title attribute. */
   detail: string;
   url: string;
@@ -50,6 +81,29 @@ const WEIGHT = {
 } as const;
 
 const repoShort = (repo: string) => repo.split('/').pop() ?? repo;
+
+/** The reason in as few words as still say it. Long enough to act on, short enough to scan. */
+const prWhy = (pr: OpenPr): string => {
+  const state = prState(pr);
+  const threads = pr.unansweredThreads ?? 0;
+  if (state === 'approved') return pr.deployQc && pr.deployQc.aheadBy === 0 ? 'approved · on QC' : 'approved';
+  if (state === 'changes-requested') return threads > 0 ? `changes + ${threads} to answer` : 'changes requested';
+  if (state === 'commented') return threads > 0 ? `${threads} comments to answer` : 'reviewed, your move';
+  return 'waiting on you';
+};
+
+const reviewWhy = (pr: ReviewPr): string => {
+  if (pr.myReviewState && pr.reworkCommits > 0) return 'pushed since you looked';
+  if (!pr.myReviewState) return pr.draft ? 'requested, still a draft' : 'never looked at';
+  if (pr.myUnansweredThreads > 0) return 'your comments unanswered';
+  return 'waiting on you';
+};
+
+const slackWhy = (row: SlackRow, days: number): string => {
+  const who = row.kind === 'dm' ? 'DM' : 'mention';
+  if (days >= 7) return `${who}, still unanswered`;
+  return `${who}, no reply yet`;
+};
 
 const toneForDays = (days: number): 'bad' | 'warn' | 'na' => {
   if (days >= 4) return 'bad';
@@ -85,7 +139,9 @@ export function needsYou({
         items.push({
           id: `pr:${group.repo}#${pr.num}`,
           source: 'pr',
+          action: lane === 'ready' ? 'merge' : 'push',
           label: `${repoShort(group.repo)} #${pr.num}`,
+          why: prWhy(pr),
           detail: reasonOf(pr, days, prs.author),
           url: pr.url,
           to: `/prs#${group.repo}-${pr.num}`,
@@ -104,7 +160,9 @@ export function needsYou({
         items.push({
           id: `review:${row.pr.url}`,
           source: 'review',
+          action: 'review',
           label: `${repoShort(row.pr.repo)} #${row.pr.num}`,
+          why: `@${row.pr.author} · ${reviewWhy(row.pr)}`,
           detail: `${row.pr.author}: ${reasonOfReview(row.pr, row.idleDays, row.sinceMyReview, row.openDays)}`,
           url: row.pr.url,
           to: `/reviews#${row.pr.repo}-${row.pr.num}`,
@@ -124,7 +182,9 @@ export function needsYou({
       items.push({
         id: `slack:${row.id}`,
         source: 'slack',
+        action: 'answer',
         label: row.kind === 'dm' ? `@${row.channel}` : `#${row.channel}`,
+        why: slackWhy(row, days),
         detail: `${row.from}: ${row.excerpt || reasonOfSlack(row, days)}`,
         url: row.permalink,
         to: `/slack#${row.id}`,
@@ -143,7 +203,9 @@ export function needsYou({
       items.push({
         id: `ticket:${ticket.key}`,
         source: 'ticket',
+        action: 'unstick',
         label: ticket.key,
+        why: `stuck in ${ticket.status.toLowerCase()}`,
         detail: `${age.days} days in ${ticket.status}: ${ticket.summary}`,
         url: ticket.url,
         to: `/jira#${ticket.key}`,

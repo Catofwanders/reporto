@@ -18,8 +18,16 @@ only question a morning asks, which is what to do first.
 So the lists became one, ordered by how much each thing is blocking; the counts moved into a
 strip read in a second; today became a timeline, because "how long until the next thing" is a
 distance rather than a sentence; and the contradictions folded to a single line with a count.
-The same data now takes **82 words on one screen**. Nothing was dropped — every row links to
-the page that owns it, and those pages carry the detail. Rendered from the synthetic fixtures in
+
+The first cut of that went too far: rows were a name and an age, with the reason hidden in a
+tooltip, and four muted icons could not carry the difference between a review and a Slack
+message. Unreadable — it said what each thing *was* and nothing about why it was in front of
+you. So each row carries a three-word reason and names its source, and the rows sit under a
+one-word verb: **Your move · Review · Answer · Merge · Unstick**. The verb is what makes a
+merged list legible, because it says what a group wants before any row is read.
+
+**133 words on one screen**, against 341 over 1.25 screens before. Nothing was dropped —
+every row links to the page that owns it, and those pages carry the full sentence. Rendered from the synthetic fixtures in
 `src/stories/fixtures.ts` via the `Pages/Home` story, not from real reports — those hold
 meeting links and ticket detail and never leave your disk. The fixtures describe an invented
 online marketplace for the same reason. The same story in the Nord palette:
