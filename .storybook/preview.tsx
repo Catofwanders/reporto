@@ -2,6 +2,9 @@ import type { Preview } from '@storybook/react-vite';
 import { MemoryRouter } from 'react-router-dom';
 import { PALETTES } from '../src/theme';
 import { RefreshContext, type RefreshStatus } from '../src/refreshContext';
+import { CapabilitiesContext, type CapabilitiesValue } from '../src/capabilitiesContext';
+import { statusVocab } from '../src/statusVocab';
+import { marketplaceAging, marketplaceStatuses, marketplaceStuck } from '../src/stories/fixtures';
 import type { ReportKind } from '../src/reportKinds';
 import '../src/index.css';
 
@@ -18,6 +21,24 @@ const refreshStub: RefreshStatus = {
   canRefresh: (kind) => kind === 'jira' || kind === 'prs',
   run: () => Promise.resolve(),
   runAll: () => Promise.resolve(),
+};
+
+/**
+ * The board's vocabulary is configuration, and Storybook has no dev server to fetch it from —
+ * so stories get the invented marketplace workflow that `config.template` carries. Without
+ * this they would fall back to universal Jira words, and a fixture column called "Ready for
+ * QA" would sort to the end of the board and lose its tone.
+ */
+const capabilitiesStub: CapabilitiesValue = {
+  modules: [],
+  statusAging: marketplaceAging,
+  stuckStatuses: marketplaceStuck,
+  statuses: statusVocab(marketplaceStatuses),
+  usable: () => true,
+  of: () => null,
+  loaded: true,
+  setEnabled: () => Promise.resolve(),
+  saveSecret: () => Promise.resolve(),
 };
 
 const preview: Preview = {
@@ -53,9 +74,11 @@ const preview: Preview = {
       // what these components actually render inside.
       <MemoryRouter>
         <RefreshContext.Provider value={refreshStub}>
-          <div className="wrap" style={{ padding: '1.5rem' }}>
-            <Story />
-          </div>
+          <CapabilitiesContext.Provider value={capabilitiesStub}>
+            <div className="wrap" style={{ padding: '1.5rem' }}>
+              <Story />
+            </div>
+          </CapabilitiesContext.Provider>
         </RefreshContext.Provider>
       </MemoryRouter>
     ),

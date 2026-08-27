@@ -18,7 +18,7 @@ names a status string, and `statusChoices` in config bounds what is offered.
 
 The sketch this came from:
 
-Move a ticket between statuses (for example `CODE REVIEW` → `QC READY`) without leaving
+Move a ticket between statuses (for example a review column → a QA queue) without leaving
 the dashboard. Today the Jira card is read-only; every transition means opening the
 ticket in a browser.
 
@@ -331,7 +331,7 @@ it; the stand-up note lists the overdue ones under blockers. Limits are per stat
 changelog read — six on this machine's board, about 20 seconds of pull.
 
 Two things settled while building it. `statuscategorychangedate` looked like a free answer but
-is useless here: In Progress → CODE REVIEW → QC READY are all one category, so it never moves
+is useless here: development, review and the QA queue are all one category, so it never moves
 for the transitions that matter. And days are derived at render rather than stored, because a
 report read the next morning would otherwise still claim "2 days".
 
@@ -340,7 +340,7 @@ The original sketch follows.
 ### 8. Ticket aging digest — the original sketch
 
 The PR lanes now say "no review yet — 6 days, chase it". Tickets have no equivalent: a
-ticket can sit in CODE REVIEW for a week and the board looks the same on day one and day
+ticket can sit in review for a week and the board looks the same on day one and day
 seven.
 
 **Shape**
@@ -359,11 +359,11 @@ cycle-time median already pays in `server/stats.mjs`. Two options, and the choic
   per ticket in the Jira report. Costs ~25 requests per refresh, and makes the report shape
   carry it, so every view gets it for free.
 - Derive it from the day snapshots already on disk. Free, but the snapshots have gaps
-  (weekends, days the puller did not run), so "7 days in CODE REVIEW" would be a guess. The
+  (weekends, days the puller did not run), so "7 days in review" would be a guess. The
   statistics page already refuses to do this for exactly this reason.
 
 The first is the honest one. What has to be settled first is the threshold per status —
-"normal" for CODE REVIEW is not "normal" for QC READY, and a fixed number of days would cry
+"normal" for a review column is not "normal" for a QA queue, and a fixed number of days would cry
 wolf on the statuses that are meant to be slow.
 
 ## 9. Live updates instead of polling — **researched, and the polling half built**

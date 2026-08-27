@@ -6,6 +6,7 @@ import Tooltip from '@mui/material/Tooltip';
 import type { Ticket } from '../types';
 import { formatStatus, statusTone } from '../jiraStatus';
 import { applyTransition, fetchTransitions, type JiraTransition } from '../jiraActions';
+import { useCapabilities } from '../capabilitiesContext';
 import { Chip } from './Chip';
 
 interface TicketStatusProps {
@@ -25,6 +26,7 @@ interface TicketStatusProps {
  * front would be thirty round trips for a menu that usually stays shut.
  */
 export const TicketStatus = ({ ticket, onChanged }: TicketStatusProps) => {
+  const { statuses } = useCapabilities();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [transitions, setTransitions] = useState<JiraTransition[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -60,14 +62,16 @@ export const TicketStatus = ({ ticket, onChanged }: TicketStatusProps) => {
     }
   };
 
-  if (readOnly) return <Chip tone={statusTone(ticket)}>{formatStatus(ticket.status)}</Chip>;
+  if (readOnly) {
+    return <Chip tone={statusTone(ticket, statuses)}>{formatStatus(ticket.status)}</Chip>;
+  }
 
   return (
     <>
       <Tooltip title={error ?? `Change status of ${ticket.key}`} disableInteractive>
         <button
           type="button"
-          className={`chip chip-${error ? 'bad' : statusTone(ticket)} chip-button`}
+          className={`chip chip-${error ? 'bad' : statusTone(ticket, statuses)} chip-button`}
           onClick={(e) => void open(e)}
           disabled={busy}
           aria-label={`change status of ${ticket.key}, currently ${ticket.status}`}

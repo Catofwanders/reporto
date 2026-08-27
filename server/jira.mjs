@@ -10,15 +10,26 @@
 /** Status names whose category Jira reports as done, whatever the site calls them. */
 const DONE_CATEGORY = 'Done'
 
+/*
+ * Fallback tone per status, in universal Jira vocabulary only. Anything past "in review" is
+ * somebody's own pipeline, so its tone comes from `statuses.tones` in config — see
+ * rules/nda.md, and `src/statusVocab.ts` for the client half, which takes precedence over the
+ * chip written here.
+ */
 const STATUS_CHIP = [
-  [/^(blocked|on hold)$/i, 'bad'],
-  [/^(code review|qc ready|in review)$/i, 'open'],
-  [/^(in progress|in development)$/i, 'open'],
-  [/^(next|backlog|to do|selected)$/i, 'na'],
+  [/^(blocked)$/i, 'bad'],
+  [/^on hold$/i, 'qcout'],
+  [/^(code review|in review|review)$/i, 'open'],
+  [/^(in progress|in development|doing)$/i, 'open'],
+  [/^(next|backlog|to do|selected|new)$/i, 'na'],
 ]
 
 /** Tone for a status chip; anything unrecognised stays neutral rather than guessing. */
-function statusChip(status, category) {
+function statusChip(status, category, tones = {}) {
+  const wanted = status.trim().toLowerCase()
+  for (const [tone, names] of Object.entries(tones)) {
+    if ((names ?? []).some((name) => String(name).trim().toLowerCase() === wanted)) return tone
+  }
   for (const [pattern, tone] of STATUS_CHIP) if (pattern.test(status)) return tone
   if (category === DONE_CATEGORY) return 'ok'
   return 'na'
@@ -170,7 +181,7 @@ const AGING_LOOKUPS = 40
 /**
  * When the ticket entered the status it is in now.
  *
- * The board looks identical on day one and day seven of CODE REVIEW, which is the whole
+ * The board looks identical on day one and day seven of a review column, which is the whole
  * problem: a ticket can sit in review for a week and nothing on screen says so. The changelog
  * is the only place that knows, at one request per ticket — so only tickets whose status is
  * worth aging get one, and a ticket that never transitioned falls back to when it was created.
@@ -210,6 +221,8 @@ export async function pullJira({
   resolvePrs,
   /** Statuses where time-in-status is worth a changelog read; empty means none are. */
   agingStatuses = [],
+  /** `{ tone: [status, ...] }` from config, for the fallback chip written into the report. */
+  tones = {},
   phase = 'full',
 }) {
   if (!site) throw new Error('no Jira site configured — set jiraSite in config/reporto.json')
@@ -242,7 +255,7 @@ export async function pullJira({
       key: issue.key,
       url: `${browse}/${issue.key}`,
       status,
-      chip: statusChip(status, issue.fields?.status?.statusCategory?.name),
+      chip: statusChip(status, issue.fields?.status?.statusCategory?.name, tones),
       summary: issue.fields?.summary ?? '',
       prs: ticketPrs?.get(issue.key) ?? [],
       // An API pull has no opinion to add; notes are for a human or an agent to fill.
@@ -372,6 +385,7 @@ export async function jiraIssueDetail({
   key,
   comments = DETAIL_COMMENTS,
   browseUrl,
+  tones = {},
 }) {
   const { base, auth } = requireAuth({ site, email, apiToken })
   const headers = { Authorization: auth, Accept: 'application/json' }
@@ -414,7 +428,7 @@ export async function jiraIssueDetail({
     url: `${(browseUrl ?? `${base}/browse`).replace(/\/$/, '')}/${issue.key ?? key}`,
     summary: fields.summary ?? '',
     status,
-    chip: statusChip(status, fields.status?.statusCategory?.name),
+    chip: statusChip(status, fields.status?.statusCategory?.name, tones),
     type: fields.issuetype?.name ?? null,
     priority: fields.priority?.name ?? null,
     assignee: personOf(fields.assignee),

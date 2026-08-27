@@ -17,8 +17,12 @@ import { secretOf } from './capabilities.mjs'
 const ROOT = path.resolve(import.meta.dirname, '..')
 const REPORTS = path.join(ROOT, 'public/reports')
 
-/** Where an unmatched ticket is worth a per-ticket PR search; backlog items are not. */
-const DEFAULT_FALLBACK_STATUSES = ['in progress', 'code review', 'qc ready', 'blocked']
+/*
+ * Where an unmatched ticket is worth a per-ticket PR search; backlog items are not. Universal
+ * Jira vocabulary only — a workflow's later stages are named in `fallbackStatuses` in config,
+ * because those names belong to whoever owns the board (rules/nda.md).
+ */
+const DEFAULT_FALLBACK_STATUSES = ['in progress', 'in development', 'code review', 'in review', 'blocked']
 
 /** Everything not Done and not already released, freshest first. */
 const DEFAULT_JQL =
@@ -171,6 +175,7 @@ export const PULLERS = {
       apiToken: process.env.JIRA_API_TOKEN,
       jql: c.jiraJql ?? DEFAULT_JQL,
       jiraBrowseUrl: c.jiraBrowseUrl,
+      tones: c.statuses?.tones ?? {},
       resolvePrs: c.githubAuthor
         ? (tickets) =>
             pullTicketPrs({

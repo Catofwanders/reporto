@@ -2,7 +2,7 @@
  * What moved since the last working day — the half of a stand-up note that cannot be read
  * off the reports on disk.
  *
- * The reports are snapshots of *now*: they say a ticket is in QC READY, not that it got
+ * The reports are snapshots of *now*: they say where a ticket is today, not that it got
  * there yesterday, and they list open PRs, not the ones merged and gone. Both facts are
  * exactly what a stand-up needs, and both are one API query away.
  */

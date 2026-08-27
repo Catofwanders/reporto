@@ -18,17 +18,17 @@ const contradictory: JiraReport = {
   ...jiraReport,
   groups: [
     {
-      title: 'QC READY',
+      title: 'Ready for QA',
       tickets: [
-        ticket('DEMO-1', 'QC READY', [
+        ticket('DEMO-1', 'Ready for QA', [
           { repo: 'orders-api', num: 11, url: 'https://example.com/pr11', state: 'open' },
         ]),
       ],
     },
     {
-      title: 'RELEASE READY',
+      title: 'Ready to ship',
       tickets: [
-        ticket('DEMO-3', 'RELEASE READY', [
+        ticket('DEMO-3', 'Ready to ship', [
           {
             repo: 'orders-api',
             num: 13,
@@ -37,7 +37,7 @@ const contradictory: JiraReport = {
             inQc: false,
           },
         ]),
-        ticket('DEMO-4', 'RELEASE READY', []),
+        ticket('DEMO-4', 'Ready to ship', []),
       ],
     },
   ],
@@ -77,8 +77,10 @@ type Story = StoryObj<typeof meta>;
 export const Findings: Story = {};
 
 /**
- * The fixtures agree with each other, so this renders nothing at all — which is the point:
- * a permanent "0 issues" card would train you to stop reading it.
+ * The everyday fixtures, which carry two contradictions rather than none: the marketplace
+ * board has a merged PR that fell off the QC branch, and an approved PR sitting idle. Named
+ * "Agreeing" when the fixtures were thinner, and the count has been two for a while — the
+ * point of the story is the quiet case, not an empty card.
  */
 export const Agreeing: Story = { args: { jira: jiraReport, prs: prsReport } };
 

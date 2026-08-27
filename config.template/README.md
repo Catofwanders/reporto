@@ -21,7 +21,7 @@ stays free of employer or account specifics.
 | `jiraBrowseUrl` | Base for ticket links. Defaults to `<jiraSite>/browse`. |
 | `jiraJql` | Which tickets the dashboard shows. Defaults to everything assigned to you that is not Done, freshest first. |
 | `ticketPattern` | Regex source matching a ticket key in a PR title, e.g. `\bPROJ-\d+\b`. How PRs get attached to tickets. |
-| `fallbackStatuses` | Statuses where a ticket with no title match is worth one body search of your own PRs. Defaults to in progress / code review / qc ready / blocked — backlog items are not worth the rate limit. |
+| `fallbackStatuses` | Statuses where a ticket with no title match is worth one body search of your own PRs. Defaults to in progress / in development / code review / in review / blocked — backlog items are not worth the rate limit. Add your own later stages here. |
 | `calendarIds` | Calendar addresses to read, e.g. `you@example.com` or `…@group.calendar.google.com` (Calendar settings → Integrate calendar → Calendar ID). Required with a service account, which cannot enumerate calendars. |
 | `calendars` | Calendar names to pull. Empty means every calendar the Google account can read. |
 | `calendarsExcluded` | Calendar names to skip — birthdays, holidays, task lists. |

@@ -26,7 +26,7 @@ const laneTitle = (id: string) => LANES.find((lane) => lane.id === id)?.title ??
  * What a PR on this ticket is waiting for, said with the same logic the PR page uses.
  *
  * The board card can only say open or merged, which is the least interesting half: "open" on
- * a ticket in CODE REVIEW is either "nobody has looked" or "changes requested and it is on
+ * a ticket in a review column is either "nobody has looked" or "changes requested and it is on
  * you". That state already exists in `prState`/`laneOf`, so this looks the PR up in the open-PR
  * report and reuses it rather than deriving a second opinion here.
  */

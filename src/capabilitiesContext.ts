@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { ReportKind } from './reportKinds';
+import { DEFAULT_VOCAB, type StatusVocab } from './statusVocab';
 
 /** One module's standing, as the server reports it. Never carries a credential's value. */
 export interface Capability {
@@ -27,6 +28,12 @@ export interface CapabilitiesValue {
    * ticket is not slow, it is blocked. Empty means "every status that has a limit".
    */
   stuckStatuses: string[];
+  /**
+   * The board's status vocabulary — column order, tones, and which statuses mean in flight,
+   * development done, blocked or shipped. From config, because those names belong to whoever
+   * owns the board and this repo is public. Falls back to universal Jira words.
+   */
+  statuses: StatusVocab;
   /** Configured *and* switched on — the test for showing a nav row, a module or a card. */
   usable: (kind: ReportKind) => boolean;
   of: (kind: ReportKind) => Capability | null;
@@ -46,6 +53,7 @@ export const CapabilitiesContext = createContext<CapabilitiesValue>({
   modules: [],
   statusAging: {},
   stuckStatuses: [],
+  statuses: DEFAULT_VOCAB,
   usable: () => true,
   of: () => null,
   loaded: false,

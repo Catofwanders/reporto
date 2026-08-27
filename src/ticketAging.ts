@@ -3,14 +3,14 @@ import type { Ticket } from './types';
 /**
  * How long a ticket has sat where it is, and whether that is too long.
  *
- * The board looks identical on day one and day seven of CODE REVIEW. The PR lanes have said
+ * The board looks identical on day one and day seven of a review column. The PR lanes have said
  * "no review yet — 6 days, chase it" for a while; tickets had no equivalent, so a ticket could
  * quietly rot in a status nobody owns.
  *
- * A fixed threshold would cry wolf: QC READY is meant to wait for somebody else, CODE REVIEW
- * is not, and a status that is normally slow would light up every day. So the limit is per
- * status and comes from config — which also keeps the employer's workflow vocabulary out of
- * this repo.
+ * A fixed threshold would cry wolf: a QA queue is meant to wait for somebody else, a review
+ * column is not, and a status that is normally slow would light up every day. So the limit is
+ * per status and comes from config — which also keeps the board's own vocabulary out of this
+ * repo.
  */
 export interface TicketAge {
   /** Whole days in the current status. */
@@ -69,7 +69,7 @@ export const agingOf = (ticket: Ticket, limits: AgingLimits): TicketAge | null =
  * Whether sitting still in this status is worth calling stuck.
  *
  * Narrower than having a limit at all, and deliberately so: a BLOCKED ticket is not slow, it
- * is blocked, and one in QC FAILED is already shouting through its own status. Counting those
+ * is blocked, and one a QA stage sent back is already shouting through its own status. Counting those
  * as "sitting too long" put four years of blocked work in a number about today. An empty list
  * means every status that has a limit.
  */

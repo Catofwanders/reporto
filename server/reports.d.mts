@@ -34,7 +34,11 @@ export interface ReportoConfig {
   statusChoices?: string[];
   /** JQL prefix the monthly statistics are built on. */
   jiraStatsJql?: string;
-  /** Status names the statistics count transitions into. */
+  /**
+   * Status names the statistics count transitions into. No defaults beyond `inProgress`: a
+   * metric whose status is not named here is reported as unavailable rather than guessed,
+   * since a wrong name in a `status changed to` clause counts a confident zero.
+   */
   statsStatuses?: {
     releaseReady?: string;
     deployed?: string;
@@ -59,6 +63,25 @@ export interface ReportoConfig {
    * already flagged by its own status. Empty means every status that has a limit.
    */
   stuckStatuses?: string[];
+  /**
+   * The board's status vocabulary. Committed code knows universal Jira words — in progress,
+   * in review, blocked, done — and everything past those is named here, because a workflow's
+   * column names belong to whoever owns the board and this remote is public (rules/nda.md).
+   */
+  statuses?: {
+    /** Column order, left to right. Replaces the generic order entirely when given. */
+    order?: string[];
+    /** `{ chipTone: [status, ...] }`. Merges over the generic tones, config winning. */
+    tones?: Record<string, string[]>;
+    /** Which statuses mean what. Merged with the generic groups. */
+    groups?: {
+      active?: string[];
+      inFlight?: string[];
+      blocked?: string[];
+      devDone?: string[];
+      shipped?: string[];
+    };
+  };
   /** How many months the statistics report carries, newest first. */
   statsMonths?: number;
   commandGroups: CommandGroup[];

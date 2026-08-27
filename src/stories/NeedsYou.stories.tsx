@@ -22,8 +22,8 @@ const aged: JiraReport = {
   })),
 };
 
-const AGING = { 'In Progress': 4, 'QC READY': 6, default: 5 };
-const STUCK = ['In Progress', 'QC READY'];
+const AGING = { 'In Progress': 4, 'Ready for QA': 6, default: 5 };
+const STUCK = ['In Progress', 'Ready for QA'];
 
 /** Built through the real derivation, so a change to a lane rule shows up in the story. */
 const feed = (over: Partial<Parameters<typeof needsYou>[0]> = {}) => {

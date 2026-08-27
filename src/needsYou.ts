@@ -13,6 +13,7 @@ import { laneOfReview, reasonOfReview, toReviewLanes } from './reviewLanes';
 import { laneOfSlack, reasonOfSlack } from './slackLanes';
 import { activeTickets } from './jiraActive';
 import { type AgingLimits, agingOf, countsAsStuck } from './ticketAging';
+import { DEFAULT_VOCAB, type StatusVocab } from './statusVocab';
 
 /**
  * One queue instead of four.
@@ -118,6 +119,7 @@ export function needsYou({
   jira,
   aging = {},
   stuckStatuses = [],
+  vocab = DEFAULT_VOCAB,
   limit = 7,
 }: {
   prs: PrsReport | null;
@@ -127,6 +129,8 @@ export function needsYou({
   aging?: AgingLimits;
   /** Statuses where sitting still counts as stuck; empty means all that have a limit. */
   stuckStatuses?: string[];
+  /** The board's status vocabulary, so "in flight" means what this workflow calls it. */
+  vocab?: StatusVocab;
   limit?: number;
 }): FeedItem[] {
   const items: FeedItem[] = [];
@@ -206,7 +210,7 @@ export function needsYou({
   }
 
   if (jira) {
-    for (const ticket of activeTickets(jira)) {
+    for (const ticket of activeTickets(jira, vocab)) {
       // Only where sitting still is the problem: blocked and QC-failed tickets are loud
       // enough through their own status, and their age says nothing new.
       if (!countsAsStuck(ticket.status, stuckStatuses)) continue;
@@ -254,6 +258,7 @@ export const kpis = ({
   jira,
   aging = {},
   stuckStatuses = [],
+  vocab = DEFAULT_VOCAB,
   conflicts = 0,
 }: {
   prs: PrsReport | null;
@@ -263,10 +268,11 @@ export const kpis = ({
   jira: JiraReport | null;
   aging?: AgingLimits;
   stuckStatuses?: string[];
+  vocab?: StatusVocab;
   conflicts?: number;
 }): Kpis => {
   const reviewLanes = reviews ? toReviewLanes(reviews, jira) : new Map();
-  const active = jira ? activeTickets(jira) : [];
+  const active = jira ? activeTickets(jira, vocab) : [];
 
   return {
     // Open PRs of mine that are not finished — the number in the sidebar's PR row.

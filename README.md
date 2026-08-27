@@ -129,17 +129,17 @@ opened — the placeholder holds still and the header says *not fetched* rather 
 ## Ticket aging
 
 The PR lanes have said "no review yet — 6 days, chase it" for a while. Tickets had no
-equivalent: the board looked identical on day one and day seven of CODE REVIEW, so work could
-rot in a status nobody owns.
+equivalent: the board looked identical on day one and day seven of a review column, so work
+could rot in a status nobody owns.
 
 Time-in-status is only in the changelog, and the search endpoint refuses
 `expand: ["changelog"]`, so it costs one request per ticket. That is why **only the statuses
 named in `statusAging` are measured** — a backlog item's age says nothing, and forty requests
 per pull would earn a 429. A ticket that never transitioned falls back to when it was created.
 
-Limits are per status because a fixed number would cry wolf: QC READY is meant to wait on
-somebody else, CODE REVIEW is not. They live in `config/reporto.json`, which also keeps the
-employer's workflow vocabulary out of this repo. Past the limit a card grows a pill; past
+Limits are per status because a fixed number would cry wolf: a QA queue is meant to wait on
+somebody else, a review column is not. They live in `config/reporto.json`, along with the rest
+of the board's vocabulary — see [Status vocabulary](#status-vocabulary). Past the limit a card grows a pill; past
 twice the limit the pill turns red — one needs a nudge, the other needs a decision.
 
 Days are derived when the page renders, never stored: a report read tomorrow must not still
@@ -276,6 +276,42 @@ them even when every name is changed.
 cp -r config.template config     # then edit config/reporto.json
 cp .env.example .env             # then add your Jira API token
 ```
+
+### Status vocabulary
+
+Committed code knows the words every Jira has — *backlog*, *in progress*, *in review*,
+*blocked*, *done* — and nothing else. Every stage past those is named in
+`config/reporto.json`, which is gitignored:
+
+```jsonc
+"statuses": {
+  "order":  ["Backlog", "In Progress", "In Review", "Ready for QA", "Ready to ship"],
+  "tones":  { "qc": ["Ready for QA"], "ok": ["Ready to ship"] },
+  "groups": {
+    "active":   ["Ready for QA"],      // still mine, still moving
+    "inFlight": [],                    // development itself is not finished
+    "blocked":  ["QA rejected"],       // said out loud at stand-up
+    "devDone":  ["Ready for QA"],      // dev finished, release has not happened
+    "shipped":  ["Ready to ship"]      // out the door
+  }
+},
+"statsStatuses": { "releaseReady": "Ready to ship", "deployed": "Shipped",
+                   "qcReady": "Ready for QA", "qcFailed": "QA rejected" }
+```
+
+`order` sets the board's columns left to right and replaces the generic order; `tones` and
+`groups` merge over the defaults, config winning per status. A status the vocabulary has never
+seen keeps the chip the pull wrote for it and sorts after every column that is named.
+
+Two reasons it works this way. The remote is public and a workflow's column names belong to
+whoever owns the board — see the NDA rules — and it makes somebody else's workflow a config
+edit rather than a patch across seven modules. The trade is that a group left empty means the
+checks that need it do not fire: no `devDone` statuses, no "board says done, code says
+otherwise" findings. That is the right failure — a guess there would invent contradictions.
+
+`statsStatuses` has no defaults beyond `inProgress`, for the same reason in reverse: a wrong
+status name in a `status changed to` clause counts a confident zero, so an unnamed metric
+reports as unavailable instead.
 
 ### Google Calendar
 
@@ -524,8 +560,8 @@ that happened twice between two snapshots.
 
 | Metric | Where it comes from |
 |---|---|
-| Deployed, release ready, QC failed, assigned | Jira JQL `status changed to "<status>" DURING (month)` for tickets assigned to me |
-| Cycle time | per-ticket changelog: last `In Progress` before the ticket reached release ready |
+| Shipped, ready to release, sent back, created | Jira JQL `status changed to "<status>" DURING (month)` for tickets assigned to me. Which status each one counts is `statsStatuses` in config — see [Status vocabulary](#status-vocabulary) |
+| Cycle time | per-ticket changelog: last `In Progress` before the ticket reached the configured release status |
 | PRs merged / opened / abandoned | GitHub search, one query per month |
 | To first review, to merge | medians over the month's merged PRs; only reviews by somebody else count |
 | PRs I reviewed | GitHub `reviewed-by:` — dated by when the PR last moved, which is the only thing search can answer |

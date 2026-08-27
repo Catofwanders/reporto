@@ -1,5 +1,5 @@
 {
-  "$comment": "Copy this directory to ./config and edit. ./config is gitignored, so nothing personal or employer-specific reaches the remote.",
+  "$comment": "Copy this directory to ./config and edit. ./config is gitignored, so nothing personal or employer-specific reaches the remote — the status names here are an invented workflow, not anybody’s.",
   "githubOrg": "your-github-org",
   "commandGroups": [],
   "githubAuthor": "your-github-login",
@@ -22,14 +22,15 @@
   "statusChoices": [
     "In Progress",
     "In Review",
-    "Done"
+    "Ready for QA",
+    "Ready to ship"
   ],
   "jiraStatsJql": "assignee = currentUser()",
   "statsStatuses": {
-    "releaseReady": "RELEASE READY",
-    "deployed": "Released to Production",
-    "qcReady": "QC READY",
-    "qcFailed": "QC Failed",
+    "releaseReady": "Ready to ship",
+    "deployed": "Shipped",
+    "qcReady": "Ready for QA",
+    "qcFailed": "QA rejected",
     "inProgress": "In Progress"
   },
   "statsMonths": 6,
@@ -37,13 +38,66 @@
   "statusAging": {
     "In Progress": 5,
     "In Review": 2,
-    "Testing": 3,
+    "Ready for QA": 3,
+    "QA rejected": 1,
     "default": 7
   },
   "stuckStatuses": [
     "In Progress",
     "In Review",
-    "Testing",
-    "Approved"
-  ]
+    "Ready for QA",
+    "Awaiting sign-off"
+  ],
+  "statuses": {
+    "order": [
+      "Backlog",
+      "Next",
+      "To Do",
+      "In Progress",
+      "In Review",
+      "Ready for QA",
+      "QA rejected",
+      "Awaiting sign-off",
+      "Ready to ship",
+      "Shipped",
+      "Done",
+      "Blocked",
+      "On Hold"
+    ],
+    "tones": {
+      "qc": [
+        "Ready for QA"
+      ],
+      "warn": [
+        "Awaiting sign-off"
+      ],
+      "bad": [
+        "QA rejected"
+      ],
+      "ok": [
+        "Ready to ship",
+        "Shipped"
+      ]
+    },
+    "groups": {
+      "active": [
+        "Ready for QA",
+        "QA rejected",
+        "Awaiting sign-off"
+      ],
+      "inFlight": [],
+      "blocked": [
+        "QA rejected"
+      ],
+      "devDone": [
+        "Ready for QA",
+        "Awaiting sign-off",
+        "Ready to ship"
+      ],
+      "shipped": [
+        "Ready to ship",
+        "Shipped"
+      ]
+    }
+  }
 }

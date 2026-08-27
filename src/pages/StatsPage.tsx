@@ -113,8 +113,9 @@ export const StatsPage = ({ report }: StatsPageProps) => {
         <ul>
           <li>
             Jira counts are transitions <em>into</em> a status during the month, for tickets
-            assigned to me: {report.statuses.deployed} for deployed,{' '}
-            {report.statuses.releaseReady} for release ready.
+            assigned to me. Which status each figure counts comes from{' '}
+            <code>statsStatuses</code> in config: {report.statuses.deployed} for shipped,{' '}
+            {report.statuses.releaseReady} for ready to release.
           </li>
           <li>
             Cycle time is a median over {latest?.cycle?.sampled ?? 0} of the{' '}

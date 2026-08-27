@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
 import type { JiraReport, PrsReport, SlackReport } from '../types';
 import { flowFindings } from '../flowChecks';
+import { useCapabilities } from '../capabilitiesContext';
 
 /**
  * How many findings the card shows before folding.
@@ -31,7 +32,8 @@ interface FlowChecksProps {
 export const FlowChecks = ({ jira, prs, slack = null, collapsed = false }: FlowChecksProps) => {
   const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState(!collapsed);
-  const findings = flowFindings(jira, prs, slack);
+  const { statuses } = useCapabilities();
+  const findings = flowFindings(jira, prs, slack, statuses);
   if (findings.length === 0) return null;
 
   const serious = findings.filter((finding) => finding.severity === 'bad').length;

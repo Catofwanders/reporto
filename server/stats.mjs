@@ -12,12 +12,17 @@ import { jiraSearchKeys, jiraStatusHistory } from './jira.mjs'
 import { pullPrStats } from './github.mjs'
 import { pullMeetingLoad } from './googleCalendar.mjs'
 
-/** Status names this workflow uses. Overridable per site from config/reporto.json. */
+/*
+ * Which status each delivery metric counts comes from `statsStatuses` in config/reporto.json
+ * and from nowhere else. The words a board uses for "ready to release", "live" or "sent back
+ * by QA" belong to whoever owns that board, and this repo is public — see rules/nda.md.
+ *
+ * `inProgress` is the only one with a default, because every Jira has that column. A metric
+ * whose status is not configured is reported as unavailable rather than guessed: a wrong
+ * status name in a `status changed to` clause counts a confident zero, which is the worst
+ * possible answer.
+ */
 const DEFAULT_STATS_STATUSES = {
-  releaseReady: 'RELEASE READY',
-  deployed: 'Released to Production',
-  qcReady: 'QC READY',
-  qcFailed: 'QC Failed',
   inProgress: 'In Progress',
 }
 
@@ -80,11 +85,14 @@ async function jiraMonth({ jira, statuses, month, jql }) {
   const during = (status) =>
     `${jql} AND status changed to "${status}" DURING ("${jqlFrom}","${jqlTo}")`
 
+  // Null, not zero, for a metric whose status nobody named.
+  const keysIn = (status) => (status ? jiraSearchKeys({ ...jira, jql: during(status) }) : null)
+
   const [releaseReady, deployed, qcReady, qcFailed, created] = await Promise.all([
-    jiraSearchKeys({ ...jira, jql: during(statuses.releaseReady) }),
-    jiraSearchKeys({ ...jira, jql: during(statuses.deployed) }),
-    jiraSearchKeys({ ...jira, jql: during(statuses.qcReady) }),
-    jiraSearchKeys({ ...jira, jql: during(statuses.qcFailed) }),
+    keysIn(statuses.releaseReady),
+    keysIn(statuses.deployed),
+    keysIn(statuses.qcReady),
+    keysIn(statuses.qcFailed),
     jiraSearchKeys({
       ...jira,
       jql: `${jql} AND created >= "${jqlFrom}" AND created < "${jqlTo}"`,
@@ -93,7 +101,7 @@ async function jiraMonth({ jira, statuses, month, jql }) {
 
   // Cycle time comes from the changelogs of the tickets that landed this month, which is
   // one request per ticket — hence the cap, and hence months being cached once computed.
-  const sample = releaseReady.slice(0, CYCLE_SAMPLE)
+  const sample = (releaseReady ?? []).slice(0, CYCLE_SAMPLE)
   const durations = []
   for (const key of sample) {
     try {
@@ -110,10 +118,10 @@ async function jiraMonth({ jira, statuses, month, jql }) {
 
   return {
     jira: {
-      releaseReady: releaseReady.length,
-      deployed: deployed.length,
-      qcReady: qcReady.length,
-      qcFailed: qcFailed.length,
+      releaseReady: releaseReady?.length ?? null,
+      deployed: deployed?.length ?? null,
+      qcReady: qcReady?.length ?? null,
+      qcFailed: qcFailed?.length ?? null,
       created: created.length,
     },
     cycle: { releaseReadyDays: median(durations), sampled: durations.length },
@@ -127,6 +135,12 @@ async function jiraMonth({ jira, statuses, month, jql }) {
  */
 async function statsMonth({ month, jira, statuses, jql, github, meetings }) {
   const missing = []
+  const unnamed = ['releaseReady', 'deployed', 'qcReady', 'qcFailed'].filter((k) => !statuses[k])
+  if (unnamed.length) {
+    missing.push(
+      `jira: no status configured for ${unnamed.join(', ')} — set statsStatuses in config/reporto.json`,
+    )
+  }
   let jiraPart = null
   let prs = null
 

@@ -8,6 +8,8 @@ export function pullJira(options: {
   jiraBrowseUrl?: string;
   /** Given every ticket found, return ticket key → the PRs implementing it. */
   resolvePrs?: (tickets: { key: string; status: string }[]) => Promise<Map<string, Pr[]>>;
+  /** Status names per chip tone, from config: the board's vocabulary is not committed here. */
+  tones?: Record<string, string[]>;
 }): Promise<JiraReport>;
 
 export interface JiraTransition {
@@ -105,4 +107,6 @@ export function jiraIssueDetail(options: {
   comments?: number;
   /** Base for the browse link, when the site is reached through a different host. */
   browseUrl?: string;
+  /** Status names per chip tone, from config. */
+  tones?: Record<string, string[]>;
 }): Promise<JiraIssueDetail>;

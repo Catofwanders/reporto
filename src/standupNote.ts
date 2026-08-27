@@ -2,13 +2,14 @@ import type { CalendarReport, JiraReport, PrsReport, StandupSince, Ticket } from
 import { formatStatus } from './jiraStatus';
 import { type AgingLimits, overdueTickets } from './ticketAging';
 import { idleDays, laneOf } from './prLanes';
+import { DEFAULT_VOCAB, inStatusGroup, type StatusVocab } from './statusVocab';
 
 /**
  * The stand-up note, assembled from what already exists.
  *
- * Only "since the last working day" needs the API — a report on disk is a snapshot of now,
- * so it cannot say a ticket *reached* QC READY yesterday. Everything else is derivation:
- * what is in flight, what is blocked, what the calendar takes today.
+ * Only "since the last working day" needs the API — a report on disk is a snapshot of now, so
+ * it cannot say a ticket *reached* a status yesterday, only that it is there today. Everything
+ * else is derivation: what is in flight, what is blocked, what the calendar takes today.
  */
 export interface StandupNote {
   since: string;
@@ -18,14 +19,12 @@ export interface StandupNote {
   notes: string[];
 }
 
-const IN_FLIGHT = ['in progress', 'in development', 'code review', 'in review'];
-/**
- * On Hold is deliberately not here. Parked work is not blocking today, and six long-parked
- * tickets read out every morning are what makes people stop listening to the blockers list.
+/*
+ * Which statuses count as in flight, and which as blocked, comes from the status vocabulary —
+ * those names belong to whoever owns the board. On Hold is deliberately not in the blocked
+ * group by default: parked work is not blocking today, and six long-parked tickets read out
+ * every morning are what makes people stop listening to the blockers list.
  */
-const BLOCKED = ['blocked', 'qc failed'];
-
-const has = (list: string[], status: string) => list.includes(status.trim().toLowerCase());
 
 const allTickets = (report: JiraReport | null): Ticket[] =>
   (report?.groups ?? []).flatMap((group) => group.tickets);
@@ -48,6 +47,7 @@ export function buildStandup(
   aging: AgingLimits = {},
   /** Statuses where sitting still is worth saying out loud; empty means all with a limit. */
   stuckStatuses: string[] = [],
+  vocab: StatusVocab = DEFAULT_VOCAB,
 ): StandupNote {
   const yesterday = [
     ...(since?.moved ?? []).map(
@@ -59,7 +59,7 @@ export function buildStandup(
 
   const today = [
     ...allTickets(jira)
-      .filter((ticket) => has(IN_FLIGHT, ticket.status))
+      .filter((ticket) => inStatusGroup(vocab, 'inFlight', ticket.status))
       .map((ticket) => `${ticket.key} — ${ticket.summary} (${formatStatus(ticket.status)})`),
     // A PR waiting on me is work for today whether or not its ticket says so.
     ...(prs?.repos ?? []).flatMap((group) =>
@@ -72,15 +72,15 @@ export function buildStandup(
 
   const blockers = [
     ...allTickets(jira)
-      .filter((ticket) => has(BLOCKED, ticket.status))
+      .filter((ticket) => inStatusGroup(vocab, 'blocked', ticket.status))
       .map((ticket) => `${ticket.key} — ${formatStatus(ticket.status)}: ${ticket.summary}`),
     /*
      * Stuck in a status past its limit. Not "blocked" in Jira's sense — nobody set a flag —
-     * which is exactly why it is worth saying: a ticket in CODE REVIEW for six days is the
+     * which is exactly why it is worth saying: a ticket sitting in review for six days is the
      * thing a stand-up exists to surface, and the board looked the same on day one.
      */
     ...overdueTickets(
-      allTickets(jira).filter((ticket) => !has(BLOCKED, ticket.status)),
+      allTickets(jira).filter((ticket) => !inStatusGroup(vocab, 'blocked', ticket.status)),
       aging,
       stuckStatuses,
     ).map(

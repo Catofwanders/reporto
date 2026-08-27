@@ -4,6 +4,7 @@ import { useHashTarget } from '../useHashTarget';
 import { TicketStatus } from './TicketStatus';
 import { agingOf } from '../ticketAging';
 import { useCapabilities } from '../capabilitiesContext';
+import { statusRank } from '../statusVocab';
 import { useRefresh } from '../refreshContext';
 import { useTicketReader } from './useTicketReader';
 
@@ -15,38 +16,13 @@ interface JiraBoardProps {
   prs?: PrsReport | null;
 }
 
-/**
- * Workflow order, left to right — the order a ticket actually travels, which is what a
- * board is for. Jira returns groups in JQL order, and that is a ranking, not a pipeline.
- * A status not named here keeps its relative position after the ones that are, so an
- * unfamiliar column shows up on the right rather than vanishing.
+/*
+ * Column order is the order a ticket actually travels, which is what a board is for — Jira
+ * returns groups in JQL order, and that is a ranking, not a pipeline. The sequence comes from
+ * the status vocabulary in config, because a workflow's column names belong to whoever owns
+ * the board. A status the vocabulary does not name keeps its relative position after the ones
+ * it does, so an unfamiliar column shows up on the right rather than vanishing.
  */
-const COLUMN_ORDER = [
-  'backlog',
-  'next',
-  'to do',
-  'selected',
-  'in progress',
-  'in development',
-  'code review',
-  'in review',
-  'qc ready',
-  'qc failed',
-  'qc approved',
-  'cs ready',
-  'cs approved',
-  'release ready',
-  'released to production',
-  'done',
-  'closed',
-  'blocked',
-  'on hold',
-];
-
-const rank = (title: string) => {
-  const at = COLUMN_ORDER.indexOf(title.trim().toLowerCase());
-  return at === -1 ? COLUMN_ORDER.length : at;
-};
 
 const prLabel = (pr: Pr) => `${pr.repo.split('/').pop()}#${pr.num}`;
 
@@ -88,7 +64,7 @@ const BoardCard = ({
   pendingPrs?: boolean;
 }) => {
   const { running } = useRefresh();
-  const { statusAging } = useCapabilities();
+  const { statusAging, statuses } = useCapabilities();
   const dropped = droppedFromQc(ticket);
   // Only shown once it is over the limit for its status: a pill on every card is wallpaper,
   // and the number that matters is the one somebody should act on.
@@ -104,7 +80,7 @@ const BoardCard = ({
         </p>
       </button>
 
-      {ticket.prs.length === 0 && pendingPrs && statusTone(ticket) !== 'na' && (
+      {ticket.prs.length === 0 && pendingPrs && statusTone(ticket, statuses) !== 'na' && (
         <PrSkeleton loading={running.has('jira')} />
       )}
 
@@ -154,12 +130,13 @@ const BoardCard = ({
  */
 export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => {
   useHashTarget([report]);
+  const { statuses } = useCapabilities();
   const pendingPrs = Boolean(report.partial && report.pending?.includes('prs'));
   const { read, drawer } = useTicketReader({ report, prs, onChanged });
 
   const columns = [...report.groups]
     .filter((group) => group.tickets.length > 0)
-    .sort((a, b) => rank(a.title) - rank(b.title));
+    .sort((a, b) => statusRank(statuses, a.title) - statusRank(statuses, b.title));
 
   if (columns.length === 0) return <p className="status">No tickets in this report.</p>;
 
@@ -170,7 +147,7 @@ export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => 
           <section key={group.title} className="board-col" role="listitem">
             <header className="board-col-head">
               <span
-                className={`board-col-dot dot-${statusTone(group.tickets[0])}`}
+                className={`board-col-dot dot-${statusTone(group.tickets[0], statuses)}`}
                 aria-hidden="true"
               />
               <h3>{formatStatus(group.title)}</h3>

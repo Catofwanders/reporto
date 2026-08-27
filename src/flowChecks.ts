@@ -1,14 +1,19 @@
 import type { JiraReport, OpenPr, Pr, PrsReport, SlackReport, SlackRow, Ticket } from './types';
 import { idleDays } from './prLanes';
 import { prState } from './prState';
+import { DEFAULT_VOCAB, inStatusGroup, type StatusVocab } from './statusVocab';
 
 /**
  * Contradictions between what Jira says and what GitHub says.
  *
- * Each side is believable on its own — that is what makes these expensive. A ticket sitting
- * in QC READY with nothing merged looks finished on the board; a merged PR missing from
- * deploy-qc reads as delivered everywhere except on the QC environment where it is not.
+ * Each side is believable on its own — that is what makes these expensive. A ticket sitting in
+ * a QA-ready status with nothing merged looks finished on the board; a merged PR missing from
+ * the QC branch reads as delivered everywhere except on the environment where it is not.
  * Nobody notices until QC asks, so the checks are worth running on every load.
+ *
+ * Which statuses mean "development done", "shipped" and "still in flight" comes from the
+ * status vocabulary, because those names belong to whoever owns the board — see
+ * `statusVocab.ts`. A workflow with no QA stage configured simply runs fewer checks.
  */
 export type FlowSeverity = 'bad' | 'warn';
 
@@ -23,16 +28,6 @@ export interface FlowFinding {
   prs?: { label: string; url: string }[];
 }
 
-/** Statuses that claim development is finished. */
-const DONE_WITH_DEV = ['qc ready', 'qc approved', 'cs ready', 'cs approved', 'release ready'];
-
-/** Statuses that claim the work has shipped. */
-const SHIPPED = ['release ready', 'released to production', 'done', 'closed'];
-
-/** Statuses that claim the work has not finished yet. */
-const IN_FLIGHT = ['in progress', 'in development', 'code review', 'in review'];
-
-const has = (list: string[], status: string) => list.includes(status.trim().toLowerCase());
 
 const prLabel = (pr: Pr) => `${pr.repo.split('/').pop()}#${pr.num}`;
 
@@ -52,8 +47,9 @@ const tickets = (report: JiraReport): Ticket[] => report.groups.flatMap((group) 
 function unmergedOnFinishedTicket(
   ticket: Ticket,
   qcOf: (pr: Pr) => OpenPr | undefined,
+  vocab: StatusVocab,
 ): FlowFinding | null {
-  if (!has(DONE_WITH_DEV, ticket.status)) return null;
+  if (!inStatusGroup(vocab, 'devDone', ticket.status)) return null;
   const offQc = ticket.prs.filter((pr) => {
     if (pr.state !== 'open') return false;
     const open = qcOf(pr);
@@ -97,8 +93,8 @@ function droppedFromQc(ticket: Ticket): FlowFinding | null {
  * The code landed but the ticket never moved. Costs a status nobody trusts, and the ticket
  * shows up in tomorrow's stand-up as work in progress that is finished.
  */
-function mergedButTicketOpen(ticket: Ticket): FlowFinding | null {
-  if (!has(IN_FLIGHT, ticket.status)) return null;
+function mergedButTicketOpen(ticket: Ticket, vocab: StatusVocab): FlowFinding | null {
+  if (!inStatusGroup(vocab, 'inFlight', ticket.status)) return null;
   const merged = ticket.prs.filter((pr) => pr.state === 'merged');
   if (merged.length === 0 || ticket.prs.some((pr) => pr.state === 'open')) return null;
   return {
@@ -112,8 +108,8 @@ function mergedButTicketOpen(ticket: Ticket): FlowFinding | null {
 }
 
 /** Shipped with no PR at all: either the work is untracked, or the ticket is not yours. */
-function shippedWithoutPr(ticket: Ticket): FlowFinding | null {
-  if (!has(SHIPPED, ticket.status) || ticket.prs.length > 0) return null;
+function shippedWithoutPr(ticket: Ticket, vocab: StatusVocab): FlowFinding | null {
+  if (!inStatusGroup(vocab, 'shipped', ticket.status) || ticket.prs.length > 0) return null;
   return {
     id: `shipped-no-pr:${ticket.key}`,
     severity: 'warn',
@@ -187,17 +183,23 @@ const where = (row: SlackRow) => (row.kind === 'dm' ? `@${row.channel}` : `#${ro
  * and a question about it has been sitting in a channel for days. Neither Jira nor Slack
  * knows the other exists, so nothing surfaces it until the asker asks again.
  */
-function unansweredAboutLiveTicket(row: SlackRow, byKey: Map<string, Ticket>): FlowFinding | null {
+function unansweredAboutLiveTicket(
+  row: SlackRow,
+  byKey: Map<string, Ticket>,
+  vocab: StatusVocab,
+): FlowFinding | null {
   if (!waiting(row)) return null;
   const live = row.tickets
     .map((key) => byKey.get(key))
     .filter((ticket): ticket is Ticket => Boolean(ticket))
-    // SHIPPED overlaps DONE_WITH_DEV ("release ready" is in both), and without this exclusion
-    // one question produced two findings saying nearly the same thing.
+    // The shipped group overlaps the development-done one — a release column is usually in
+    // both — and without this exclusion one question produced two findings saying nearly the
+    // same thing.
     .filter(
       (ticket) =>
-        !has(SHIPPED, ticket.status) &&
-        (has(IN_FLIGHT, ticket.status) || has(DONE_WITH_DEV, ticket.status)),
+        !inStatusGroup(vocab, 'shipped', ticket.status) &&
+        (inStatusGroup(vocab, 'inFlight', ticket.status) ||
+          inStatusGroup(vocab, 'devDone', ticket.status)),
     );
   const ticket = live[0];
   if (!ticket) return null;
@@ -219,12 +221,13 @@ function unansweredAboutLiveTicket(row: SlackRow, byKey: Map<string, Ticket>): F
 function unansweredAboutShippedTicket(
   row: SlackRow,
   byKey: Map<string, Ticket>,
+  vocab: StatusVocab,
 ): FlowFinding | null {
   if (!waiting(row)) return null;
   const shipped = row.tickets
     .map((key) => byKey.get(key))
     .filter((ticket): ticket is Ticket => Boolean(ticket))
-    .filter((ticket) => has(SHIPPED, ticket.status));
+    .filter((ticket) => inStatusGroup(vocab, 'shipped', ticket.status));
   const ticket = shipped[0];
   if (!ticket) return null;
 
@@ -273,6 +276,7 @@ export function flowFindings(
   jira: JiraReport | null,
   prs: PrsReport | null,
   slack: SlackReport | null = null,
+  vocab: StatusVocab = DEFAULT_VOCAB,
 ): FlowFinding[] {
   const findings: FlowFinding[] = [];
 
@@ -286,10 +290,10 @@ export function flowFindings(
   if (jira) {
     for (const ticket of tickets(jira)) {
       const checks = [
-        unmergedOnFinishedTicket(ticket, qcOf),
+        unmergedOnFinishedTicket(ticket, qcOf, vocab),
         droppedFromQc(ticket),
-        mergedButTicketOpen(ticket),
-        shippedWithoutPr(ticket),
+        mergedButTicketOpen(ticket, vocab),
+        shippedWithoutPr(ticket, vocab),
       ];
       for (const finding of checks) if (finding) findings.push(finding);
     }
@@ -304,8 +308,8 @@ export function flowFindings(
 
     for (const row of slack.rows) {
       const checks = [
-        unansweredAboutLiveTicket(row, byKey),
-        unansweredAboutShippedTicket(row, byKey),
+        unansweredAboutLiveTicket(row, byKey, vocab),
+        unansweredAboutShippedTicket(row, byKey, vocab),
         announcedOffQc(row, openPrs),
       ];
       for (const finding of checks) if (finding) findings.push(finding);

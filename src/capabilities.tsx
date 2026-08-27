@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { ReportKind } from './reportKinds';
 import type { Capability } from './capabilitiesContext';
 import { CapabilitiesContext } from './capabilitiesContext';
+import { statusVocab, type StatusVocabConfig } from './statusVocab';
 
 /**
  * What this machine can do, fetched once from the dev server.
@@ -18,6 +19,7 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
   const [modules, setModules] = useState<Capability[]>([]);
   const [statusAging, setStatusAging] = useState<Record<string, number>>({});
   const [stuckStatuses, setStuckStatuses] = useState<string[]>([]);
+  const [vocabConfig, setVocabConfig] = useState<StatusVocabConfig | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -31,6 +33,7 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
                 modules?: Capability[];
                 statusAging?: Record<string, number>;
                 stuckStatuses?: string[];
+                statuses?: StatusVocabConfig;
               }
             | null,
         ) => {
@@ -38,6 +41,7 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
           if (body?.modules) setModules(body.modules);
           if (body?.statusAging) setStatusAging(body.statusAging);
           if (body?.stuckStatuses) setStuckStatuses(body.stuckStatuses);
+          if (body?.statuses) setVocabConfig(body.statuses);
           setLoaded(true);
         },
       )
@@ -88,9 +92,23 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
     [post],
   );
 
+  // Normalised once per answer rather than per read: the vocabulary is a Map behind the
+  // scenes, and rebuilding it in every component that colours a chip would be silly.
+  const statuses = useMemo(() => statusVocab(vocabConfig), [vocabConfig]);
+
   const value = useMemo(
-    () => ({ modules, statusAging, stuckStatuses, usable, of, loaded, setEnabled, saveSecret }),
-    [modules, statusAging, stuckStatuses, usable, of, loaded, setEnabled, saveSecret],
+    () => ({
+      modules,
+      statusAging,
+      stuckStatuses,
+      statuses,
+      usable,
+      of,
+      loaded,
+      setEnabled,
+      saveSecret,
+    }),
+    [modules, statusAging, stuckStatuses, statuses, usable, of, loaded, setEnabled, saveSecret],
   );
 
   return <CapabilitiesContext.Provider value={value}>{children}</CapabilitiesContext.Provider>;

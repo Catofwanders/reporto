@@ -314,7 +314,11 @@ function jiraTransitionPlugin(): Plugin {
         if (req.method === 'GET' && !verb) {
           // Read-only, so no cross-site guard: this answers with data the page already had
           // the key for, and a GET cannot be made to move a ticket.
-          void jiraIssueDetail({ ...creds, browseUrl: config.jiraBrowseUrl }).then(
+          void jiraIssueDetail({
+            ...creds,
+            browseUrl: config.jiraBrowseUrl,
+            tones: config.statuses?.tones ?? {},
+          }).then(
             (ticket) => res.end(JSON.stringify({ ok: true, ticket })),
             (err: Error) => {
               res.statusCode = err.message.startsWith('no such ticket') ? 404 : 500
@@ -616,6 +620,9 @@ function settingsPlugin(): Plugin {
               modules: capabilities(),
               statusAging: config.statusAging ?? {},
               stuckStatuses: config.stuckStatuses ?? [],
+              // The board's own words — column order, tones and status groups. Config only:
+              // committed code knows universal Jira vocabulary and nothing else.
+              statuses: config.statuses ?? {},
             }),
           )
           return

@@ -29,17 +29,17 @@ export const DELIVERY_METRICS: StatsMetric[] = [
   },
   {
     id: 'releaseReady',
-    label: 'Release ready',
+    label: 'Ready to release',
     tone: 'qc',
-    hint: 'tickets that finished development and QC',
+    hint: 'tickets that finished development and testing this month',
     value: (m) => m.jira?.releaseReady ?? null,
   },
   {
     id: 'qcFailed',
-    label: 'QC failed',
+    label: 'Sent back',
     tone: 'bad',
     lowerIsBetter: true,
-    hint: 'tickets QC sent back — rework, not throughput',
+    hint: 'tickets testing sent back — rework, not throughput',
     value: (m) => m.jira?.qcFailed ?? null,
   },
   {
@@ -48,7 +48,7 @@ export const DELIVERY_METRICS: StatsMetric[] = [
     unit: 'd',
     tone: 'warn',
     lowerIsBetter: true,
-    hint: 'median days from the last In Progress to release ready',
+    hint: 'median days from development starting to ready-to-release',
     value: (m) => m.cycle?.releaseReadyDays ?? null,
   },
 ];

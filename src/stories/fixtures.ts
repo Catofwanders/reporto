@@ -8,6 +8,7 @@
  * projects one for one leak them by shape even when every name is changed.
  */
 import type { AdfNode, TicketDetail } from '../ticketDetail';
+import type { StatusVocabConfig } from '../statusVocab';
 import type {
   CalendarReport,
   JiraReport,
@@ -90,7 +91,7 @@ export const jiraReport: JiraReport = {
   type: 'jira',
   date: DATE,
   generatedAt: AT('08:22'),
-  banner: { tone: 'open', text: 'Two tickets sitting in QC READY with approved PRs still open.' },
+  banner: { tone: 'open', text: 'Two tickets sitting in Ready for QA with approved PRs still open.' },
   groups: [
     {
       title: 'In Progress',
@@ -124,12 +125,12 @@ export const jiraReport: JiraReport = {
       ],
     },
     {
-      title: 'QC READY',
+      title: 'Ready for QA',
       tickets: [
         {
           key: 'SHOP-790',
           url: 'https://jira.example.com/browse/SHOP-790',
-          status: 'QC READY',
+          status: 'Ready for QA',
           chip: 'open',
           summary: 'Confirm payment before the order-confirmation screen renders',
           prs: [
@@ -146,7 +147,7 @@ export const jiraReport: JiraReport = {
         {
           key: 'SHOP-781',
           url: 'https://jira.example.com/browse/SHOP-781',
-          status: 'QC READY',
+          status: 'Ready for QA',
           chip: 'open',
           summary: 'Reconnect the delivery-tracking socket after a terminate frame',
           prs: [
@@ -432,7 +433,7 @@ export const statsReport: StatsReport = {
     { ...statsMonth('2026-01', 4, 5, 1, null, 6, 10), meetings: null, missing: ['meeting hours unavailable: no Google credentials'] },
     statsMonth('2025-12', 3, 4, 0, 9.9, 4, 6),
   ],
-  statuses: { releaseReady: 'RELEASE READY', deployed: 'Released to Production' },
+  statuses: { releaseReady: 'Ready to ship', deployed: 'Shipped' },
   notes: [],
 };
 
@@ -618,3 +619,53 @@ export const ticketDetail: TicketDetail = {
     },
   ],
 };
+
+
+/**
+ * The marketplace's own workflow, mirroring `config.template/reporto.json`.
+ *
+ * Committed code knows universal Jira words and nothing else — the stages past "in review"
+ * come from config (see rules/nda.md). Storybook has no dev server to ask, so the preview
+ * hands this to the capabilities context: the stories then exercise the configured path rather
+ * than the bare defaults, and a board fixture's columns come out in workflow order.
+ */
+export const marketplaceStatuses: StatusVocabConfig = {
+  order: [
+    'Backlog',
+    'Next',
+    'To Do',
+    'In Progress',
+    'In Review',
+    'Ready for QA',
+    'QA rejected',
+    'Awaiting sign-off',
+    'Ready to ship',
+    'Shipped',
+    'Done',
+    'Blocked',
+    'On Hold',
+  ],
+  tones: {
+    qc: ['Ready for QA'],
+    warn: ['Awaiting sign-off'],
+    bad: ['QA rejected'],
+    ok: ['Ready to ship', 'Shipped'],
+  },
+  groups: {
+    active: ['Ready for QA', 'QA rejected', 'Awaiting sign-off'],
+    blocked: ['QA rejected'],
+    devDone: ['Ready for QA', 'Awaiting sign-off', 'Ready to ship'],
+    shipped: ['Ready to ship', 'Shipped'],
+  },
+};
+
+/** Days-in-status limits for the marketplace, so age pills have something to be over. */
+export const marketplaceAging = {
+  'In Progress': 5,
+  'In Review': 2,
+  'Ready for QA': 3,
+  'QA rejected': 1,
+  default: 7,
+};
+
+export const marketplaceStuck = ['In Progress', 'In Review', 'Ready for QA', 'Awaiting sign-off'];

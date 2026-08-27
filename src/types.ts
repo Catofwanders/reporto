@@ -145,14 +145,19 @@ export interface StatsMonth {
   /** `2026-08`. */
   month: string;
   jira: {
-    releaseReady: number;
-    deployed: number;
-    qcReady: number;
-    qcFailed: number;
+    /*
+     * Null where no status name is configured for that metric: the words a board uses for
+     * these stages come from config (see rules/nda.md), and a metric nobody named is
+     * unavailable rather than zero.
+     */
+    releaseReady: number | null;
+    deployed: number | null;
+    qcReady: number | null;
+    qcFailed: number | null;
     created: number;
   } | null;
   cycle: {
-    /** Median days from the last In Progress to Release Ready. */
+    /** Median days from the last "in progress" transition to the configured release status. */
     releaseReadyDays: number | null;
     /** Tickets the median is built from — small samples are worth showing as such. */
     sampled: number;
