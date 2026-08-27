@@ -434,3 +434,52 @@ export const statsReport: StatsReport = {
   statuses: { releaseReady: 'RELEASE READY', deployed: 'Released to Production' },
   notes: [],
 };
+
+const minutesAgo = (mins: number) => new Date(Date.now() - mins * 60_000).toISOString();
+const hoursAgo = (hours: number) => minutesAgo(hours * 60);
+
+/*
+ * The fixtures above are pinned to one date so stories stay deterministic. Anything that
+ * renders an age — a PR lane, the review queue, the dashboard feed — then reads "104d idle",
+ * which is the fixture's date rather than a fact about the row, and makes a screenshot look
+ * like a dashboard nobody has opened since spring.
+ *
+ * These restamp the same fixtures onto now. Functions, not constants, so the ages are taken
+ * when the story renders rather than when the module loads.
+ */
+
+/**
+ * Open PRs spread over the last few days rather than the last few hours: the age pill and its
+ * tone are half of what a lane row says, and a fixture where every row reads "today" shows
+ * neither.
+ */
+export const freshPrs = (): PrsReport => ({
+  ...prsReport,
+  repos: prsReport.repos.map((group) => ({
+    ...group,
+    prs: group.prs.map((pr, i) => ({ ...pr, updatedAt: hoursAgo(3 + i * 26) })),
+  })),
+});
+
+/** Review requests aged in days, keeping each row's own state — reviewed, unseen, answered. */
+export const freshReviews = (): ReviewsReport => ({
+  ...reviewsReport,
+  prs: reviewsReport.prs.map((pr, i) => ({
+    ...pr,
+    updatedAt: hoursAgo(5 + i * 27),
+    lastCommitAt: hoursAgo(5 + i * 27),
+    createdAt: hoursAgo(24 * (4 + i)),
+    // Older than the commit above, or the row would not be "pushed since you looked".
+    myReviewAt: pr.myReviewAt ? hoursAgo(24 * (2 + i) + 12) : null,
+  })),
+});
+
+/** Mentions and DMs, the oldest a few days back so the tones differ. */
+export const freshSlack = (): SlackReport => ({
+  ...slackReport,
+  rows: slackReport.rows.map((row, i) => ({
+    ...row,
+    at: hoursAgo(2 + i * 30),
+    lastAt: hoursAgo(2 + i * 30),
+  })),
+});
