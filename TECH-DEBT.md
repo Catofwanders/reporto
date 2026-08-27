@@ -17,19 +17,6 @@ network, which the security model says it never will be.
 fallback, and Recharts follows it into its own chunk. Half an hour, and the only risk is the
 chart's CSS custom properties resolving a frame later than the page.
 
-## The README screenshots go stale on every redesign
-
-Currently **up to date** — both palettes were re-shot on the strip-and-queue dashboard. The
-debt is the process, not the files: they have now fallen behind twice, once per redesign, and
-each catch-up needs Storybook running on a hand-picked Node, two URLs, two screenshots and two
-file copies.
-
-**Cost today:** none, until the next visible change to the dashboard.
-
-**Fix:** a script — Playwright against `Pages/Home`, both palettes, writing straight into
-`docs/` — so it is one command rather than ten minutes of clicking. Worth doing the next time
-they drift rather than pre-emptively.
-
 ## The Jira pull reads a changelog per aged ticket
 
 Time-in-status is only in the changelog and the search endpoint refuses

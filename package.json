@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "google-auth": "node scripts/google-auth.mjs"
+    "google-auth": "node scripts/google-auth.mjs",
+    "shots": "node scripts/shots.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

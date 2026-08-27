@@ -57,7 +57,8 @@ hover):
 `src/stories/fixtures.ts` via the `Pages/Home` story, not from real reports — those hold
 meeting links and ticket detail and never leave your disk. The fixtures describe an invented
 online marketplace for the same reason. The same story in the Nord palette:
-[docs/home-nord.jpg](docs/home-nord.jpg).
+[docs/home-nord.jpg](docs/home-nord.jpg). Both are re-shot with `npm run shots`, which starts
+Storybook, shoots that story in each palette and writes straight into `docs/`.
 
 ## Running it
 
