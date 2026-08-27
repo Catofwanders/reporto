@@ -331,6 +331,8 @@ const slackRow = (over: Partial<SlackRow> & Pick<SlackRow, 'id' | 'excerpt'>): S
   lastFrom: 'colleague',
   lastFromMe: false,
   lastAt: AT('09:10'),
+  tickets: [],
+  prs: [],
   ...over,
 });
 
@@ -343,7 +345,8 @@ export const slackReport: SlackReport = {
   rows: [
     slackRow({
       id: 'C0000001:1',
-      excerpt: 'can you confirm the refund window before we ship the release?',
+      excerpt: 'can you confirm the refund window before we ship the release? SHOP-790',
+      tickets: ['SHOP-790'],
     }),
     slackRow({
       id: 'C0000002:2',

@@ -237,6 +237,10 @@ export interface SlackRow {
   lastAt: string | null;
   /** First line, with Slack's markup flattened. */
   excerpt: string;
+  /** Ticket keys named in the message — the hook the flow checks hang on. */
+  tickets: string[];
+  /** Pull requests named in it, as "repo#num". */
+  prs: string[];
 }
 
 export interface SlackReport {

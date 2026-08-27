@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
-import type { JiraReport, PrsReport } from '../types';
+import type { JiraReport, PrsReport, SlackReport } from '../types';
 import { flowFindings } from '../flowChecks';
 
 /**
@@ -15,15 +15,17 @@ const SHOWN = 3;
 interface FlowChecksProps {
   jira: JiraReport | null;
   prs: PrsReport | null;
+  /** Optional: with it, the checks can also see questions nobody answered. */
+  slack?: SlackReport | null;
 }
 
 /**
  * Where Jira and GitHub disagree. Renders nothing when they agree — a permanent "0 issues"
  * card trains you to stop reading it, and then it is worthless on the day it has something.
  */
-export const FlowChecks = ({ jira, prs }: FlowChecksProps) => {
+export const FlowChecks = ({ jira, prs, slack = null }: FlowChecksProps) => {
   const [expanded, setExpanded] = useState(false);
-  const findings = flowFindings(jira, prs);
+  const findings = flowFindings(jira, prs, slack);
   if (findings.length === 0) return null;
 
   const serious = findings.filter((finding) => finding.severity === 'bad').length;
@@ -40,8 +42,8 @@ export const FlowChecks = ({ jira, prs }: FlowChecksProps) => {
           <div>
             <h2>Worth a look</h2>
             <p className="panel-sub">
-              {findings.length} place{findings.length === 1 ? '' : 's'} where Jira and GitHub
-              disagree{serious > 0 && `, ${serious} of them serious`}
+              {findings.length} place{findings.length === 1 ? '' : 's'} where Jira, GitHub and
+              Slack disagree{serious > 0 && `, ${serious} of them serious`}
             </p>
           </div>
         </div>

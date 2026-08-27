@@ -1,4 +1,4 @@
-import type { JiraReport, OpenPr, Pr, PrsReport, Ticket } from './types';
+import type { JiraReport, OpenPr, Pr, PrsReport, SlackReport, SlackRow, Ticket } from './types';
 import { idleDays } from './prLanes';
 import { prState } from './prState';
 
@@ -153,6 +153,96 @@ function prWithoutTicket(report: PrsReport): FlowFinding[] {
   );
 }
 
+/** A Slack row nobody has answered: somebody spoke, it was not a bot, and I have not replied. */
+const waiting = (row: SlackRow) => !row.bot && !row.lastFromMe;
+
+const where = (row: SlackRow) => (row.kind === 'dm' ? `@${row.channel}` : `#${row.channel}`);
+
+/**
+ * Somebody asked about a ticket that is still in flight, and nobody answered.
+ *
+ * This is the contradiction the other checks cannot see: the board says the work is moving,
+ * and a question about it has been sitting in a channel for days. Neither Jira nor Slack
+ * knows the other exists, so nothing surfaces it until the asker asks again.
+ */
+function unansweredAboutLiveTicket(row: SlackRow, byKey: Map<string, Ticket>): FlowFinding | null {
+  if (!waiting(row)) return null;
+  const live = row.tickets
+    .map((key) => byKey.get(key))
+    .filter((ticket): ticket is Ticket => Boolean(ticket))
+    // SHIPPED overlaps DONE_WITH_DEV ("release ready" is in both), and without this exclusion
+    // one question produced two findings saying nearly the same thing.
+    .filter(
+      (ticket) =>
+        !has(SHIPPED, ticket.status) &&
+        (has(IN_FLIGHT, ticket.status) || has(DONE_WITH_DEV, ticket.status)),
+    );
+  const ticket = live[0];
+  if (!ticket) return null;
+
+  const days = idleDays(row.lastAt ?? row.at);
+  return {
+    id: `slack-live-${row.id}`,
+    severity: days >= 2 ? 'bad' : 'warn',
+    title: `${ticket.key} was asked about in ${where(row)}${days > 0 ? ` ${days} days ago` : ''}, unanswered`,
+    detail: `The ticket is ${ticket.status.toUpperCase()} and ${row.from} is still waiting. ${row.excerpt}`,
+    ticket: { key: ticket.key, url: ticket.url },
+  };
+}
+
+/**
+ * A question about work that has already shipped. Usually a one-line answer, and usually the
+ * asker has no way of knowing — the board moved and nobody said so in the channel.
+ */
+function unansweredAboutShippedTicket(
+  row: SlackRow,
+  byKey: Map<string, Ticket>,
+): FlowFinding | null {
+  if (!waiting(row)) return null;
+  const shipped = row.tickets
+    .map((key) => byKey.get(key))
+    .filter((ticket): ticket is Ticket => Boolean(ticket))
+    .filter((ticket) => has(SHIPPED, ticket.status));
+  const ticket = shipped[0];
+  if (!ticket) return null;
+
+  return {
+    id: `slack-shipped-${row.id}`,
+    severity: 'warn',
+    title: `${ticket.key} is ${ticket.status.toUpperCase()}, and the question in ${where(row)} is unanswered`,
+    detail: `${row.from} asked and nobody said it had shipped — a one-line reply closes it.`,
+    ticket: { key: ticket.key, url: ticket.url },
+  };
+}
+
+/**
+ * A PR posted in a channel that is not on deploy-qc.
+ *
+ * Sharing a link reads as "this is ready to look at", and it is the same false signal the QC
+ * check catches on the Jira side: whoever opens it will test a branch the QC environment does
+ * not have.
+ *
+ * Unlike the other two, this does not care who spoke last: the commonest case is me sharing
+ * my own PR, where the last word is mine by definition. Bots are excluded because a deploy
+ * feed posts links all day and its links are about deploys, not about review.
+ */
+function announcedOffQc(row: SlackRow, openPrs: Map<string, OpenPr>): FlowFinding | null {
+  if (row.bot) return null;
+  const offQc = row.prs
+    .map((ref) => ({ ref, pr: openPrs.get(ref) }))
+    .filter((entry) => entry.pr && (entry.pr.deployQc?.aheadBy ?? 0) > 0);
+  if (offQc.length === 0) return null;
+
+  return {
+    id: `slack-offqc-${row.id}`,
+    severity: 'warn',
+    title: `${offQc.map((entry) => entry.ref).join(', ')} shared in ${where(row)} but not on deploy-qc`,
+    detail:
+      'Whoever opens the link will read code that QC cannot test yet — merge it into deploy-qc, or say so in the thread.',
+    prs: offQc.map((entry) => ({ label: entry.ref, url: entry.pr!.url })),
+  };
+}
+
 /**
  * Every finding, worst first. A missing report is not an error — it just means those checks
  * cannot run, and half the checks are better than none.
@@ -160,6 +250,7 @@ function prWithoutTicket(report: PrsReport): FlowFinding[] {
 export function flowFindings(
   jira: JiraReport | null,
   prs: PrsReport | null,
+  slack: SlackReport | null = null,
 ): FlowFinding[] {
   const findings: FlowFinding[] = [];
 
@@ -183,6 +274,21 @@ export function flowFindings(
   }
 
   if (prs) findings.push(...approvedAndSitting(prs), ...prWithoutTicket(prs));
+
+  if (slack) {
+    // Keyed by ticket, because a Slack message names a key and knows nothing else about it.
+    const byKey = new Map<string, Ticket>();
+    for (const ticket of jira ? tickets(jira) : []) byKey.set(ticket.key, ticket);
+
+    for (const row of slack.rows) {
+      const checks = [
+        unansweredAboutLiveTicket(row, byKey),
+        unansweredAboutShippedTicket(row, byKey),
+        announcedOffQc(row, openPrs),
+      ];
+      for (const finding of checks) if (finding) findings.push(finding);
+    }
+  }
 
   const order: FlowSeverity[] = ['bad', 'warn'];
   return findings.sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));

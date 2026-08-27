@@ -105,6 +105,22 @@ so the design is deliberately narrow:
   still saying "waiting on you" after you have just answered it is the same lie the unread
   badge tells.
 
+### Flow checks against Slack
+
+The Jira/GitHub checks gained three that need Slack, and none of them needs to know your
+channel conventions — they key off what a message *names*, read from the full text at pull
+time rather than from the 160-character excerpt:
+
+| Check | Why it is a contradiction |
+|---|---|
+| A ticket **in flight** was asked about and nobody answered | The board says the work is moving; a question about it has sat in a channel for days. Neither side knows the other exists. |
+| A ticket **already shipped** was asked about, unanswered | The board moved and nobody said so in the channel. Usually a one-line reply. |
+| A PR **shared in a channel** is not on `deploy-qc` | Sharing a link reads as "ready to look at", and whoever opens it will read code QC cannot test. |
+
+The first two require the last word to be somebody else's; the third deliberately does not,
+because the commonest case is sharing your own PR, where the last word is yours by definition.
+Bots are excluded from all three — a deploy feed posts links all day.
+
 ### Posting the stand-up note
 
 The stand-up card grows a **Post to Slack** button, and only when

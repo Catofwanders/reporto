@@ -115,6 +115,7 @@ export const PULLERS = {
       token: secretOf('SLACK_USER_TOKEN'),
       days: c.slackDays ?? 14,
       excludeChannels: c.slackChannelsExcluded ?? [],
+      ticketPattern: c.ticketPattern ?? '\\b[A-Z][A-Z0-9]+-\\d+\\b',
     }),
 
   reviews: (c) =>

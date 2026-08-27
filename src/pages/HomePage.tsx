@@ -39,7 +39,7 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps)
   return (
     <main className="home">
       {/* Contradictions first: they are the only thing here that is silently wrong. */}
-      <FlowChecks jira={jira} prs={prs} />
+      <FlowChecks jira={jira} prs={prs} slack={usable('slack') ? slack : null} />
 
       <div className="home-modules">
         {jira && usable('jira') && <HomeTickets report={jira} />}

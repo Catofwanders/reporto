@@ -193,6 +193,25 @@ async function channelStateSince(token, channel, ts, meId) {
   }
 }
 
+/** github.com/<org>/<repo>/pull/<n>, however it was pasted or auto-linked. */
+const PR_LINK = /github\.com\/[^/\s]+\/([A-Za-z0-9._-]+)\/pull\/(\d+)/g
+
+/**
+ * What a message is *about*, so the flow checks can cross it with Jira and GitHub: the ticket
+ * keys and pull requests named in it. Read from the full text rather than the excerpt, which
+ * is cut at 160 characters and would drop the reference half the time.
+ */
+function referencesIn(text, ticketKey) {
+  const body = String(text ?? '')
+  const tickets = ticketKey ? [...new Set(body.match(ticketKey) ?? [])] : []
+  const prs = []
+  for (const [, repo, num] of body.matchAll(PR_LINK)) {
+    const ref = `${repo}#${Number(num)}`
+    if (!prs.includes(ref)) prs.push(ref)
+  }
+  return { tickets, prs }
+}
+
 /** First line, trimmed: enough to recognise the message without reproducing the thread. */
 function excerptOf(text) {
   const flat = String(text ?? '')
@@ -277,7 +296,12 @@ export async function addSlackReaction({ token, channel, ts, name = 'white_check
   return { channel, ts, name }
 }
 
-export async function pullSlack({ token, days = DEFAULT_DAYS, excludeChannels = [] }) {
+export async function pullSlack({
+  token,
+  days = DEFAULT_DAYS,
+  excludeChannels = [],
+  ticketPattern,
+}) {
   if (!token) throw new Error('set SLACK_USER_TOKEN in .env (a user token, xoxp-)')
 
   const me = await call(token, 'auth.test')
@@ -287,6 +311,8 @@ export async function pullSlack({ token, days = DEFAULT_DAYS, excludeChannels = 
   const matches = await mentionsOf(token, me.user, days)
 
   const skip = new Set(excludeChannels.map((name) => name.replace(/^#/, '').toLowerCase()))
+  // Global, because a message can name several tickets and match.match needs the g flag.
+  const ticketKey = ticketPattern ? new RegExp(ticketPattern, 'g') : null
   const rows = []
   let lookups = 0
 
@@ -309,6 +335,7 @@ export async function pullSlack({ token, days = DEFAULT_DAYS, excludeChannels = 
       at: isoOf(match.ts),
       threadTs,
       excerpt: excerptOf(match.text),
+      ...referencesIn(match.text, ticketKey),
       replies: 0,
       lastFrom: names.get(match.user) ?? match.username ?? 'unknown',
       lastFromMe: false,
@@ -376,6 +403,7 @@ export async function pullSlack({ token, days = DEFAULT_DAYS, excludeChannels = 
       at: isoOf(match.ts),
       threadTs: null,
       excerpt: excerptOf(match.text),
+      ...referencesIn(match.text, ticketKey),
       replies: 0,
       lastFrom: names.get(match.user) ?? match.username ?? other,
       lastFromMe: match.user === me.user_id,
