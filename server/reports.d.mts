@@ -46,6 +46,8 @@ export interface ReportoConfig {
   slackDays?: number;
   /** Channel names whose mentions are noise — announcements, alert feeds. */
   slackChannelsExcluded?: string[];
+  /** Where the stand-up note posts. A name or an id; the browser never names a channel. */
+  slackStandupChannel?: string;
   /** How many months the statistics report carries, newest first. */
   statsMonths?: number;
   commandGroups: CommandGroup[];

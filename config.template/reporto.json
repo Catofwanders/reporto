@@ -32,5 +32,6 @@
     "qcFailed": "QC Failed",
     "inProgress": "In Progress"
   },
-  "statsMonths": 6
+  "statsMonths": 6,
+  "slackStandupChannel": ""
 }

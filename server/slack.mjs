@@ -237,6 +237,38 @@ export async function postSlackReply({ token, channel, threadTs, text }) {
   return { channel: body.channel, ts: body.ts }
 }
 
+/**
+ * A channel id from whatever the config names: an id passes through, a name is looked up.
+ *
+ * The destination for the stand-up cannot come from the browser — a note posted to the wrong
+ * channel is not something an undo fixes — so it comes from config/reporto.json, and this is
+ * where a human-written "#standup" becomes something the API accepts.
+ */
+export async function resolveChannel(token, nameOrId) {
+  if (!token) throw new Error('set SLACK_USER_TOKEN in .env (a user token, xoxp-)')
+  const wanted = String(nameOrId ?? '').trim().replace(/^#/, '')
+  if (!wanted) throw new Error('no channel configured')
+  if (/^[CG][A-Z0-9]{6,}$/.test(wanted)) return wanted
+
+  let cursor
+  do {
+    const body = await call(token, 'conversations.list', {
+      types: 'public_channel,private_channel',
+      exclude_archived: 'true',
+      limit: '1000',
+      ...(cursor ? { cursor } : {}),
+    })
+    const found = (body.channels ?? []).find((channel) => channel.name === wanted)
+    // Not being a member is the interesting failure: the name resolves, the post would not.
+    if (found) {
+      if (!found.is_member) throw new Error(`you are not in #${wanted}`)
+      return found.id
+    }
+    cursor = body.response_metadata?.next_cursor || undefined
+  } while (cursor)
+  throw new Error(`no channel called #${wanted}`)
+}
+
 /** A reaction as a one-word answer, for the messages that do not need a sentence. */
 export async function addSlackReaction({ token, channel, ts, name = 'white_check_mark' }) {
   if (!token) throw new Error('set SLACK_USER_TOKEN in .env (a user token, xoxp-)')

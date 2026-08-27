@@ -105,6 +105,18 @@ so the design is deliberately narrow:
   still saying "waiting on you" after you have just answered it is the same lie the unread
   badge tells.
 
+### Posting the stand-up note
+
+The stand-up card grows a **Post to Slack** button, and only when
+`slackStandupChannel` is set in `config/reporto.json` — with no channel configured there is
+nothing to post to and no button, rather than a picker inviting a wrong guess.
+
+The destination never comes from the browser: the request carries the note's text and nothing
+else, and the server resolves the configured name to a channel id, refusing one you are not a
+member of. Posting takes two clicks — the first only reveals where it would go, spelled out
+("Post to #standup as you?") — because a stand-up in the wrong channel is not something an
+undo fixes.
+
 `SLACK_USER_TOKEN` is read through the same helper the pullers use, which checks `.env` on
 disk as well as the environment: the dev server lifts `.env` at boot, so a token pasted by
 hand afterwards would otherwise leave Settings saying "configured" while every pull failed.

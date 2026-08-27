@@ -33,6 +33,7 @@ stays free of employer or account specifics.
 | `upcomingDays` | How far the calendar watch-list looks ahead. Defaults to 7. |
 | `slackDays` | How far back the Slack mention search goes. Defaults to 14. |
 | `slackChannelsExcluded` | Channel names whose mentions are noise — alert feeds, announcements. |
+| `slackStandupChannel` | Where the stand-up note posts, e.g. `standup`. Empty means the button never appears. |
 | `commandGroups[].command` | Claude Code slash command that regenerates reports, spawned as `claude -p`. Only needed for reports the server cannot pull itself — the Outlook half of the calendar, which requires the Chrome extension. Leave the list empty if you run `/email` by hand. |
 | `commandGroups[].writes` | Report kinds that command produces (`calendar`, `jira`, `prs`). Kinds in one group refresh together. |
 | `commandGroups[].tools` | Which allow-list the headless run gets: `mail` (Chrome MCP, for the calendar skill) or `jira` (Atlassian search plus specific `gh` commands). The lists live in `vite.config.ts`. |

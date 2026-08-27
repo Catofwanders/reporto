@@ -25,3 +25,6 @@ export function addSlackReaction(options: {
   ts: string;
   name?: string;
 }): Promise<{ channel: string; ts: string; name: string }>;
+
+/** Turns a configured channel name or id into an id, refusing one you are not a member of. */
+export function resolveChannel(token: string | undefined, nameOrId: string): Promise<string>;

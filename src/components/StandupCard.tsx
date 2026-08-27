@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CampaignRoundedIcon from '@mui/icons-material/CampaignRounded';
+import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import type { CalendarReport, JiraReport, PrsReport, StandupSince } from '../types';
 import { fetchStandupSince } from '../standup';
 import { buildStandup, standupText } from '../standupNote';
 import { copyText } from '../copyText';
+import { postStandup, standupChannel } from '../slackActions';
+import { useCapabilities } from '../capabilitiesContext';
 
 interface StandupCardProps {
   jira: JiraReport | null;
@@ -22,10 +25,27 @@ interface StandupCardProps {
  * once a day.
  */
 export const StandupCard = ({ jira, prs, calendar }: StandupCardProps) => {
+  const { usable } = useCapabilities();
   const [since, setSince] = useState<StandupSince | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  /** Where posting would land. Asked for once; null means the button has nothing to offer. */
+  const [channel, setChannel] = useState<string | null>(null);
+  /** Posting is two clicks: the first only reveals where it would go. */
+  const [confirming, setConfirming] = useState(false);
+  const [posted, setPosted] = useState(false);
+
+  useEffect(() => {
+    if (!usable('slack')) return;
+    let cancelled = false;
+    void standupChannel().then((name) => {
+      if (!cancelled) setChannel(name);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [usable]);
 
   const build = async () => {
     setBusy(true);
@@ -40,6 +60,26 @@ export const StandupCard = ({ jira, prs, calendar }: StandupCardProps) => {
   };
 
   const note = since ? buildStandup(since, jira, prs, calendar) : null;
+
+  /**
+   * Posts the note as me, into the channel config names. Two clicks by design: the first
+   * says where it is going, because a stand-up in the wrong channel is not something an
+   * undo fixes, and this is the one button here that speaks to other people.
+   */
+  const post = async () => {
+    if (!note) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await postStandup(standupText(note));
+      setPosted(true);
+      setConfirming(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const copy = async () => {
     if (!note) return;
@@ -66,6 +106,34 @@ export const StandupCard = ({ jira, prs, calendar }: StandupCardProps) => {
           </div>
         </div>
         <span className="panel-meta">
+          {note && channel && !posted && (
+            <Button
+              size="small"
+              startIcon={<SendRoundedIcon fontSize="small" />}
+              disabled={busy}
+              onClick={() => (confirming ? void post() : setConfirming(true))}
+              title={`Posts as you into ${channel}`}
+              sx={{ textTransform: 'none', color: confirming ? 'var(--bad-ink)' : 'var(--ink-2)' }}
+            >
+              {busy ? (
+                <CircularProgress size={13} />
+              ) : confirming ? (
+                `Post to ${channel} as you?`
+              ) : (
+                'Post to Slack'
+              )}
+            </Button>
+          )}
+          {confirming && !busy && (
+            <Button
+              size="small"
+              onClick={() => setConfirming(false)}
+              sx={{ textTransform: 'none', color: 'var(--ink-2)' }}
+            >
+              Cancel
+            </Button>
+          )}
+          {posted && <span className="slack-sent">posted to {channel}</span>}
           {note && (
             <Button
               size="small"

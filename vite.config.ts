@@ -9,7 +9,7 @@ import { jiraTransition, jiraTransitions } from './server/jira.mjs'
 import { readKit } from './server/kit.mjs'
 import { readStandup } from './server/standup.mjs'
 import { PULLABLE, loadConfig, pullReport, readReport } from './server/reports.mjs'
-import { addSlackReaction, postSlackReply } from './server/slack.mjs'
+import { addSlackReaction, postSlackReply, resolveChannel } from './server/slack.mjs'
 import {
   capabilities,
   capabilityOf,
@@ -479,6 +479,13 @@ function slackPlugin(): Plugin {
         res.setHeader('Content-Type', 'application/json')
         const route = (req.url ?? '/').split('?')[0]
 
+        // Where the stand-up would go, so the button can name it before anybody presses it.
+        if (req.method === 'GET' && route === '/standup') {
+          const channel = loadConfig().slackStandupChannel ?? null
+          res.end(JSON.stringify({ channel }))
+          return
+        }
+
         if (req.method !== 'POST') {
           res.statusCode = 405
           res.end('{"error":"use POST"}')
@@ -490,7 +497,7 @@ function slackPlugin(): Plugin {
           res.end(JSON.stringify({ error: `slack write blocked: ${blocked}` }))
           return
         }
-        if (route !== '/reply' && route !== '/react') {
+        if (route !== '/reply' && route !== '/react' && route !== '/standup') {
           res.statusCode = 404
           res.end('{"error":"no such slack action"}')
           return
@@ -506,6 +513,37 @@ function slackPlugin(): Plugin {
             return
           }
 
+          const token = secretOf('SLACK_USER_TOKEN')
+
+          /*
+           * The stand-up is the one message with no row behind it, so its destination comes
+           * from config rather than from the request: the browser sends text and nothing
+           * else, and `slackStandupChannel` decides where it lands.
+           */
+          if (route === '/standup') {
+            const configured = loadConfig().slackStandupChannel
+            if (!configured) {
+              res.statusCode = 400
+              res.end('{"error":"set slackStandupChannel in config/reporto.json"}')
+              return
+            }
+            void resolveChannel(token, configured)
+              .then((channel) =>
+                postSlackReply({ token, channel, threadTs: null, text: parsed.text ?? '' }),
+              )
+              .then(
+                (result) =>
+                  // `configured` is the human's word for it ("#standup"); the API answers with
+                  // an id, and the id is what a permalink needs.
+                  res.end(JSON.stringify({ ok: true, ...result, named: configured })),
+                (err: Error) => {
+                  res.statusCode = 400
+                  res.end(JSON.stringify({ ok: false, error: err.message }))
+                },
+              )
+            return
+          }
+
           // The row id is "channel:ts" and comes back to us rather than a channel of the
           // caller's choosing: whatever it names has to be a row already in the report.
           const report = readReport('slack') as { rows?: { id: string; channelId: string; threadTs: string | null }[] } | null
@@ -516,7 +554,6 @@ function slackPlugin(): Plugin {
             return
           }
 
-          const token = secretOf('SLACK_USER_TOKEN')
           const ts = row.id.slice(row.id.indexOf(':') + 1)
           const action =
             route === '/reply'
