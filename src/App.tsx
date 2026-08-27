@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import type {
   CalendarReport,
@@ -22,12 +22,21 @@ import { JiraPage } from './pages/JiraPage';
 import { PrsPage } from './pages/PrsPage';
 import { ReviewsPage } from './pages/ReviewsPage';
 import { SlackPage } from './pages/SlackPage';
-import { StatsPage } from './pages/StatsPage';
 import { CommandsPage } from './pages/CommandsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectPage } from './pages/ProjectPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { SettingsPage } from './pages/SettingsPage';
+
+/*
+ * The only route that draws charts, and Recharts is most of the bundle — 925KB raw before
+ * this, of which every page that never plots anything was paying for the library. Loading it
+ * with the route puts it in its own chunk. Named export, hence the mapping: `lazy` wants a
+ * module whose default is the component.
+ */
+const StatsPage = lazy(() =>
+  import('./pages/StatsPage').then((module) => ({ default: module.StatsPage })),
+);
 
 const BASE = `${import.meta.env.BASE_URL}reports/`;
 
@@ -244,7 +253,11 @@ export const App = () => {
                     path="/stats"
                     element={
                       <ModuleGate kind="stats">
-                        <StatsPage report={reports.stats} />
+                        {/* Scoped to this route: a Suspense around the whole switch would
+                            blank the page being left rather than the one arriving. */}
+                        <Suspense fallback={<p className="status">Loading the charts…</p>}>
+                          <StatsPage report={reports.stats} />
+                        </Suspense>
                       </ModuleGate>
                     }
                   />

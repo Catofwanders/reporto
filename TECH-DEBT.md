@@ -4,18 +4,19 @@ Known, accepted, and not worth fixing today. Each entry says what is wrong, what
 right now, and what fixing it would take — so the decision to leave it can be re-made rather
 than re-discovered.
 
-## One JavaScript bundle, 925KB raw / 283KB gzip
+## The main bundle is 550KB raw / 175KB gzip
 
-`npm run build` warns, and the warning is right: Recharts is the bulk of it and only the
-statistics page uses it, so every visit to the dashboard pays for charts it does not draw.
+Recharts is out — the statistics route loads with its own chunk (383KB raw, 111KB gzip), so a
+visit that never plots anything no longer pays for the library. What is left in the main chunk
+is mostly MUI: the component library plus the icons, and `npm run build` still warns at 500KB.
 
-**Cost today:** none that is felt. This is a local dev-server app on a fast disk; the bundle
-is read from `localhost` and cached. It would matter the moment this were served over a
-network, which the security model says it never will be.
+**Cost today:** none that is felt. This is a local dev-server app reading from `localhost` with
+a warm cache. It would matter the moment this were served over a network, which the security
+model says it never will be.
 
-**Fix:** lazy-load the statistics route — `React.lazy` around `StatsPage`, a `Suspense`
-fallback, and Recharts follows it into its own chunk. Half an hour, and the only risk is the
-chart's CSS custom properties resolving a frame later than the page.
+**Fix:** the icons are individually imported already, so the remaining win is MUI's components
+— few enough here that plain elements plus the existing CSS would replace them, which is a
+bigger job than it sounds and buys nothing while this stays local. Leave it.
 
 ## The Jira pull reads a changelog per aged ticket
 
