@@ -65,12 +65,28 @@ export const agingOf = (ticket: Ticket, limits: AgingLimits): TicketAge | null =
   };
 };
 
+/**
+ * Whether sitting still in this status is worth calling stuck.
+ *
+ * Narrower than having a limit at all, and deliberately so: a BLOCKED ticket is not slow, it
+ * is blocked, and one in QC FAILED is already shouting through its own status. Counting those
+ * as "sitting too long" put four years of blocked work in a number about today. An empty list
+ * means every status that has a limit.
+ */
+export const countsAsStuck = (status: string, watched: string[]): boolean => {
+  if (watched.length === 0) return true;
+  const wanted = status.trim().toLowerCase();
+  return watched.some((name) => name.trim().toLowerCase() === wanted);
+};
+
 /** The ones past their limit, longest first — what a stand-up would actually mention. */
 export const overdueTickets = (
   tickets: Ticket[],
   limits: AgingLimits,
+  watched: string[] = [],
 ): { ticket: Ticket; age: TicketAge }[] =>
   tickets
+    .filter((ticket) => countsAsStuck(ticket.status, watched))
     .map((ticket) => ({ ticket, age: agingOf(ticket, limits) }))
     .filter((entry): entry is { ticket: Ticket; age: TicketAge } => Boolean(entry.age?.over))
     .sort((a, b) => b.age.days - a.age.days);

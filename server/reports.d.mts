@@ -53,6 +53,12 @@ export interface ReportoConfig {
    * optional `default`. Only the statuses named here cost a changelog read.
    */
   statusAging?: Record<string, number>;
+  /**
+   * Statuses where sitting still is worth counting as stuck. Narrower than `statusAging` on
+   * purpose: a blocked ticket is not "sitting too long", it is blocked, and a QC-failed one is
+   * already flagged by its own status. Empty means every status that has a limit.
+   */
+  stuckStatuses?: string[];
   /** How many months the statistics report carries, newest first. */
   statsMonths?: number;
   commandGroups: CommandGroup[];

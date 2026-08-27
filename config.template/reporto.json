@@ -39,5 +39,11 @@
     "In Review": 2,
     "Testing": 3,
     "default": 7
-  }
+  },
+  "stuckStatuses": [
+    "In Progress",
+    "In Review",
+    "Testing",
+    "Approved"
+  ]
 }

@@ -407,7 +407,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 /* Today, as a line: position answers "how long until the next thing" without arithmetic. */
 .day-panel { padding: .8rem 1rem .85rem; }
 .day-more { margin-left: auto; font-size: .74rem; }
-.day-track { position: relative; height: 6.4rem; margin: .8rem 0 .2rem; }
+.day-track { position: relative; height: 5.8rem; margin: .8rem 0 .2rem; }
 .day-line {
   position: absolute; left: 0; right: 0; top: .55rem; height: 2px;
   background: var(--line); border-radius: 1px;
@@ -437,8 +437,35 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   position: absolute; bottom: 0; transform: translateX(-50%);
   color: var(--ink-2); font-size: .62rem; font-variant-numeric: tabular-nums; opacity: .7;
 }
-.day-chips, .day-week { list-style: none; display: flex; flex-wrap: wrap; gap: .3rem; margin: .5rem 0 0; padding: 0; }
-.day-week-note { color: var(--ink-2); font-size: .7rem; align-self: center; }
+.day-chips { list-style: none; display: flex; flex-wrap: wrap; gap: .3rem; margin: .45rem 0 0; padding: 0; }
+
+/* What is next, as a distance — the question is "how long", not "at what time". */
+.day-next {
+  display: flex; align-items: baseline; gap: .45rem; margin: .1rem 0 0;
+  font-size: .78rem; min-width: 0;
+}
+.day-next-when { color: var(--accent); font-weight: 600; }
+.day-next-when.is-clear { color: var(--ink-2); font-weight: 400; }
+.day-next-time { color: var(--ink-2); font-size: .72rem; font-variant-numeric: tabular-nums; }
+.day-next-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/*
+ * The days ahead, a column each. This replaces a row of weekday initials that carried no
+ * times, no titles and no sense of which day was full — the bars are the count, the time is
+ * the first thing on that day, and the whole column's titles are one hover away.
+ */
+.day-ahead {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: .4rem;
+  margin-top: .6rem; padding-top: .55rem; border-top: 1px solid var(--line);
+}
+.day-ahead-col { display: grid; gap: .2rem; justify-items: center; font-size: .68rem; }
+.day-ahead-day { color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; }
+.day-ahead-bars { display: flex; gap: 2px; align-items: flex-end; height: .9rem; }
+.day-ahead-bar { width: .3rem; height: 100%; border-radius: 1px; background: var(--warn-ink); opacity: .75; }
+.day-ahead-bar.kind-kickoff { background: var(--bad-ink); opacity: 1; }
+.day-ahead-bar.kind-all-day { background: var(--na-ink); }
+.day-ahead-first { color: var(--ink); font-variant-numeric: tabular-nums; }
+.day-ahead-col.is-kickoff .day-ahead-day { color: var(--bad-ink); }
 
 /* Open PRs as one bar: proportion, not four numbers to add up. */
 .pr-mix { padding: .8rem 1rem .9rem; }

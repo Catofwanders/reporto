@@ -22,6 +22,11 @@ export interface CapabilitiesValue {
    * this repo; empty means no ticket is ever called old.
    */
   statusAging: Record<string, number>;
+  /**
+   * Statuses where sitting still counts as stuck. Narrower than the aging limits: a blocked
+   * ticket is not slow, it is blocked. Empty means "every status that has a limit".
+   */
+  stuckStatuses: string[];
   /** Configured *and* switched on — the test for showing a nav row, a module or a card. */
   usable: (kind: ReportKind) => boolean;
   of: (kind: ReportKind) => Capability | null;
@@ -40,6 +45,7 @@ export interface CapabilitiesValue {
 export const CapabilitiesContext = createContext<CapabilitiesValue>({
   modules: [],
   statusAging: {},
+  stuckStatuses: [],
   usable: () => true,
   of: () => null,
   loaded: false,

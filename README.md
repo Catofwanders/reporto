@@ -38,9 +38,11 @@ hover):
   team was copied on is *not* counted: most of those are somebody else's to take, and counting
   them made the dashboard claim work that was not mine. They are still on the queue page under
   *Never looked at*.
-- **tickets sitting too long** — past the days-in-status limit set for that status in
-  `config/reporto.json`, which is why a week in CODE REVIEW is a problem and a week in QC READY
-  is not.
+- **tickets sitting too long** — past the days-in-status limit for that status, and only in
+  the statuses named by `stuckStatuses` in `config/reporto.json`. That list is narrower than
+  the one with limits on purpose: a BLOCKED ticket is not slow, it is blocked, and a QC-failed
+  one is already shouting through its own status — counting either put years of parked work in
+  a number about today.
 - **Jira and GitHub disagree** — the flow checks. A PR with no ticket key only counts when the
   branch does not already declare it ticketless: `chore/`, `hotfix/`, `fix/`, `revert/` and
   friends, or a conventional-commit title. That one rule took this from seven findings to zero

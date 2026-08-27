@@ -60,8 +60,9 @@ const TILES: Tile[] = [
     to: '/jira',
     tone: 'bad',
     title:
-      'Tickets that have been in one status longer than the limit set for it in ' +
-      'config/reporto.json — a week in CODE REVIEW is not the same as a week in QC READY',
+      'Tickets in one of the statuses watched for this (stuckStatuses in ' +
+      'config/reporto.json) for longer than that status allows. Blocked and QC-failed ' +
+      'tickets are excluded: they are loud through their own status, not through their age',
     needs: 'jira',
   },
   {

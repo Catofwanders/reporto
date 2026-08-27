@@ -12,7 +12,7 @@ import { idleDays, laneOf, reasonOf } from './prLanes';
 import { laneOfReview, reasonOfReview, toReviewLanes } from './reviewLanes';
 import { laneOfSlack, reasonOfSlack } from './slackLanes';
 import { activeTickets } from './jiraActive';
-import { type AgingLimits, agingOf } from './ticketAging';
+import { type AgingLimits, agingOf, countsAsStuck } from './ticketAging';
 
 /**
  * One queue instead of four.
@@ -117,6 +117,7 @@ export function needsYou({
   slack,
   jira,
   aging = {},
+  stuckStatuses = [],
   limit = 7,
 }: {
   prs: PrsReport | null;
@@ -124,6 +125,8 @@ export function needsYou({
   slack: SlackReport | null;
   jira: JiraReport | null;
   aging?: AgingLimits;
+  /** Statuses where sitting still counts as stuck; empty means all that have a limit. */
+  stuckStatuses?: string[];
   limit?: number;
 }): FeedItem[] {
   const items: FeedItem[] = [];
@@ -204,6 +207,9 @@ export function needsYou({
 
   if (jira) {
     for (const ticket of activeTickets(jira)) {
+      // Only where sitting still is the problem: blocked and QC-failed tickets are loud
+      // enough through their own status, and their age says nothing new.
+      if (!countsAsStuck(ticket.status, stuckStatuses)) continue;
       const age = agingOf(ticket, aging);
       // Only the ones past their limit: a ticket moving normally is not waiting on anybody.
       if (!age?.over) continue;
@@ -247,6 +253,7 @@ export const kpis = ({
   reviews,
   jira,
   aging = {},
+  stuckStatuses = [],
   conflicts = 0,
 }: {
   prs: PrsReport | null;
@@ -255,6 +262,7 @@ export const kpis = ({
   slack?: SlackReport | null;
   jira: JiraReport | null;
   aging?: AgingLimits;
+  stuckStatuses?: string[];
   conflicts?: number;
 }): Kpis => {
   const reviewLanes = reviews ? toReviewLanes(reviews, jira) : new Map();
@@ -266,7 +274,9 @@ export const kpis = ({
     // Same rule as the feed: my verdict is out of date, not "somebody asked the team".
     reviews: (reviewLanes.get('changed') ?? []).length,
     tickets: active.length,
-    stuck: active.filter((ticket) => agingOf(ticket, aging)?.over).length,
+    stuck: active.filter(
+      (ticket) => countsAsStuck(ticket.status, stuckStatuses) && agingOf(ticket, aging)?.over,
+    ).length,
     conflicts,
   };
 };

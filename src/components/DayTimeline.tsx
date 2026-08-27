@@ -9,6 +9,47 @@ interface DayTimelineProps {
 const HHMM: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
 const WEEKDAY: Intl.DateTimeFormatOptions = { weekday: 'short' };
 
+/** "in 2h 10m", or "now" for something already started. Distance, not a timestamp. */
+const untilLabel = (start: string): string => {
+  const minutes = Math.round((new Date(start).getTime() - Date.now()) / 60_000);
+  if (minutes <= 0) return 'now';
+  if (minutes < 60) return `in ${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `in ${hours}h` : `in ${hours}h ${rest}m`;
+};
+
+/**
+ * The days ahead, grouped.
+ *
+ * The row of weekday initials this replaces was unreadable: five chips saying "Fri Mon Tue"
+ * with no titles, no times and no sense of which day was busy. A day is worth a column — the
+ * weekday, the count, and the first thing on it — which is what somebody actually wants from
+ * a week strip.
+ */
+interface DayAhead {
+  key: string;
+  weekday: string;
+  events: CalendarEvent[];
+  kickoff: boolean;
+}
+
+const daysAhead = (events: CalendarEvent[], limit = 4): DayAhead[] => {
+  const byDay = new Map<string, DayAhead>();
+  for (const event of events) {
+    if (!event.start) continue;
+    const at = new Date(event.start);
+    const key = at.toISOString().slice(0, 10);
+    const day =
+      byDay.get(key) ??
+      ({ key, weekday: at.toLocaleDateString('en-GB', WEEKDAY), events: [], kickoff: false } as DayAhead);
+    day.events.push(event);
+    day.kickoff = day.kickoff || event.kind === 'kickoff';
+    byDay.set(key, day);
+  }
+  return [...byDay.values()].sort((a, b) => a.key.localeCompare(b.key)).slice(0, limit);
+};
+
 const minutesOfDay = (iso: string | null): number | null => {
   if (!iso) return null;
   const at = new Date(iso);
@@ -51,6 +92,8 @@ export const DayTimeline = ({ report }: DayTimelineProps) => {
   const span = Math.max(1, to - from);
   const now = new Date().getHours() * 60 + new Date().getMinutes();
   const at = (minutes: number) => `${((minutes - from) / span) * 100}%`;
+  const next = timed.find((event) => (minutesOfDay(event.start) ?? 0) >= now) ?? null;
+  const ahead = daysAhead(report.upcoming);
 
   return (
     <section className="panel day-panel">
@@ -110,6 +153,23 @@ export const DayTimeline = ({ report }: DayTimelineProps) => {
         </div>
       )}
 
+      {/* What is next, in the terms the question is asked in: how long from now. */}
+      <p className="day-next">
+        {next ? (
+          <>
+            <span className="day-next-when">{untilLabel(next.start!)}</span>
+            <span className="day-next-time">
+              {new Date(next.start!).toLocaleTimeString('en-GB', HHMM)}
+            </span>
+            <span className="day-next-title" title={next.title}>
+              {next.title}
+            </span>
+          </>
+        ) : (
+          <span className="day-next-when is-clear">nothing else today</span>
+        )}
+      </p>
+
       {allDay.length > 0 && (
         <ul className="day-chips">
           {allDay.map((event) => (
@@ -120,21 +180,33 @@ export const DayTimeline = ({ report }: DayTimelineProps) => {
         </ul>
       )}
 
-      {report.upcoming.length > 0 && (
-        <ul className="day-week">
-          {report.upcoming.slice(0, 5).map((event) => (
-            <li
-              key={`${event.start}-${event.title}`}
-              className={`chip chip-${event.kind === 'kickoff' ? 'bad' : 'na'}`}
-              title={`${event.title}${event.note ? ` — ${event.note}` : ''}`}
+      {ahead.length > 0 && (
+        <div className="day-ahead">
+          {ahead.map((day) => (
+            <div
+              key={day.key}
+              className={`day-ahead-col${day.kickoff ? ' is-kickoff' : ''}`}
+              title={day.events
+                .map(
+                  (event) =>
+                    `${event.start ? new Date(event.start).toLocaleTimeString('en-GB', HHMM) : ''} ${event.title}`,
+                )
+                .join('\n')}
             >
-              {event.start
-                ? new Date(event.start).toLocaleDateString('en-GB', WEEKDAY)
-                : 'soon'}
-            </li>
+              <span className="day-ahead-day">{day.weekday}</span>
+              <span className="day-ahead-bars" aria-hidden="true">
+                {day.events.slice(0, 4).map((event, index) => (
+                  <span key={index} className={`day-ahead-bar kind-${event.kind}`} />
+                ))}
+              </span>
+              <span className="day-ahead-first">
+                {day.events[0]?.start
+                  ? new Date(day.events[0].start).toLocaleTimeString('en-GB', HHMM)
+                  : 'all day'}
+              </span>
+            </div>
           ))}
-          <li className="day-week-note">ahead</li>
-        </ul>
+        </div>
       )}
     </section>
   );

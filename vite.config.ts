@@ -601,6 +601,7 @@ function settingsPlugin(): Plugin {
             JSON.stringify({
               modules: capabilities(),
               statusAging: config.statusAging ?? {},
+              stuckStatuses: config.stuckStatuses ?? [],
             }),
           )
           return

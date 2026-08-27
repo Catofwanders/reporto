@@ -46,6 +46,8 @@ export function buildStandup(
   calendar: CalendarReport | null,
   /** Days-in-status limits per status, so a ticket stuck too long can be said out loud. */
   aging: AgingLimits = {},
+  /** Statuses where sitting still is worth saying out loud; empty means all with a limit. */
+  stuckStatuses: string[] = [],
 ): StandupNote {
   const yesterday = [
     ...(since?.moved ?? []).map(
@@ -80,6 +82,7 @@ export function buildStandup(
     ...overdueTickets(
       allTickets(jira).filter((ticket) => !has(BLOCKED, ticket.status)),
       aging,
+      stuckStatuses,
     ).map(
       ({ ticket, age }) =>
         `${ticket.key} — ${age.days} days in ${formatStatus(ticket.status)}: ${ticket.summary}`,

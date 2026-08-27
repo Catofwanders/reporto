@@ -38,7 +38,7 @@ interface HomePageProps {
  * the page that owns it. This screen decides where to look; it does not do the work.
  */
 export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps) => {
-  const { usable, statusAging } = useCapabilities();
+  const { usable, statusAging, stuckStatuses } = useCapabilities();
 
   // A module switched off in Settings, or one whose credentials are missing, contributes
   // nothing — not an empty row, not a zero in the strip.
@@ -48,6 +48,7 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps)
     reviews: usable('reviews') ? reviews : null,
     slack: usable('slack') ? slack : null,
     aging: statusAging,
+    stuckStatuses,
   };
 
   const findings = flowFindings(sources.jira, sources.prs, sources.slack);

@@ -17,18 +17,30 @@ import { CapabilitiesContext } from './capabilitiesContext';
 export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
   const [modules, setModules] = useState<Capability[]>([]);
   const [statusAging, setStatusAging] = useState<Record<string, number>>({});
+  const [stuckStatuses, setStuckStatuses] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetch('/api/settings')
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { modules?: Capability[]; statusAging?: Record<string, number> } | null) => {
-        if (cancelled) return;
-        if (body?.modules) setModules(body.modules);
-        if (body?.statusAging) setStatusAging(body.statusAging);
-        setLoaded(true);
-      })
+      .then(
+        (
+          body:
+            | {
+                modules?: Capability[];
+                statusAging?: Record<string, number>;
+                stuckStatuses?: string[];
+              }
+            | null,
+        ) => {
+          if (cancelled) return;
+          if (body?.modules) setModules(body.modules);
+          if (body?.statusAging) setStatusAging(body.statusAging);
+          if (body?.stuckStatuses) setStuckStatuses(body.stuckStatuses);
+          setLoaded(true);
+        },
+      )
       .catch(() => {
         if (!cancelled) setLoaded(true);
       });
@@ -77,8 +89,8 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const value = useMemo(
-    () => ({ modules, statusAging, usable, of, loaded, setEnabled, saveSecret }),
-    [modules, statusAging, usable, of, loaded, setEnabled, saveSecret],
+    () => ({ modules, statusAging, stuckStatuses, usable, of, loaded, setEnabled, saveSecret }),
+    [modules, statusAging, stuckStatuses, usable, of, loaded, setEnabled, saveSecret],
   );
 
   return <CapabilitiesContext.Provider value={value}>{children}</CapabilitiesContext.Provider>;
