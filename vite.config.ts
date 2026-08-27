@@ -8,8 +8,15 @@ import { PR_ACTIONS, prAction } from './server/github.mjs'
 import { jiraTransition, jiraTransitions } from './server/jira.mjs'
 import { readKit } from './server/kit.mjs'
 import { readStandup } from './server/standup.mjs'
-import { PULLABLE, loadConfig, pullReport } from './server/reports.mjs'
-import { capabilities, capabilityOf, setEnabled, setSecret } from './server/capabilities.mjs'
+import { PULLABLE, loadConfig, pullReport, readReport } from './server/reports.mjs'
+import { addSlackReaction, postSlackReply } from './server/slack.mjs'
+import {
+  capabilities,
+  capabilityOf,
+  secretOf,
+  setEnabled,
+  setSecret,
+} from './server/capabilities.mjs'
 
 
 // A headless `claude -p` run cannot prompt for permission, so every tool the skill
@@ -452,6 +459,90 @@ function readBody(
  * checks the value's shape before believing it. It exists only in the dev server; a
  * production build is a static site with no API at all.
  */
+/**
+ * Replying to Slack from the dashboard.
+ *
+ * This is the sharpest endpoint here: a user token posts as the human, in a shared workspace,
+ * with no undo. Two things bound it. The destination must already be in the Slack report —
+ * the dashboard can answer where I was addressed and nowhere else, so a stray page cannot
+ * name an arbitrary channel — and a thread reply must name a thread the report knows. That
+ * makes the report the allow-list, which is exactly what "reply from the queue" means.
+ *
+ * Sending is never automatic: the page confirms the destination and the text with a human
+ * before it calls this, and nothing here ever composes a message of its own.
+ */
+function slackPlugin(): Plugin {
+  return {
+    name: 'reporto-slack',
+    configureServer(server) {
+      server.middlewares.use('/api/slack', (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        const route = (req.url ?? '/').split('?')[0]
+
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.end('{"error":"use POST"}')
+          return
+        }
+        const blocked = rejectCrossSite(req)
+        if (blocked) {
+          res.statusCode = 403
+          res.end(JSON.stringify({ error: `slack write blocked: ${blocked}` }))
+          return
+        }
+        if (route !== '/reply' && route !== '/react') {
+          res.statusCode = 404
+          res.end('{"error":"no such slack action"}')
+          return
+        }
+
+        readBody(req, (raw) => {
+          let parsed: { id?: string; text?: string; name?: string }
+          try {
+            parsed = JSON.parse(raw || '{}') as typeof parsed
+          } catch {
+            res.statusCode = 400
+            res.end('{"error":"body is not JSON"}')
+            return
+          }
+
+          // The row id is "channel:ts" and comes back to us rather than a channel of the
+          // caller's choosing: whatever it names has to be a row already in the report.
+          const report = readReport('slack') as { rows?: { id: string; channelId: string; threadTs: string | null }[] } | null
+          const row = report?.rows?.find((entry) => entry.id === parsed.id)
+          if (!row) {
+            res.statusCode = 404
+            res.end('{"error":"that message is not in the current Slack report"}')
+            return
+          }
+
+          const token = secretOf('SLACK_USER_TOKEN')
+          const ts = row.id.slice(row.id.indexOf(':') + 1)
+          const action =
+            route === '/reply'
+              ? postSlackReply({
+                  token,
+                  channel: row.channelId,
+                  // Answer inside the thread when the message is in one; otherwise in the
+                  // channel, which is where a reply to a bare mention belongs.
+                  threadTs: row.threadTs ? ts : null,
+                  text: parsed.text ?? '',
+                })
+              : addSlackReaction({ token, channel: row.channelId, ts, name: parsed.name })
+
+          void action.then(
+            (result) => res.end(JSON.stringify({ ok: true, ...result })),
+            (err: Error) => {
+              res.statusCode = 400
+              res.end(JSON.stringify({ ok: false, error: err.message }))
+            },
+          )
+        })
+      })
+    },
+  }
+}
+
 function settingsPlugin(): Plugin {
   return {
     name: 'reporto-settings',
@@ -628,6 +719,7 @@ export default defineConfig(({ mode }) => {
       standupPlugin(),
       projectsPlugin(),
       settingsPlugin(),
+      slackPlugin(),
       refreshPlugin(),
       pullPlugin(),
       prActionPlugin(),

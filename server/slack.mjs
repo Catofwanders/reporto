@@ -205,6 +205,46 @@ function excerptOf(text) {
   return flat.length > 160 ? `${flat.slice(0, 157)}…` : flat
 }
 
+/** The longest message this dashboard will send. Slack's own limit is 40k; this is a reply. */
+const MAX_REPLY = 3000
+
+/**
+ * Posts a reply as me.
+ *
+ * A user token makes this indistinguishable from typing in Slack: same author, same channel,
+ * no undo. So the caller has to name a conversation that is already in the report — the
+ * dashboard can answer where I was addressed and nowhere else. That check happens in the
+ * plugin, which is the only thing holding the report; here the job is to send exactly what
+ * was asked and to say what came back.
+ */
+export async function postSlackReply({ token, channel, threadTs, text }) {
+  // The message is checked before the credentials: "empty message" is the useful answer to
+  // an empty message, whatever the token situation is.
+  const message = String(text ?? '').trim()
+  if (!message) throw new Error('empty message')
+  if (message.length > MAX_REPLY) throw new Error(`message is over ${MAX_REPLY} characters`)
+  if (!token) throw new Error('set SLACK_USER_TOKEN in .env (a user token, xoxp-)')
+
+  const body = await call(token, 'chat.postMessage', {
+    channel,
+    text: message,
+    ...(threadTs ? { thread_ts: threadTs } : {}),
+    // Link previews are the sender's noise, not the reader's: a reply about a PR should not
+    // paste the whole PR card underneath it.
+    unfurl_links: 'false',
+    unfurl_media: 'false',
+  })
+  return { channel: body.channel, ts: body.ts }
+}
+
+/** A reaction as a one-word answer, for the messages that do not need a sentence. */
+export async function addSlackReaction({ token, channel, ts, name = 'white_check_mark' }) {
+  if (!token) throw new Error('set SLACK_USER_TOKEN in .env (a user token, xoxp-)')
+  if (!/^[a-z0-9_+-]{1,40}$/.test(name)) throw new Error('that is not an emoji name')
+  await call(token, 'reactions.add', { channel, timestamp: ts, name })
+  return { channel, ts, name }
+}
+
 export async function pullSlack({ token, days = DEFAULT_DAYS, excludeChannels = [] }) {
   if (!token) throw new Error('set SLACK_USER_TOKEN in .env (a user token, xoxp-)')
 

@@ -89,6 +89,26 @@ being carried, not at the top of today's list.
 Auth is a **user token** (`xoxp`), so what it reads is what you can read and anything it
 posts is your own message. A bot token cannot see your mentions at all.
 
+### Replying from the queue
+
+Each row offers a reply and a ✅. Both post **as you**, in a shared workspace, with no undo,
+so the design is deliberately narrow:
+
+- The request carries the **row id**, never a channel. The server looks that id up in the
+  report it holds and refuses anything that is not in it, which makes the report the
+  allow-list: the dashboard can answer where you were addressed and nowhere else.
+- A reply goes **into the thread** when the message is in one, and into the channel when it is
+  not — the same distinction the queue uses to decide who is waiting.
+- The composer states the destination in words before you send, ⌘↵ sends and bare Enter does
+  not, and nothing is ever composed or sent without a person pressing the button.
+- An answered row moves to *You replied* immediately, without waiting for the next pull. A row
+  still saying "waiting on you" after you have just answered it is the same lie the unread
+  badge tells.
+
+`SLACK_USER_TOKEN` is read through the same helper the pullers use, which checks `.env` on
+disk as well as the environment: the dev server lifts `.env` at boot, so a token pasted by
+hand afterwards would otherwise leave Settings saying "configured" while every pull failed.
+
 ## Modules and credentials
 
 Settings → **Modules** lists what this machine can fetch. Each row says whether it is

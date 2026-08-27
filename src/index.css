@@ -942,6 +942,22 @@ body { background: var(--canvas); }
 .flow-step-label { fill: var(--ink); font-size: 10.5px; font-weight: 600; }
 .flow-step-ref { fill: var(--ink-2); font-size: 8.5px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
 
+/* Slack: answering from the queue. The destination is stated in words before the send. */
+.slack-actions { display: flex; align-items: center; gap: .2rem; }
+.slack-sent { color: var(--ok-ink); font-size: .74rem; font-weight: 600; }
+.slack-composer { display: grid; gap: .35rem; min-width: 0; }
+.slack-composer-to { margin: 0; color: var(--ink-2); font-size: .72rem; }
+.slack-composer textarea {
+  width: 100%; resize: vertical;
+  background: var(--bg); color: var(--ink);
+  border: 1px solid var(--line); border-radius: .45rem;
+  padding: .4rem .55rem; font: inherit; font-size: .8rem; line-height: 1.4;
+}
+.slack-composer textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.slack-composer-row { display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+/* The hint takes its own line: with it inline, Send was pushed out of the column. */
+.slack-composer-row .module-hint { flex-basis: 100%; }
+
 /*
  * Settings → Modules. One row per report kind: a switch, what it needs, and the fields to
  * paste it into. Fields are write-only — nothing here ever displays a stored value.
@@ -1031,6 +1047,8 @@ body { background: var(--canvas); }
 .review-table th.review-col-size { width: 13rem; }
 .review-table th.review-col-qc { width: 8rem; }
 .review-table th.review-col-actions { width: 10.5rem; }
+/* The Slack composer lives in that column, and 10rem is not a message box. */
+.slack-table th.review-col-actions { width: 15rem; }
 
 .review-pick { padding-right: 0 !important; }
 .review-pick input { accent-color: var(--accent); cursor: pointer; }

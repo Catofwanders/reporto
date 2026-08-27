@@ -11,6 +11,7 @@ import {
 } from '../slackLanes';
 import { CopyPrLinks } from '../components/CopyPrLinks';
 import { RefreshButton } from '../components/RefreshButton';
+import { SlackReply } from '../components/SlackReply';
 
 interface SlackPageProps {
   report: SlackReport | null;
@@ -21,11 +22,13 @@ const Rows = ({
   selected,
   onToggle,
   onToggleAll,
+  onAnswered,
 }: {
   rows: SlackLaneRow[];
   selected: ReadonlySet<string>;
   onToggle: (id: string) => void;
   onToggleAll: (ids: string[], next: boolean) => void;
+  onAnswered: (id: string) => void;
 }) => {
   const ids = rows.map((entry) => entry.row.id);
   const picked = ids.filter((id) => selected.has(id)).length;
@@ -33,7 +36,7 @@ const Rows = ({
 
   return (
     <div className="review-table-wrap">
-      <table className="review-table">
+      <table className="review-table slack-table">
         <thead>
           <tr>
             <th className="review-pick">
@@ -51,6 +54,7 @@ const Rows = ({
             <th>Where</th>
             <th>What it says</th>
             <th className="review-col-ticket">From</th>
+            <th className="review-col-actions" aria-label="reply" />
           </tr>
         </thead>
         <tbody>
@@ -90,6 +94,9 @@ const Rows = ({
                 <td className="review-cell-ticket">
                   <span className="review-author">@{row.from}</span>
                 </td>
+                <td className="pr-cell-actions">
+                  <SlackReply row={row} onSent={() => onAnswered(row.id)} />
+                </td>
               </tr>
             );
           })}
@@ -109,11 +116,23 @@ const Rows = ({
 export const SlackPage = ({ report }: SlackPageProps) => {
   const [hideBots, setHideBots] = useState(true);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  /**
+   * Rows answered in this session. The report still says somebody is waiting until the next
+   * pull, and a row that sits in "waiting on you" after you have just replied to it is the
+   * same lie the unread badge tells.
+   */
+  const [answeredHere, setAnsweredHere] = useState<Set<string>>(new Set());
 
-  const lanes = useMemo<Map<SlackLaneId, SlackLaneRow[]>>(
-    () => (report ? toSlackLanes(report) : new Map()),
-    [report],
-  );
+  const answered = (id: string) =>
+    setAnsweredHere((prev) => new Set(prev).add(id));
+
+  const lanes = useMemo<Map<SlackLaneId, SlackLaneRow[]>>(() => {
+    if (!report) return new Map();
+    const seen = { ...report, rows: report.rows.map((row) => (
+      answeredHere.has(row.id) ? { ...row, lastFromMe: true, lastFrom: report.me } : row
+    )) };
+    return toSlackLanes(seen);
+  }, [report, answeredHere]);
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -220,6 +239,7 @@ export const SlackPage = ({ report }: SlackPageProps) => {
                 selected={selected}
                 onToggle={toggle}
                 onToggleAll={toggleAll}
+                onAnswered={answered}
               />
             </section>
           );

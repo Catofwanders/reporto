@@ -115,6 +115,19 @@ function envEntries() {
 
 const isSet = (name, env) => Boolean(env.get(name) || process.env[name])
 
+/**
+ * A credential's value, from the environment or from .env on disk.
+ *
+ * The two can disagree: the dev server lifts .env at boot, so a value added by hand
+ * afterwards is on disk but not in this process. Settings reads the file and reports
+ * "configured" while a puller reading process.env fails with "not set" — the same machine
+ * answering two ways. Reading through here makes the file the authority, which is where the
+ * human just typed.
+ */
+export function secretOf(name) {
+  return process.env[name] || envEntries().get(name) || undefined
+}
+
 // The gh CLI keeps its auth in its own config, not in this repo. Checking the file rather
 // than shelling out to `gh auth status` keeps this synchronous and cheap.
 function ghAuthed() {

@@ -31,6 +31,9 @@ export function capabilityOf(
 
 export function capabilities(): Capability[];
 
+/** A credential's value: process.env first, then .env on disk (which the human just edited). */
+export function secretOf(name: string): string | undefined;
+
 /** Writes one variable into .env (0600, by rename). Returns the standing, never the value. */
 export function setSecret(
   name: string,

@@ -12,6 +12,7 @@ import { pullJira } from './jira.mjs'
 import { pullStats } from './stats.mjs'
 import { pullGoogleCalendar } from './googleCalendar.mjs'
 import { pullSlack } from './slack.mjs'
+import { secretOf } from './capabilities.mjs'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const REPORTS = path.join(ROOT, 'public/reports')
@@ -111,7 +112,7 @@ export const PULLERS = {
 
   slack: (c) =>
     pullSlack({
-      token: process.env.SLACK_USER_TOKEN,
+      token: secretOf('SLACK_USER_TOKEN'),
       days: c.slackDays ?? 14,
       excludeChannels: c.slackChannelsExcluded ?? [],
     }),
