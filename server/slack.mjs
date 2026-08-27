@@ -55,7 +55,7 @@ async function call(token, method, params = {}, attempt = 0) {
   return body
 }
 
-/** Slack ids look like U04AB123 (people) or B01… (apps); never a name worth showing. */
+/** A Slack id is a letter and then digits and capitals — U or W for people, B for apps. */
 const idLike = (value) => /^[UWB][A-Z0-9]{6,}$/.test(String(value ?? ''))
 
 /** Display name, falling back through the fields Slack actually fills. */
@@ -382,7 +382,7 @@ export async function pullSlack({
   for (const match of await dmsOf(token, days)) {
     /*
      * For a DM, search fills `channel.name` with the counterpart's *user id*, which reads as
-     * "@U884KPRL7" in a row. The id is the thing to resolve, not to display: try the
+     * a bare member id in a row. The id is the thing to resolve, not to display: try the
      * conversation's user, then the id in the name, then whoever wrote the message if it was
      * not me — one of those is a person.
      */

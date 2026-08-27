@@ -323,7 +323,8 @@ const slackRow = (over: Partial<SlackRow> & Pick<SlackRow, 'id' | 'excerpt'>): S
   channelId: 'C0000001',
   permalink: 'https://example.slack.com/archives/C0000001/p1',
   from: 'colleague',
-  fromId: 'U0000001',
+  // Not id-shaped on purpose: a fixture that looks like a real member id trips the NDA scan.
+  fromId: 'fixture-person',
   bot: false,
   at: AT('09:10'),
   threadTs: null,
@@ -370,6 +371,7 @@ export const slackReport: SlackReport = {
       channel: 'seller-ops-lead',
       channelId: 'D0000009',
       from: 'seller-ops-lead',
+      fromId: 'fixture-seller-ops',
       excerpt: 'when does the payout report land? finance is asking',
     }),
     slackRow({

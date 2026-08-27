@@ -103,8 +103,8 @@ Direct messages come from the same search (`is:dm`), not from a call per convers
 are far more DM conversations than channels, and `conversations.history` for each would be
 minutes of rate-limited requests. A DM has one timeline, so its newest message *is* the last
 word and who wrote it is the whole answer. Search returns the counterpart's *user id* as the
-DM's channel name, so that gets resolved against the user list — a row reading `@U884KPRL7`
-names nobody.
+DM's channel name, so that gets resolved against the user list — a row reading `@U04…`, a
+bare member id, names nobody.
 
 Lanes put age above kind: an unanswered DM from three weeks ago belongs with the other things
 being carried, not at the top of today's list.

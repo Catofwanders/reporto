@@ -83,6 +83,20 @@ const GENERIC = new Set([
 /** Hosts everyone uses. Their names identify nobody; their subdomains sometimes do. */
 const PUBLIC_HOSTS = new Set(['github.com', 'gitlab.com', 'bitbucket.org'])
 
+/**
+ * Shapes that identify somebody whatever the term list says.
+ *
+ * A colleague's Slack member id is not a word anybody would think to list, and it reached a
+ * README, a code comment and a commit message before anyone noticed. Requiring a digit keeps
+ * it off ordinary uppercase words, and these are matched case-sensitively for the same reason.
+ */
+const SHAPES = [
+  {
+    name: 'slack member id',
+    pattern: /\b[UW](?=[A-Z0-9]{7,}\b)(?=[A-Z0-9]*[0-9])[A-Z0-9]+\b/,
+  },
+]
+
 /** Lock files and vendored data are pages of URLs and names, and never where a leak hides. */
 const SKIP_FILES = /^(package-lock\.json|.*\.lock|.*\.min\.(js|css)|docs\/.*\.(png|jpe?g|gif|webp))$/
 
@@ -185,6 +199,11 @@ function scan(label, text, terms, findings) {
   lines.forEach((line, i) => {
     for (const { term, pattern } of terms) {
       if (pattern.test(line)) findings.push({ label, line: i + 1, term, text: line.trim() })
+    }
+    for (const shape of SHAPES) {
+      if (shape.pattern.test(line)) {
+        findings.push({ label, line: i + 1, term: shape.name, text: line.trim() })
+      }
     }
   })
 }
