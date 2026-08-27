@@ -8,7 +8,7 @@ import { idleDays } from './prLanes';
  * message somebody is waiting on an answer to then looks handled. What matters is whether the
  * last word is mine — and how long ago somebody else had it.
  */
-export type SlackLaneId = 'asked' | 'stale' | 'answered' | 'bots';
+export type SlackLaneId = 'dms' | 'asked' | 'stale' | 'answered' | 'bots';
 
 export interface SlackLaneMeta {
   id: SlackLaneId;
@@ -20,6 +20,11 @@ export interface SlackLaneMeta {
 export const STALE_DAYS = 7;
 
 export const SLACK_LANES: SlackLaneMeta[] = [
+  {
+    id: 'dms',
+    title: 'Direct messages',
+    hint: 'One-to-one, and the last word is theirs',
+  },
   {
     id: 'asked',
     title: 'Waiting on you',
@@ -46,14 +51,17 @@ export const laneOfSlack = (row: SlackRow): SlackLaneId => {
   // A bot naming you is not a person waiting, however urgent the alert reads.
   if (row.bot) return 'bots';
   if (row.lastFromMe) return 'answered';
-  return idleDays(row.lastAt ?? row.at) >= STALE_DAYS ? 'stale' : 'asked';
+  // Age wins over kind: an unanswered DM from three weeks ago belongs with the other things
+  // being carried rather than at the top of today's list.
+  if (idleDays(row.lastAt ?? row.at) >= STALE_DAYS) return 'stale';
+  return row.kind === 'dm' ? 'dms' : 'asked';
 };
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /** The row's one line: who is waiting, on what, and where the answer belongs. */
 export const reasonOfSlack = (row: SlackRow, days: number): string => {
-  const where = row.threadTs ? 'in a thread' : 'in the channel';
+  const where = row.kind === 'dm' ? 'in your DMs' : row.threadTs ? 'in a thread' : 'in the channel';
   if (row.bot) return `${row.from} · ${where}`;
   if (row.lastFromMe) {
     return days === 0 ? 'you answered today' : `you answered ${plural(days, 'day')} ago`;
@@ -82,9 +90,3 @@ export const toSlackLanes = (report: SlackReport): Map<SlackLaneId, SlackLaneRow
   for (const list of lanes.values()) list.sort((a, b) => b.idleDays - a.idleDays);
   return lanes;
 };
-
-/** Links worth copying into a catch-up session: the ones still waiting on a reply. */
-export const slackLinks = (lanes: Map<SlackLaneId, SlackLaneRow[]>): string[] =>
-  [...(lanes.get('asked') ?? []), ...(lanes.get('stale') ?? [])]
-    .map((entry) => entry.row.permalink)
-    .filter(Boolean);

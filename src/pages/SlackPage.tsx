@@ -76,8 +76,9 @@ const Rows = ({
                 </td>
                 <td className="review-cell-pr">
                   <a className="ref" href={row.permalink} target="_blank" rel="noopener noreferrer">
-                    #{row.channel}
+                    {row.kind === 'dm' ? `@${row.channel}` : `#${row.channel}`}
                   </a>
+                  {row.kind === 'dm' && <span className="pr-row-repo">DM</span>}
                   {row.threadTs && <span className="pr-row-repo">thread</span>}
                 </td>
                 <td className="review-cell-what">

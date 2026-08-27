@@ -1,6 +1,16 @@
+import { useState } from 'react';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
 import type { JiraReport, PrsReport } from '../types';
 import { flowFindings } from '../flowChecks';
+
+/**
+ * How many findings the card shows before folding.
+ *
+ * Seven PRs missing a ticket key are seven cards saying the same sentence, and they pushed
+ * every module below the fold — a card meant to catch the eye instead became the page. The
+ * serious ones come first, so what is folded away is the tail rather than the point.
+ */
+const SHOWN = 3;
 
 interface FlowChecksProps {
   jira: JiraReport | null;
@@ -12,10 +22,13 @@ interface FlowChecksProps {
  * card trains you to stop reading it, and then it is worthless on the day it has something.
  */
 export const FlowChecks = ({ jira, prs }: FlowChecksProps) => {
+  const [expanded, setExpanded] = useState(false);
   const findings = flowFindings(jira, prs);
   if (findings.length === 0) return null;
 
   const serious = findings.filter((finding) => finding.severity === 'bad').length;
+  const shown = expanded ? findings : findings.slice(0, SHOWN);
+  const hidden = findings.length - shown.length;
 
   return (
     <section className="panel flow-checks">
@@ -35,7 +48,7 @@ export const FlowChecks = ({ jira, prs }: FlowChecksProps) => {
       </div>
 
       <ul className="flow-list">
-        {findings.map((finding) => (
+        {shown.map((finding) => (
           <li key={finding.id} className={`flow-item flow-${finding.severity}`}>
             <div className="flow-item-head">
               <p className="flow-title">{finding.title}</p>
@@ -63,6 +76,12 @@ export const FlowChecks = ({ jira, prs }: FlowChecksProps) => {
           </li>
         ))}
       </ul>
+
+      {(hidden > 0 || expanded) && (
+        <button type="button" className="module-more" onClick={() => setExpanded(!expanded)}>
+          {expanded ? 'Show fewer' : `${hidden} more`}
+        </button>
+      )}
     </section>
   );
 };

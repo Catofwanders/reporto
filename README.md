@@ -76,6 +76,16 @@ makes the pull about a second. Search is a paid-plan feature; a free workspace a
 `not_allowed_token_type`, and that error is left to surface rather than degrading into a
 partial answer that looks complete.
 
+Direct messages come from the same search (`is:dm`), not from a call per conversation: there
+are far more DM conversations than channels, and `conversations.history` for each would be
+minutes of rate-limited requests. A DM has one timeline, so its newest message *is* the last
+word and who wrote it is the whole answer. Search returns the counterpart's *user id* as the
+DM's channel name, so that gets resolved against the user list — a row reading `@U884KPRL7`
+names nobody.
+
+Lanes put age above kind: an unanswered DM from three weeks ago belongs with the other things
+being carried, not at the top of today's list.
+
 Auth is a **user token** (`xoxp`), so what it reads is what you can read and anything it
 posts is your own message. A bot token cannot see your mentions at all.
 

@@ -11,7 +11,7 @@ interface HomeSlackProps {
 const SHOWN = 4;
 
 /** Only the lanes that are mine to move; a reply I already sent needs nothing. */
-const ORDER: SlackLaneId[] = ['asked', 'stale'];
+const ORDER: SlackLaneId[] = ['dms', 'asked', 'stale'];
 
 /**
  * Slack messages waiting on a reply. Same shape as the review queue, for the same reason:
@@ -56,7 +56,7 @@ export const HomeSlack = ({ report }: HomeSlackProps) => {
             </span>
             <div className="mini-row-body">
               <a href={row.permalink} target="_blank" rel="noopener noreferrer" title={row.excerpt}>
-                #{row.channel}
+                {row.kind === 'dm' ? `@${row.channel}` : `#${row.channel}`}
               </a>
               <span className="mini-row-meta">
                 @{row.from} · {row.excerpt}

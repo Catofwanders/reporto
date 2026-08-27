@@ -318,6 +318,7 @@ export const reviewsReport: ReviewsReport = {
  * already answered, and an alert from an app.
  */
 const slackRow = (over: Partial<SlackRow> & Pick<SlackRow, 'id' | 'excerpt'>): SlackRow => ({
+  kind: 'mention',
   channel: 'orders-team',
   channelId: 'C0000001',
   permalink: 'https://example.slack.com/archives/C0000001/p1',
@@ -359,6 +360,14 @@ export const slackReport: SlackReport = {
       replies: 2,
       lastFrom: 'you',
       lastFromMe: true,
+    }),
+    slackRow({
+      kind: 'dm',
+      id: 'D0000009:5',
+      channel: 'seller-ops-lead',
+      channelId: 'D0000009',
+      from: 'seller-ops-lead',
+      excerpt: 'when does the payout report land? finance is asking',
     }),
     slackRow({
       id: 'C0000003:4',

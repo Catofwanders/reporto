@@ -48,7 +48,11 @@ function validReviews(v: unknown): v is ReviewsReport {
 function validSlack(v: unknown): v is SlackReport {
   if (!isObject(v) || typeof v.date !== 'string' || !isArray(v.rows)) return false;
   return v.rows.every(
-    (row) => isObject(row) && typeof row.id === 'string' && typeof row.lastFromMe === 'boolean',
+    (row) =>
+      isObject(row) &&
+      typeof row.id === 'string' &&
+      typeof row.lastFromMe === 'boolean' &&
+      (row.kind === 'mention' || row.kind === 'dm'),
   );
 }
 

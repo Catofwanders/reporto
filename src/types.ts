@@ -216,9 +216,11 @@ export interface ReviewsReport {
  * word since is not mine.
  */
 export interface SlackRow {
+  /** A channel mention, or a direct message — they wait differently and read differently. */
+  kind: 'mention' | 'dm';
   /** channel id + timestamp: stable, and unique across channels. */
   id: string;
-  /** Channel name, or "DM" where there is no name to show. */
+  /** Channel name, or the other person's handle for a direct message. */
   channel: string;
   channelId: string;
   permalink: string;

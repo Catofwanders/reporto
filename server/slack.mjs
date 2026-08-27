@@ -55,6 +55,9 @@ async function call(token, method, params = {}, attempt = 0) {
   return body
 }
 
+/** Slack ids look like U04AB123 (people) or B01… (apps); never a name worth showing. */
+const idLike = (value) => /^[UWB][A-Z0-9]{6,}$/.test(String(value ?? ''))
+
 /** Display name, falling back through the fields Slack actually fills. */
 const nameOf = (user) =>
   user?.profile?.display_name || user?.profile?.real_name || user?.name || user?.id || 'unknown'
@@ -133,6 +136,38 @@ async function threadState(token, channel, ts, meId) {
 }
 
 /**
+ * Direct messages, newest first, from search rather than by walking conversations.
+ *
+ * There are far more DM conversations than channels — a `conversations.history` call each
+ * would be minutes of rate-limited requests for an answer that search gives in one call.
+ * Only the newest message per conversation matters: it is either mine or somebody's waiting.
+ */
+async function dmsOf(token, days) {
+  const newest = new Map()
+  const cutoff = Date.now() - days * 86_400_000
+  let page = 1
+  for (;;) {
+    const body = await call(token, 'search.messages', {
+      query: 'is:dm',
+      sort: 'timestamp',
+      sort_dir: 'desc',
+      count: '100',
+      page: String(page),
+    })
+    const matches = body.messages?.matches ?? []
+    for (const match of matches) {
+      if (new Date(isoOf(match.ts)).getTime() < cutoff) return [...newest.values()]
+      const id = match.channel?.id
+      // Descending order means the first sighting of a conversation is its last word.
+      if (id && !newest.has(id)) newest.set(id, match)
+    }
+    const paging = body.messages?.paging
+    if (!paging || page >= paging.pages || matches.length === 0) return [...newest.values()]
+    page += 1
+  }
+}
+
+/**
  * Did anything land in the channel after this mention, and was it mine?
  *
  * Half of Slack's replies are not thread replies — somebody @s me in a channel and I answer
@@ -191,6 +226,7 @@ export async function pullSlack({ token, days = DEFAULT_DAYS, excludeChannels = 
 
     const threadTs = match.thread_ts ?? null
     const row = {
+      kind: 'mention',
       id: `${match.channel?.id}:${match.ts}`,
       channel: channelName || (match.channel?.is_im ? 'DM' : match.channel?.id ?? 'unknown'),
       channelId: match.channel?.id ?? '',
@@ -238,6 +274,41 @@ export async function pullSlack({ token, days = DEFAULT_DAYS, excludeChannels = 
       }
     }
     rows.push(row)
+  }
+
+  /*
+   * DMs need no thread or channel lookup: a direct message conversation has one timeline, so
+   * its newest message *is* the last word, and who wrote it is the whole answer.
+   */
+  for (const match of await dmsOf(token, days)) {
+    /*
+     * For a DM, search fills `channel.name` with the counterpart's *user id*, which reads as
+     * "@U884KPRL7" in a row. The id is the thing to resolve, not to display: try the
+     * conversation's user, then the id in the name, then whoever wrote the message if it was
+     * not me — one of those is a person.
+     */
+    const other =
+      names.get(match.channel?.user) ??
+      (idLike(match.channel?.name) ? names.get(match.channel.name) : match.channel?.name) ??
+      (match.user !== me.user_id ? names.get(match.user) : null) ??
+      'unknown'
+    rows.push({
+      kind: 'dm',
+      id: `${match.channel?.id}:${match.ts}`,
+      channel: other,
+      channelId: match.channel?.id ?? '',
+      permalink: match.permalink ?? '',
+      from: names.get(match.user) ?? match.username ?? other,
+      fromId: match.user ?? '',
+      bot: bots.has(match.user) || Boolean(match.bot_id),
+      at: isoOf(match.ts),
+      threadTs: null,
+      excerpt: excerptOf(match.text),
+      replies: 0,
+      lastFrom: names.get(match.user) ?? match.username ?? other,
+      lastFromMe: match.user === me.user_id,
+      lastAt: isoOf(match.ts),
+    })
   }
 
   rows.sort((a, b) => new Date(a.lastAt).getTime() - new Date(b.lastAt).getTime())
