@@ -55,6 +55,30 @@ remote. A fresh checkout therefore starts with no data:
 the cards stay hidden and the action bar reads "never" until you press an update
 button.
 
+## Slack mentions
+
+A fifth report: who named you, and whether the last word is still theirs. Slack's own answer
+to that — unread badges — is useless, because unread clears the moment a channel is glanced
+at on a phone, and a question somebody is waiting on then reads as handled. So "waiting" is
+derived from the conversation instead.
+
+Deciding it takes two endpoints, not one, because a reply lands in one of two places:
+
+- `conversations.replies` sees a reply **inside the thread**. Search results do not carry
+  `thread_ts`, so whether a mention is threaded at all is not knowable until asked — a single
+  message comes back as a thread of one, and that is the signal to ask the channel instead.
+- `conversations.history` from the mention's timestamp sees a reply **in the channel below
+  it**, which is how half of Slack actually answers. Without this every such exchange sat in
+  "waiting on you" forever, which is the exact false alarm the page exists to remove.
+
+Mentions come from one `search.messages` call rather than a walk over channels, which is what
+makes the pull about a second. Search is a paid-plan feature; a free workspace answers
+`not_allowed_token_type`, and that error is left to surface rather than degrading into a
+partial answer that looks complete.
+
+Auth is a **user token** (`xoxp`), so what it reads is what you can read and anything it
+posts is your own message. A bot token cannot see your mentions at all.
+
 ## Modules and credentials
 
 Settings → **Modules** lists what this machine can fetch. Each row says whether it is

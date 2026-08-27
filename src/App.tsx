@@ -6,6 +6,7 @@ import type {
   PrsReport,
   ReportIndex,
   ReviewsReport,
+  SlackReport,
   StatsReport,
 } from './types';
 import type { ReportKind } from './reportKinds';
@@ -20,6 +21,7 @@ import { HomePage } from './pages/HomePage';
 import { JiraPage } from './pages/JiraPage';
 import { PrsPage } from './pages/PrsPage';
 import { ReviewsPage } from './pages/ReviewsPage';
+import { SlackPage } from './pages/SlackPage';
 import { StatsPage } from './pages/StatsPage';
 import { CommandsPage } from './pages/CommandsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -62,11 +64,19 @@ interface Reports {
   jira: JiraReport | null;
   stats: StatsReport | null;
   reviews: ReviewsReport | null;
+  slack: SlackReport | null;
   calendar: CalendarReport | null;
   prs: PrsReport | null;
 }
 
-const EMPTY: Reports = { jira: null, calendar: null, prs: null, reviews: null, stats: null };
+const EMPTY: Reports = {
+  jira: null,
+  calendar: null,
+  prs: null,
+  reviews: null,
+  slack: null,
+  stats: null,
+};
 
 type KindErrors = Partial<Record<ReportKind, string>>;
 
@@ -154,6 +164,7 @@ export const App = () => {
   const generatedAt = {
     stats: reports.stats?.generatedAt,
     reviews: reports.reviews?.generatedAt,
+    slack: reports.slack?.generatedAt,
     jira: reports.jira?.generatedAt,
     calendar: reports.calendar?.generatedAt,
     prs: reports.prs?.generatedAt,
@@ -183,6 +194,7 @@ export const App = () => {
                       <HomePage
                         jira={reports.jira}
                         reviews={reports.reviews}
+                        slack={reports.slack}
                         calendar={reports.calendar}
                         prs={reports.prs}
                       />
@@ -209,6 +221,14 @@ export const App = () => {
                     element={
                       <ModuleGate kind="reviews">
                         <ReviewsPage report={reports.reviews} jira={reports.jira} />
+                      </ModuleGate>
+                    }
+                  />
+                  <Route
+                    path="/slack"
+                    element={
+                      <ModuleGate kind="slack">
+                        <SlackPage report={reports.slack} />
                       </ModuleGate>
                     }
                   />

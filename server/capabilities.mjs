@@ -45,6 +45,12 @@ export const CAPABILITIES = {
     gh: true,
     note: 'Same GitHub auth as the PR report.',
   },
+  slack: {
+    label: 'Slack',
+    requires: [['SLACK_USER_TOKEN']],
+    config: [],
+    note: 'A user token (xoxp) from your own Slack app — it reads as you and posts as you.',
+  },
   calendar: {
     label: 'Calendar',
     requires: [
@@ -85,6 +91,12 @@ const SHAPE = {
   },
   GOOGLE_CLIENT_SECRET: { test: (v) => v.length >= 10, hint: 'a Google client secret' },
   GOOGLE_REFRESH_TOKEN: { test: (v) => v.startsWith('1//'), hint: 'a Google refresh token' },
+  // xoxb is a bot token and xapp an app-level one; neither can read your mentions, and both
+  // are easy to copy by mistake from the same settings page.
+  SLACK_USER_TOKEN: {
+    test: (v) => v.startsWith('xoxp-'),
+    hint: 'a Slack *user* token, starting xoxp- (xoxb/xapp cannot read your mentions)',
+  },
 }
 
 /** Lines of .env as [key, hasValue] — the value itself is read but never returned. */

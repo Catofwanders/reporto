@@ -1,3 +1,5 @@
+import type { ReportKind } from './reportKinds';
+
 export type Chip = 'bad' | 'warn' | 'ok' | 'na' | 'open' | 'qc' | 'qcout';
 
 export interface Pr {
@@ -206,6 +208,46 @@ export interface ReviewsReport {
   prs: ReviewPr[];
 }
 
+/**
+ * One thing in Slack that has my name on it.
+ *
+ * `lastFromMe` is the whole point: unread state clears the moment a channel is glanced at,
+ * so "waiting" is derived from the conversation instead — somebody addressed me, and the last
+ * word since is not mine.
+ */
+export interface SlackRow {
+  /** channel id + timestamp: stable, and unique across channels. */
+  id: string;
+  /** Channel name, or "DM" where there is no name to show. */
+  channel: string;
+  channelId: string;
+  permalink: string;
+  from: string;
+  fromId: string;
+  bot: boolean;
+  /** When the mention itself landed. */
+  at: string;
+  /** Set when the mention sits in a thread, which changes where a reply belongs. */
+  threadTs: string | null;
+  replies: number;
+  lastFrom: string | null;
+  lastFromMe: boolean;
+  lastAt: string | null;
+  /** First line, with Slack's markup flattened. */
+  excerpt: string;
+}
+
+export interface SlackReport {
+  type: 'slack';
+  date: string;
+  generatedAt: string;
+  /** The handle the mentions were searched for. */
+  me: string;
+  /** How many days back the search went. */
+  days: number;
+  rows: SlackRow[];
+}
+
 /** A lane in a flow diagram: who or what performs a step. */
 export interface FlowActor {
   id: string;
@@ -361,14 +403,11 @@ export interface KitReport {
   }[];
 }
 
+/**
+ * Keyed by report kind rather than spelled out: a new kind that the index forgot is a kind
+ * whose file the loader cannot find, and that failure is silent.
+ */
 export interface ReportIndex {
-  latest: { jira?: string; calendar?: string; prs?: string; stats?: string; reviews?: string };
-  history: {
-    date: string;
-    jira?: string;
-    calendar?: string;
-    prs?: string;
-    stats?: string;
-    reviews?: string;
-  }[];
+  latest: Partial<Record<ReportKind, string>>;
+  history: ({ date: string } & Partial<Record<ReportKind, string>>)[];
 }

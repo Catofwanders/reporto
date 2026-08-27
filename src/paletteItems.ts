@@ -32,6 +32,7 @@ const PAGES: PaletteItem[] = [
   { id: 'page:/jira', group: 'Pages', title: 'Jira board', keywords: 'tickets', kind: 'jira', action: { kind: 'goto', to: '/jira' } },
   { id: 'page:/prs', group: 'Pages', title: 'Pull requests', keywords: 'prs github', kind: 'prs', action: { kind: 'goto', to: '/prs' } },
   { id: 'page:/reviews', group: 'Pages', title: 'Review queue', keywords: 'reviews waiting', kind: 'reviews', action: { kind: 'goto', to: '/reviews' } },
+  { id: 'page:/slack', group: 'Pages', title: 'Slack mentions', keywords: 'messages threads', kind: 'slack', action: { kind: 'goto', to: '/slack' } },
   { id: 'page:/calendar', group: 'Pages', title: 'Calendar', keywords: 'meetings', kind: 'calendar', action: { kind: 'goto', to: '/calendar' } },
   { id: 'page:/stats', group: 'Pages', title: 'Statistics', keywords: 'metrics charts', kind: 'stats', action: { kind: 'goto', to: '/stats' } },
   { id: 'page:/commands', group: 'Pages', title: 'Commands and skills', keywords: 'kit slash', action: { kind: 'goto', to: '/commands' } },

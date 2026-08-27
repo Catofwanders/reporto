@@ -11,6 +11,7 @@ import { pullOpenPrs, pullReviewQueue, pullTicketPrs } from './github.mjs'
 import { pullJira } from './jira.mjs'
 import { pullStats } from './stats.mjs'
 import { pullGoogleCalendar } from './googleCalendar.mjs'
+import { pullSlack } from './slack.mjs'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const REPORTS = path.join(ROOT, 'public/reports')
@@ -106,6 +107,13 @@ export const PULLERS = {
       },
       months: c.statsMonths ?? 6,
       previous: readReport('stats'),
+    }),
+
+  slack: (c) =>
+    pullSlack({
+      token: process.env.SLACK_USER_TOKEN,
+      days: c.slackDays ?? 14,
+      excludeChannels: c.slackChannelsExcluded ?? [],
     }),
 
   reviews: (c) =>

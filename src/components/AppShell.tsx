@@ -50,6 +50,11 @@ const HEADINGS: Record<
     subtitle: "PRs waiting on your review, and the ones that moved since you looked.",
     kind: 'reviews',
   },
+  '/slack': {
+    title: 'Slack',
+    subtitle: 'Who named you, and whether the last word is still theirs.',
+    kind: 'slack',
+  },
   '/calendar': {
     title: 'Calendar',
     subtitle: "Today's events and the upcoming watch-list.",

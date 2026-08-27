@@ -15,6 +15,8 @@ import type {
   ReviewDecision,
   ReviewPr,
   ReviewsReport,
+  SlackReport,
+  SlackRow,
   StatsMonth,
   StatsReport,
 } from '../types';
@@ -308,6 +310,65 @@ export const reviewsReport: ReviewsReport = {
       reviewDecision: 'APPROVED',
     }),
     reviewPr({ num: 70, title: 'Bump the linter', author: 'dependabot', bot: true }),
+  ],
+};
+
+/**
+ * Slack mentions in the invented marketplace: one waiting on a reply, one gone stale, one
+ * already answered, and an alert from an app.
+ */
+const slackRow = (over: Partial<SlackRow> & Pick<SlackRow, 'id' | 'excerpt'>): SlackRow => ({
+  channel: 'orders-team',
+  channelId: 'C0000001',
+  permalink: 'https://example.slack.com/archives/C0000001/p1',
+  from: 'colleague',
+  fromId: 'U0000001',
+  bot: false,
+  at: AT('09:10'),
+  threadTs: null,
+  replies: 0,
+  lastFrom: 'colleague',
+  lastFromMe: false,
+  lastAt: AT('09:10'),
+  ...over,
+});
+
+export const slackReport: SlackReport = {
+  type: 'slack',
+  date: DATE,
+  generatedAt: AT('08:35'),
+  me: 'you',
+  days: 14,
+  rows: [
+    slackRow({
+      id: 'C0000001:1',
+      excerpt: 'can you confirm the refund window before we ship the release?',
+    }),
+    slackRow({
+      id: 'C0000002:2',
+      channel: 'checkout',
+      channelId: 'C0000002',
+      excerpt: 'the basket serialiser change — is that still landing this sprint?',
+      at: `2026-05-02T10:00:00+02:00`,
+      lastAt: `2026-05-02T10:00:00+02:00`,
+    }),
+    slackRow({
+      id: 'C0000001:3',
+      excerpt: 'thanks — merged and on QC now',
+      threadTs: 'C0000001:3',
+      replies: 2,
+      lastFrom: 'you',
+      lastFromMe: true,
+    }),
+    slackRow({
+      id: 'C0000003:4',
+      channel: 'alerts',
+      channelId: 'C0000003',
+      from: 'deploy-bot',
+      bot: true,
+      excerpt: 'orders-api deploy finished · 3 migrations applied',
+      lastFrom: 'deploy-bot',
+    }),
   ],
 };
 

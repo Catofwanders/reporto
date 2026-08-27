@@ -31,6 +31,8 @@ stays free of employer or account specifics.
 | `projects.json` | The project map behind `/projects`: repositories, the ticket workflow, and the infrastructure sketch. Separate file, same directory; copy `config.template/projects.json` and describe your own work. |
 | `statusChoices` | Statuses offered when changing a ticket from the dashboard, matched against a transition's target status. Empty means Jira's whole workflow, which is usually far more than anyone moves a ticket to by hand. |
 | `upcomingDays` | How far the calendar watch-list looks ahead. Defaults to 7. |
+| `slackDays` | How far back the Slack mention search goes. Defaults to 14. |
+| `slackChannelsExcluded` | Channel names whose mentions are noise — alert feeds, announcements. |
 | `commandGroups[].command` | Claude Code slash command that regenerates reports, spawned as `claude -p`. Only needed for reports the server cannot pull itself — the Outlook half of the calendar, which requires the Chrome extension. Leave the list empty if you run `/email` by hand. |
 | `commandGroups[].writes` | Report kinds that command produces (`calendar`, `jira`, `prs`). Kinds in one group refresh together. |
 | `commandGroups[].tools` | Which allow-list the headless run gets: `mail` (Chrome MCP, for the calendar skill) or `jira` (Atlassian search plus specific `gh` commands). The lists live in `vite.config.ts`. |

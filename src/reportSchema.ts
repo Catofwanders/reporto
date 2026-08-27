@@ -3,6 +3,7 @@ import type {
   JiraReport,
   PrsReport,
   ReviewsReport,
+  SlackReport,
   StatsReport,
 } from './types';
 import type { ReportKind } from './reportKinds';
@@ -44,6 +45,13 @@ function validReviews(v: unknown): v is ReviewsReport {
   return v.prs.every((pr) => isObject(pr) && typeof pr.num === 'number' && typeof pr.repo === 'string');
 }
 
+function validSlack(v: unknown): v is SlackReport {
+  if (!isObject(v) || typeof v.date !== 'string' || !isArray(v.rows)) return false;
+  return v.rows.every(
+    (row) => isObject(row) && typeof row.id === 'string' && typeof row.lastFromMe === 'boolean',
+  );
+}
+
 function validStats(v: unknown): v is StatsReport {
   if (!isObject(v) || !isArray(v.months)) return false;
   return v.months.every((m) => isObject(m) && typeof m.month === 'string');
@@ -54,6 +62,7 @@ const VALIDATORS: Record<ReportKind, (v: unknown) => boolean> = {
   calendar: validCalendar,
   prs: validPrs,
   reviews: validReviews,
+  slack: validSlack,
   stats: validStats,
 };
 

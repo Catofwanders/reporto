@@ -1,15 +1,23 @@
-import type { CalendarReport, JiraReport, PrsReport, ReviewsReport } from '../types';
+import type {
+  CalendarReport,
+  JiraReport,
+  PrsReport,
+  ReviewsReport,
+  SlackReport,
+} from '../types';
 import { useCapabilities } from '../capabilitiesContext';
 import { CalendarWidget } from '../components/CalendarWidget';
 import { FlowChecks } from '../components/FlowChecks';
 import { HomePrs } from '../components/HomePrs';
 import { HomeReviews } from '../components/HomeReviews';
+import { HomeSlack } from '../components/HomeSlack';
 import { HomeTickets } from '../components/HomeTickets';
 import { StandupCard } from '../components/StandupCard';
 
 interface HomePageProps {
   jira: JiraReport | null;
   reviews: ReviewsReport | null;
+  slack: SlackReport | null;
   calendar: CalendarReport | null;
   prs: PrsReport | null;
 }
@@ -23,7 +31,7 @@ interface HomePageProps {
  * rather than acted on, and the review queue — where somebody else is waiting — earns that
  * space better.
  */
-export const HomePage = ({ jira, calendar, prs, reviews }: HomePageProps) => {
+export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps) => {
   // A module whose credentials are missing, or which has been switched off in Settings, is
   // not shown at all: an empty card that can never fill reads as a broken card.
   const { usable } = useCapabilities();
@@ -37,6 +45,7 @@ export const HomePage = ({ jira, calendar, prs, reviews }: HomePageProps) => {
         {jira && usable('jira') && <HomeTickets report={jira} />}
         {prs && usable('prs') && <HomePrs report={prs} />}
         {reviews && usable('reviews') && <HomeReviews report={reviews} jira={jira} />}
+        {slack && usable('slack') && <HomeSlack report={slack} />}
         {calendar && usable('calendar') && <CalendarWidget report={calendar} />}
       </div>
 

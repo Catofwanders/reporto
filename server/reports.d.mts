@@ -42,6 +42,10 @@ export interface ReportoConfig {
     qcFailed?: string;
     inProgress?: string;
   };
+  /** How far back the Slack mention search goes. */
+  slackDays?: number;
+  /** Channel names whose mentions are noise — announcements, alert feeds. */
+  slackChannelsExcluded?: string[];
   /** How many months the statistics report carries, newest first. */
   statsMonths?: number;
   commandGroups: CommandGroup[];

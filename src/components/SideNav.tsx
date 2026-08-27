@@ -5,6 +5,7 @@ import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumbe
 import AltRouteRoundedIcon from '@mui/icons-material/AltRouteRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import EventRoundedIcon from '@mui/icons-material/EventRounded';
+import ForumRoundedIcon from '@mui/icons-material/ForumRounded';
 import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import TerminalRoundedIcon from '@mui/icons-material/TerminalRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
@@ -41,6 +42,7 @@ const SECTIONS: { title: string; rows: NavRow[] }[] = [
       { to: '/jira', label: 'Jira', icon: ConfirmationNumberRoundedIcon, kind: 'jira' },
       { to: '/prs', label: 'Pull requests', icon: AltRouteRoundedIcon, kind: 'prs' },
       { to: '/reviews', label: 'Reviews', icon: VisibilityRoundedIcon, kind: 'reviews' },
+      { to: '/slack', label: 'Slack', icon: ForumRoundedIcon, kind: 'slack' },
       { to: '/calendar', label: 'Calendar', icon: EventRoundedIcon, kind: 'calendar' },
     ],
   },
