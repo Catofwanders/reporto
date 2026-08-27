@@ -28,13 +28,26 @@ const freshReviews = {
   })),
 };
 
+/**
+ * Slack too: the fixture is dated with everything else, so without this the mention queue
+ * reads "117d" and the screenshot looks like a dashboard nobody has opened since spring.
+ */
+const freshSlack = {
+  ...slackReport,
+  rows: slackReport.rows.map((row, i) => ({
+    ...row,
+    at: minutesAgo(90 + i * 240),
+    lastAt: minutesAgo(90 + i * 240),
+  })),
+};
+
 const meta = {
   title: 'Pages/Home',
   component: HomePage,
   args: {
     jira: jiraReport,
     reviews: freshReviews,
-    slack: slackReport,
+    slack: freshSlack,
     calendar: calendarReport,
     prs: freshPrs,
   },
@@ -52,7 +65,7 @@ export const NothingWaiting: Story = {
   args: {
     prs: { ...prsReport, repos: [] },
     reviews: { ...reviewsReport, prs: [] },
-    slack: { ...slackReport, rows: [] },
+    slack: { ...freshSlack, rows: [] },
   },
 };
 

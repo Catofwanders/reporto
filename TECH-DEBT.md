@@ -17,18 +17,18 @@ network, which the security model says it never will be.
 fallback, and Recharts follows it into its own chunk. Half an hour, and the only risk is the
 chart's CSS custom properties resolving a frame later than the page.
 
-## The README screenshots lag the dashboard
+## The README screenshots go stale on every redesign
 
-`docs/home.jpg` and `docs/home-nord.jpg` were re-shot when the dashboard became modules, and
-have since fallen behind again: they predate the Slack module, the ticket-aging pills and the
-paired top row of flow checks and calendar.
+Currently **up to date** — both palettes were re-shot on the strip-and-queue dashboard. The
+debt is the process, not the files: they have now fallen behind twice, once per redesign, and
+each catch-up needs Storybook running on a hand-picked Node, two URLs, two screenshots and two
+file copies.
 
-**Cost today:** a reader sees a slightly older product than the one described two paragraphs
-below the image. Nothing is wrong, only stale.
+**Cost today:** none, until the next visible change to the dashboard.
 
-**Fix:** run Storybook, open `Pages/Home`, shoot both palettes, replace the two files. Ten
-minutes — but it needs doing after *every* visible dashboard change, which is why it keeps
-lagging. Worth automating with a Playwright script against the story if it drifts again.
+**Fix:** a script — Playwright against `Pages/Home`, both palettes, writing straight into
+`docs/` — so it is one command rather than ten minutes of clicking. Worth doing the next time
+they drift rather than pre-emptively.
 
 ## The Jira pull reads a changelog per aged ticket
 

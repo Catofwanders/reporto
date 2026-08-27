@@ -6,8 +6,8 @@ calendar, each rendered from a JSON report on disk.
 **This is a single-user, local-only app by design.** See
 [Why it stays local](#why-it-stays-local) before considering deploying it anywhere.
 
-![The dashboard: a flow-check card, then modules for active tickets, my open PRs, the review
-queue and today's calendar, and the stand-up note](docs/home.jpg)
+![The dashboard: a strip of six counts, one prioritised queue grouped by what to do, today as
+a timeline, open PRs as a proportional bar, and the stand-up note](docs/home.jpg)
 
 One screen: six numbers, one queue, and the day. The version before this was five cards of
 identical shape — a title, a count, then four lines of prose each — which measured 341 words
