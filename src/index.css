@@ -149,23 +149,6 @@ body {
 }
 
 .wrap { max-width: 82rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
-
-/* settings */
-/* Starts every refreshable report at once; each card still settles on its own. */
-.action-all {
-  display: inline-flex; align-items: center; gap: .35rem;
-  background: var(--panel); color: var(--ink-2);
-  border: 1px solid var(--line); border-radius: .55rem;
-  padding: .5rem .7rem; font: inherit; font-size: .74rem; font-weight: 600; cursor: pointer;
-}
-.action-all:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
-.action-all:disabled { cursor: progress; opacity: .7; }
-
-.app-settings {
-  margin-left: .3rem; font-size: 1rem; line-height: 1; text-decoration: none;
-  color: var(--ink-2); opacity: .8;
-}
-.app-settings:hover { color: var(--accent); opacity: 1; }
 .palette-grid {
   display: grid; gap: .7rem; margin-top: 1rem;
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
@@ -183,27 +166,6 @@ body {
 .palette-name { font-weight: 600; font-size: .92rem; display: flex; align-items: baseline; gap: .5rem; }
 .palette-current { font-size: .68rem; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
 .palette-note { color: var(--ink-2); font-size: .8rem; }
-
-.app-head {
-  display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .8rem; margin-bottom: 1.4rem;
-}
-.app-head h1 { margin: 0; font-size: 1.5rem; letter-spacing: -.01em; }
-.app-sub { color: var(--ink-2); font-size: .85rem; }
-
-/* action bar: one update control per report */
-.action-bar { margin-left: auto; display: flex; flex-wrap: wrap; gap: .5rem; }
-.action-item {
-  display: flex; align-items: center; gap: .45rem;
-  background: var(--panel); border: 1px solid var(--line); border-radius: .5rem;
-  padding: .25rem .35rem .25rem .6rem;
-}
-.action-item.has-error { border-color: var(--bad-line); }
-/* No update control: written by running the skill in the user's own session. */
-.action-item.action-manual { padding-right: .6rem; opacity: .75; }
-.action-icon { font-size: .9rem; }
-.action-labels { display: flex; flex-direction: column; line-height: 1.15; }
-.action-name { font-size: .78rem; font-weight: 600; }
-.action-stamp { font-size: .68rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .refresh-slot { display: inline-flex; }
 
 .panel-meta { display: inline-flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
@@ -244,6 +206,7 @@ body {
 .empty { padding: .8rem .9rem; color: var(--ink-2); font-size: .84rem; }
 
 .prs { margin: .25rem 0 0; font: 500 .77rem/1.7 ui-monospace, 'SF Mono', Menlo, monospace; display: flex; flex-wrap: wrap; gap: .1rem .9rem; }
+/* Built as `pr pr-${pr.state}`, so grep finds no literal for these three. */
 .pr-merged { color: var(--ok-ink); }
 .pr-open { color: var(--open-ink); }
 .pr-closed { color: var(--na-ink); }
@@ -290,28 +253,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .banner-warn { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--warn-line); }
 
 .foot { margin-top: 1.2rem; color: var(--ink-2); font-size: .76rem; line-height: 1.6; }
-
-.home-link { color: var(--ink); }
-.home-link:hover { text-decoration: none; }
 .back-link { font-size: .85rem; }
-
-.summary-card {
-  display: block; background: var(--panel); border: 1px solid var(--line);
-  border-radius: .7rem; padding: 1.1rem 1.2rem 1.3rem; color: var(--ink);
-  transition: border-color .15s ease;
-}
-.summary-card:hover { text-decoration: none; border-color: var(--accent); }
-
-.kpi-row { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 1rem; }
-.stat-tile {
-  flex: 1 1 8.5rem; min-width: 8.5rem; display: flex; flex-direction: column; gap: .15rem;
-  border: 1px solid var(--line); border-radius: .55rem; padding: .7rem .85rem;
-}
-.stat-label { color: var(--ink-2); font-size: .74rem; }
-.stat-value { font-size: 2rem; font-weight: 600; line-height: 1.1; }
-.stat-good { color: var(--ok-ink); }
-.stat-bad { color: var(--bad-ink); }
-.stat-sub { color: var(--ink-2); font-size: .72rem; }
 
 .item.done { opacity: .55; }
 .item.done .subj { text-decoration: line-through; }
@@ -516,21 +458,9 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .mini-head h2 { margin: 0; font-size: .92rem; flex: 1 1 auto; min-width: 0; }
 
 .mini-empty { margin: 0; color: var(--ink-2); font-size: .8rem; }
-/* Pinned to the bottom of the card, so a row of modules ends on one line. */
-
-/* open PRs: summary strip above the repo groups */
-.pr-summary {
-  display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.4rem;
-  margin-top: 1rem; padding-bottom: .2rem;
-}
 .pr-counts { list-style: none; display: flex; flex-wrap: wrap; gap: 1.1rem; margin: 0; padding: 0; }
 .pr-counts li { display: flex; align-items: baseline; gap: .35rem; }
 .pr-count { font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-.pr-count-ok { color: var(--ok-ink); }
-.pr-count-warn { color: var(--warn-ink); }
-.pr-count-open { color: var(--open-ink); }
-.pr-count-bad { color: var(--bad-ink); }
-.pr-count-na { color: var(--na-ink); }
 .pr-count-label { color: var(--ink-2); font-size: .78rem; }
 .pr-copy-fallback { flex: 1 1 100%; font-size: .78rem; color: var(--ink-2); }
 .pr-copy-fallback textarea {
@@ -538,88 +468,18 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   border: 1px solid var(--line); border-radius: .4rem; padding: .4rem .5rem;
   font: 500 .76rem/1.5 ui-monospace, 'SF Mono', Menlo, monospace;
 }
-
-/* open PRs: one full-width column of repo groups, PR status in each row's right corner */
-.pr-groups { display: grid; gap: .7rem; margin-top: 1rem; }
-.pr-groups .MuiAccordion-root + .MuiAccordion-root { margin-top: 0; }
-
-.mini-sub { margin: .3rem 0 -.1rem; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); }
 .chip-when { flex: none; font-variant-numeric: tabular-nums; }
 .chip-when .chip { font-size: .68rem; padding: .18rem .45rem; }
 .dot { width: .55rem; height: .55rem; border-radius: 50%; flex: none; margin-top: .35rem; }
 .dot-warn { background: var(--warn-ink); }
 .dot-na { background: var(--na-ink); }
 .dot-bad { background: var(--bad-ink); }
-.kind-tag {
-  margin-left: .4rem; padding: .05rem .35rem; border-radius: 99px; font-size: .62rem;
-  font-weight: 600; background: var(--bad-bg); color: var(--bad-ink); border: 1px solid var(--bad-line);
-}
-
-.card-meta { margin: .9rem 0 0; color: var(--ink-2); font-size: .78rem; }
-.ticket-list { margin-top: 1rem; }
 .chip-status { flex: none; width: 8.9rem; display: flex; margin-left: auto; }
 .chip-status .chip {
   flex: 1 1 0; min-width: 0;
   text-align: center; overflow: hidden; text-overflow: ellipsis;
   font-size: .66rem; letter-spacing: .02em;
 }
-/* One pill, two halves: review state left in its own colour, deploy-qc state right in
-   its own. The shared edge drops its radius and the right half its left border, so the
-   two colours meet flush instead of reading as two chips. */
-.chip-status-split { width: 13.6rem; }
-.chip-status-split .chip { font-size: .63rem; padding: .2rem .35rem; }
-/* review labels run longer than the QC ones, so the left half gets the wider share */
-.chip-status-split .chip:first-child { flex: 1.3 1 0; border-radius: 99px 0 0 99px; }
-.chip-status-split .chip:last-child { border-radius: 0 99px 99px 0; border-left-width: 0; }
-
-/* stats: tiles, per-month bars, per-repo bars */
-.ink-ok { color: var(--ok-ink); }
-.ink-bad { color: var(--bad-ink); }
-.ink-warn { color: var(--warn-ink); }
-.ink-open { color: var(--open-ink); }
-.ink-na { color: var(--na-ink); }
-.ink-qc { color: var(--qc-ink); }
-.ink-qcout { color: var(--qcout-ink); }
-
-.stat-tiles { list-style: none; margin: .9rem 0 0; padding: 0; display: grid; gap: .9rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.stat-tiles-wide { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
-.stat-tiles li { display: grid; gap: .1rem; }
-.stat-tile-value { font-size: 1.55rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
-/* The hue lives on a mark beside the number, never on the number itself. */
-.stat-tile-mark { width: 1.6rem; height: 4px; border-radius: 2px; }
-.stat-tile-mark.bar-ok { background: var(--ok-ink); }
-.stat-tile-mark.bar-bad { background: var(--bad-ink); }
-.stat-tile-mark.bar-warn { background: var(--warn-ink); }
-.stat-tile-mark.bar-open { background: var(--open-ink); }
-.stat-tile-mark.bar-na { background: var(--na-ink); }
-.stat-tile-mark.bar-qc { background: var(--qc-ink); }
-.stat-tile-mark.bar-qcout { background: var(--qcout-ink); }
-.stat-tile-label { font-size: .78rem; color: var(--ink-2); }
-.stat-tile-delta { font-size: .7rem; color: var(--ink-2); }
-.stat-tile-delta.is-better { color: var(--ok-ink); }
-.stat-tile-delta.is-worse { color: var(--bad-ink); }
-
-.stats-charts { display: grid; gap: 1.4rem 1.6rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); margin-top: 1rem; }
-.month-bars { margin: 0; }
-.month-bars figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
-.month-bars-label { font-size: .8rem; color: var(--ink-2); }
-.month-bars-value { font-size: 1.05rem; font-weight: 600; color: var(--ink); }
-.month-bars-plot { width: 100%; max-width: 10.5rem; height: auto; margin-top: .45rem; overflow: visible; }
-.month-bars-baseline { stroke: var(--line); stroke-width: 1; }
-/* One series per chart, so the fill is the metric's own status ink. */
-.month-bars .bar-ok { fill: var(--ok-ink); }
-.month-bars .bar-bad { fill: var(--bad-ink); }
-.month-bars .bar-warn { fill: var(--warn-ink); }
-.month-bars .bar-open { fill: var(--open-ink); }
-.month-bars .bar-na { fill: var(--na-ink); }
-.month-bars .bar-qc { fill: var(--qc-ink); }
-.month-bars .bar-qcout { fill: var(--qcout-ink); }
-.month-bars .bar { opacity: .55; transition: opacity .12s ease; }
-.month-bars .is-newest .bar { opacity: 1; }
-.month-bars-col:hover .bar { opacity: 1; }
-.month-bars .bar-empty { fill: var(--line); opacity: 1; }
-.month-bars-tick { fill: var(--ink-2); font-size: 7px; text-anchor: middle; }
-.month-bars-hint { margin: .5rem 0 0; font-size: .68rem; color: var(--ink-2); line-height: 1.35; }
 
 .repo-bars { list-style: none; margin: .9rem 0 0; padding: 0; display: grid; gap: .5rem; }
 .repo-bars li { display: grid; grid-template-columns: minmax(6rem, 11rem) minmax(0, 1fr) 2rem; align-items: center; gap: .6rem; font-size: .82rem; }
@@ -774,13 +634,7 @@ body { background: var(--canvas); }
 }
 
 /* Apex-style card: hairline border, soft shadow, generous padding. */
-.panel, .summary-card { box-shadow: var(--card-shadow); border-radius: var(--radius); }
-
-/* KPI cards: label, value, delta, badge, and the spark running to the bottom edge. */
-.kpi-band { display: grid; gap: .8rem; }
-.kpi-band-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
-.kpi-band-head h2 { margin: 0; font-size: 1rem; }
-.kpi-band-head a { font-size: .78rem; }
+.panel{ box-shadow: var(--card-shadow); border-radius: var(--radius); }
 .kpi-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
 
 .spark-card {
@@ -876,7 +730,6 @@ body { background: var(--canvas); }
   display: grid; place-items: center; width: 2rem; height: 2rem;
   border-radius: .55rem; color: var(--ink);
 }
-
 
 /*
  * Jira board: one column per status, in workflow order, scrolling sideways when the
@@ -1308,10 +1161,6 @@ body { background: var(--canvas); }
 .arch-list span { font-size: .76rem; color: var(--ink-2); line-height: 1.45; }
 .arch-list code { font-size: .68rem; color: var(--ink-2); opacity: .85; }
 
-.arch-section { margin-top: 1.4rem; }
-.arch-section > h3 { margin: 0; font-size: .82rem; }
-.arch-section > p { margin: .15rem 0 0; font-size: .76rem; color: var(--ink-2); }
-
 /* Jump list for a long project page. */
 .page-toc { display: flex; flex-wrap: wrap; gap: .35rem .5rem; }
 .page-toc a {
@@ -1321,7 +1170,6 @@ body { background: var(--canvas); }
 .page-toc a:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
 /* Anchored sections must not hide under the sticky top bar. */
 .grid > .panel[id] { scroll-margin-top: 5.5rem; }
-
 
 /*
  * Ticket drawer. Over the board rather than a route: the board stays behind it, and Esc puts

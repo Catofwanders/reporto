@@ -1,12 +1,11 @@
 /**
- * Whether the dashboard pulls stale reports when it is opened, and what counts as stale.
+ * The one switch behind the refresh-on-attention behaviour: whether looking at a page is
+ * allowed to refetch what it shows. What counts as stale lives in `freshness.ts`, per report.
  *
- * Four hours is chosen so that opening the dashboard in the morning always refetches — an
- * overnight report is worse than useless, because it looks current. Reopening a tab an hour
- * later refetches nothing.
+ * A browser preference rather than config, because it is about this browser's habits, not
+ * about the machine — and `localStorage` throws in a private window, so every access is
+ * guarded and falls back to the default.
  */
-export const STALE_HOURS = 4;
-
 const KEY = 'reporto.autoRefresh';
 
 /** Default on: the whole point is not having to remember to press update. */
@@ -27,6 +26,3 @@ export const setAutoRefresh = (enabled: boolean): void => {
     /* nothing to persist to; the current session still honours the choice */
   }
 };
-
-export const hoursSince = (iso: string | undefined): number =>
-  iso === undefined ? Number.POSITIVE_INFINITY : (Date.now() - new Date(iso).getTime()) / 3_600_000;

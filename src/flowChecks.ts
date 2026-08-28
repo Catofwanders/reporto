@@ -2,6 +2,7 @@ import type { JiraReport, OpenPr, Pr, PrsReport, SlackReport, SlackRow, Ticket }
 import { idleDays } from './prLanes';
 import { prState } from './prState';
 import { DEFAULT_VOCAB, inStatusGroup, type StatusVocab } from './statusVocab';
+import { prLabel } from './format';
 
 /**
  * Contradictions between what Jira says and what GitHub says.
@@ -27,9 +28,6 @@ export interface FlowFinding {
   ticket?: { key: string; url: string };
   prs?: { label: string; url: string }[];
 }
-
-
-const prLabel = (pr: Pr) => `${pr.repo.split('/').pop()}#${pr.num}`;
 
 const link = (pr: Pr) => ({ label: prLabel(pr), url: pr.url });
 

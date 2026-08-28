@@ -1,4 +1,4 @@
-import type { JiraReport, Pr, PrsReport, Ticket } from '../types';
+import type { JiraReport, PrsReport, Ticket } from '../types';
 import { formatStatus, statusTone } from '../jiraStatus';
 import { useHashTarget } from '../useHashTarget';
 import { TicketStatus } from './TicketStatus';
@@ -7,6 +7,7 @@ import { useCapabilities } from '../capabilitiesContext';
 import { statusRank } from '../statusVocab';
 import { useRefresh } from '../refreshContext';
 import { useTicketReader } from './useTicketReader';
+import { prLabel } from '../format';
 
 interface JiraBoardProps {
   report: JiraReport;
@@ -23,8 +24,6 @@ interface JiraBoardProps {
  * the board. A status the vocabulary does not name keeps its relative position after the ones
  * it does, so an unfamiliar column shows up on the right rather than vanishing.
  */
-
-const prLabel = (pr: Pr) => `${pr.repo.split('/').pop()}#${pr.num}`;
 
 /** Merged but no longer on deploy-qc: the one PR state a board card must not hide. */
 const droppedFromQc = (ticket: Ticket) =>

@@ -1,10 +1,11 @@
-import type { JiraReport, Pr, PrsReport } from '../types';
+import type { JiraReport, PrsReport } from '../types';
 import { formatStatus } from '../jiraStatus';
 import { TicketStatus } from './TicketStatus';
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
 import { useTicketReader } from './useTicketReader';
+import { prLabel } from '../format';
 
 interface JiraReportViewProps {
   report: JiraReport;
@@ -13,8 +14,6 @@ interface JiraReportViewProps {
   /** Passed to the drawer, so a PR row can say what it is waiting for. */
   prs?: PrsReport | null;
 }
-
-const prLabel = (pr: Pr) => `${pr.repo.split('/').pop()}#${pr.num}`;
 
 export const JiraReportView = ({ report, onChanged, prs = null }: JiraReportViewProps) => {
   const { read, drawer } = useTicketReader({ report, prs, onChanged });

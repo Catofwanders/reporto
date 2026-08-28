@@ -1,5 +1,6 @@
 import type { JiraReport, ReviewPr, ReviewsReport } from './types';
 import { idleDays } from './prLanes';
+import { plural } from './format';
 
 /**
  * The review queue, sorted by what it needs from me.
@@ -80,8 +81,6 @@ export const laneOfReview = (pr: ReviewPr): ReviewLaneId => {
   if (pr.myReviewState === 'APPROVED') return 'approved';
   return 'quiet';
 };
-
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 const state = (pr: ReviewPr) => (pr.myReviewState ?? '').toLowerCase().replace('_', ' ');
 

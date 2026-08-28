@@ -1,5 +1,6 @@
 import type { OpenPr, PrRepoGroup, PrsReport } from './types';
 import { prState, qcChip } from './prState';
+import { plural } from './format';
 
 /**
  * Which lane a PR belongs in — the answer to "who is holding the ball", which is the only
@@ -62,8 +63,6 @@ export const laneOf = (pr: OpenPr): LaneId => {
 };
 
 const threads = (pr: OpenPr) => pr.unansweredThreads ?? 0;
-
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /**
  * Said after a state when the only thing that landed since the review was a branch sync.

@@ -1,5 +1,6 @@
 import type { SlackReport, SlackRow } from './types';
 import { idleDays } from './prLanes';
+import { plural } from './format';
 
 /**
  * Slack sorted by what it needs from me.
@@ -56,9 +57,6 @@ export const laneOfSlack = (row: SlackRow): SlackLaneId => {
   if (idleDays(row.lastAt ?? row.at) >= STALE_DAYS) return 'stale';
   return row.kind === 'dm' ? 'dms' : 'asked';
 };
-
-/** `many` for the words an -s does not fit: "3 replys" shipped for a while. */
-const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 
 /** The row's one line: who is waiting, on what, and where the answer belongs. */
 export const reasonOfSlack = (row: SlackRow, days: number): string => {
