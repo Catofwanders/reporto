@@ -24,7 +24,7 @@ export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTab
   const all = picked === urls.length && urls.length > 0;
 
   return (
-    <div className="review-table-wrap">
+    <div className="review-table-wrap" tabIndex={0} aria-label="Review queue table, scrolls sideways">
       <table className="review-table">
         <thead>
           <tr>
@@ -41,7 +41,7 @@ export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTab
                 aria-label={all ? 'Clear this lane' : 'Select every PR in this lane'}
               />
             </th>
-            <th>Age</th>
+            <th>Idle</th>
             <th>PR</th>
             <th>What it needs</th>
             <th className="review-col-ticket">Ticket</th>
@@ -66,14 +66,21 @@ export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTab
                   />
                 </td>
                 <td>
+                  {/*
+                    * Two numbers, because they answer different questions and were previously
+                    * one column called "Age": how long the branch has been still, and how long
+                    * the PR has existed. On an abandoned branch they are wildly apart, and the
+                    * open age was hidden in a tooltip.
+                    */}
                   <span
                     className={`pr-age chip-${agingTone(idleDays)}`}
                     title={`last commit ${new Date(
                       pr.lastCommitAt ?? pr.updatedAt,
-                    ).toLocaleString('en-GB')} · opened ${openDays}d ago`}
+                    ).toLocaleString('en-GB')}`}
                   >
                     {idleDays === 0 ? 'today' : `${idleDays}d`}
                   </span>
+                  <span className="pr-age-open">open {openDays}d</span>
                 </td>
                 <td className="review-cell-pr">
                   <a className="ref" href={pr.url} target="_blank" rel="noopener noreferrer">

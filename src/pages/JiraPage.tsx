@@ -51,13 +51,14 @@ export const JiraPage = ({ report, prs = null }: JiraPageProps) => {
             </div>
           </div>
           <span className="panel-meta">
-            <span className="segmented" role="tablist" aria-label="Jira view">
+            {/* Toggle buttons, not tabs: `role="tab"` promises a tabpanel, `aria-controls` and
+                arrow-key navigation, and this is one control that swaps a view. */}
+            <span className="segmented" role="group" aria-label="Jira view">
               {(['board', 'list'] as View[]).map((option) => (
                 <button
                   key={option}
                   type="button"
-                  role="tab"
-                  aria-selected={view === option}
+                  aria-pressed={view === option}
                   className={view === option ? 'is-active' : ''}
                   onClick={() => setView(option)}
                 >

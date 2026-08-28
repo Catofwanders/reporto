@@ -36,7 +36,7 @@ const Rows = ({
   const all = picked === ids.length && ids.length > 0;
 
   return (
-    <div className="review-table-wrap">
+    <div className="review-table-wrap" tabIndex={0} aria-label="Slack table, scrolls sideways">
       <table className="review-table slack-table">
         <thead>
           <tr>

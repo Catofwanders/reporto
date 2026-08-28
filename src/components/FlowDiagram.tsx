@@ -117,7 +117,7 @@ export const FlowDiagram = ({ flow }: FlowDiagramProps) => {
   const height = y - GAP_Y + PAD;
 
   return (
-    <div className="flow-diagram">
+    <div className="flow-diagram" tabIndex={0} aria-label="Flow diagram, scrolls sideways">
       <svg
         width={width}
         height={height}

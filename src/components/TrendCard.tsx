@@ -63,13 +63,13 @@ export const TrendCard = ({ title, subtitle, metrics, months }: TrendCardProps) 
           <h2>{title}</h2>
           <p className="panel-sub">{subtitle}</p>
         </div>
-        <div className="segmented" role="tablist" aria-label={`${title} metric`}>
+        {/* Toggles, not tabs — see JiraPage: no tabpanel exists, and none should. */}
+        <div className="segmented" role="group" aria-label={`${title} metric`}>
           {metrics.map((option) => (
             <button
               key={option.id}
               type="button"
-              role="tab"
-              aria-selected={option.id === metric.id}
+              aria-pressed={option.id === metric.id}
               className={option.id === metric.id ? 'is-active' : ''}
               onClick={() => setActiveId(option.id)}
             >

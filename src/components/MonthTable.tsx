@@ -12,7 +12,7 @@ interface MonthTableProps {
  * It also keeps the page usable where colour cannot be relied on at all.
  */
 export const MonthTable = ({ months, metrics }: MonthTableProps) => (
-  <div className="table-card">
+  <div className="table-card" tabIndex={0} aria-label="Monthly table, scrolls sideways">
     <table>
       <thead>
         <tr>

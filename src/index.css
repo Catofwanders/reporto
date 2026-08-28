@@ -286,7 +286,13 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 }
 
 /* The strip: read in a second, so icon and figure carry it and nothing wraps. */
-.kpi-strip { display: grid; gap: .7rem; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); }
+/*
+ * 7.5rem, not 8.5: at 8.5 the six tiles needed 872px inside a pane that is the viewport minus
+ * the 304px rail, so between roughly 1090 and 1180 the last tile wrapped onto a second row —
+ * and that row comes out of the dashboard's single screen. The label wraps to two lines there
+ * instead, which costs nothing.
+ */
+.kpi-strip { display: grid; gap: .7rem; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); }
 .kpi-tile {
   display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
   gap: 0 .55rem; align-items: center;
@@ -315,8 +321,12 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   display: grid; gap: 1rem; min-height: 0;
   grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
 }
-@media (max-width: 68rem) {
-  /* Too narrow for two columns: stack them and let the content area scroll instead. */
+/*
+ * Stack sooner than the layout technically allows. At 68rem the two columns still fit, but the
+ * queue ends up at 396px against a 384px aside — two equal columns, neither of which can show
+ * a row. 82rem is where the queue stops being the wider half.
+ */
+@media (max-width: 82rem) {
   .home-split { grid-template-columns: minmax(0, 1fr); }
   .home { height: auto; }
 }
@@ -628,6 +638,11 @@ body { background: var(--canvas); }
 .shell-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
 /* Under a laptop width the rail becomes a scrolling strip above the content. */
+/*
+ * The rail loses its per-report stamps and buttons here for room. The top bar keeps the one for
+ * the current page — but Projects, Commands and Settings have none, so `shell-nav-stamp` staying
+ * visible is what tells you whether you are looking at this morning's data or Tuesday's.
+ */
 @media (max-width: 60rem) {
   .shell { grid-template-columns: 1fr; height: auto; overflow: visible; }
   .shell-side {
@@ -637,7 +652,13 @@ body { background: var(--canvas); }
   .shell-nav { display: flex; gap: .8rem; }
   .shell-nav-title { display: none; }
   .shell-nav-group ul { display: flex; }
-  .shell-nav-stamp, .shell-side-foot span { display: none; }
+  /*
+   * The stamps stay. Hiding them saved a few pixels and took away the only thing on screen that
+   * says how old the data is — on Projects, Commands and Settings there is no top-bar update
+   * button either, so a half-width window could not tell this morning from Tuesday.
+   */
+  .shell-side-foot span { display: none; }
+  .shell-nav-stamp { font-size: .75rem; }
   .shell-nav-refresh { display: none; }
   .shell-side-foot { margin: 0; border: 0; }
   .shell-top, .shell-content { padding-inline: 1rem; }
@@ -781,7 +802,7 @@ body { background: var(--canvas); }
 .board-card-foot { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
 .board-card-foot .key { font-size: .75rem; white-space: nowrap; }
 /* The aging pill shares the card's foot with the key and the status chip, so it runs small. */
-.board-card-foot .pr-age { min-width: auto; padding: .15rem .32rem; font-size: .75rem; }
+.pr-age { min-width: auto; padding: .15rem .32rem; font-size: .75rem; }
 
 .dot-ok { background: var(--ok-ink); }
 .dot-bad { background: var(--bad-ink); }
@@ -802,6 +823,8 @@ body { background: var(--canvas); }
 .pr-lane-hint { margin: 0; font-size: .75rem; color: var(--ink-2); }
 .pr-lane-head .MuiButton-root { margin-left: auto; }
 
+/* The open age under the idle age: same cell, different question. */
+.pr-age-open { display: block; margin-top: .15rem; color: var(--ink-2); font-size: .75rem; }
 .pr-age {
   min-width: 2.9rem; text-align: center; border-radius: .4rem;
   padding: .25rem .35rem; font-size: .75rem; font-weight: 600;
@@ -1306,3 +1329,16 @@ body { background: var(--canvas); }
   font-size: .82rem;
 }
 .shell-skip:focus-visible { left: .5rem; }
+
+/*
+ * Regions that scroll are focusable now — Chrome gives a scroll container no tab stop of its
+ * own, so a board wider than the screen was unreachable without a mouse. They need a visible
+ * ring like any other focusable thing.
+ */
+.board:focus-visible,
+.review-table-wrap:focus-visible,
+.table-card:focus-visible,
+.infra:focus-visible,
+.flow-diagram:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; border-radius: .4rem;
+}

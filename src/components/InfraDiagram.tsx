@@ -40,7 +40,11 @@ export const InfraDiagram = ({ system }: InfraDiagramProps) => {
     );
 
   return (
-    <div className={`infra${focus ? ' has-focus' : ''}`}>
+    <div
+      className={`infra${focus ? ' has-focus' : ''}`}
+      tabIndex={0}
+      aria-label="Architecture diagram, scrolls sideways"
+    >
       <svg
         // Natural size, not stretched: a 132px box scaled to the panel width reads as a
         // billboard, and the diagram should look the same on every screen.

@@ -300,7 +300,7 @@ export const TicketDrawer = ({ ticket, prs, onClose, onChanged }: TicketDrawerPr
 const Shimmer = ({ lines = 1 }: { lines?: number }) => (
   <>
     {Array.from({ length: lines }, (_, i) => (
-      <span key={i} className="skeleton skeleton-line" aria-label="loading" />
+      <span key={i} className="skeleton skeleton-line" role="img" aria-label="loading" />
     ))}
   </>
 );

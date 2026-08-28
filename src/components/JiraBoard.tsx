@@ -7,7 +7,7 @@ import { useCapabilities } from '../capabilitiesContext';
 import { statusRank } from '../statusVocab';
 import { useRefresh } from '../refreshContext';
 import { useTicketReader } from './useTicketReader';
-import { prLabel } from '../format';
+import { plural, prLabel } from '../format';
 
 interface JiraBoardProps {
   report: JiraReport;
@@ -44,6 +44,9 @@ const PrSkeleton = ({ loading }: { loading: boolean }) => (
       // failed, or the page was opened on a partial report — the placeholder holds still, so
       // the gap reads as "not fetched" rather than as "any moment now".
       className={`skeleton skeleton-chip${loading ? '' : ' is-idle'}`}
+      // `role="img"` so the label counts at all: an `aria-label` on a bare span is ignored, so
+      // the careful "loading" vs "not fetched" distinction reached sighted users only.
+      role="img"
       aria-label={loading ? 'pull requests still loading' : 'pull requests not fetched'}
     />
   </p>
@@ -141,9 +144,18 @@ export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => 
 
   return (
     <>
-      <div className="board" role="list">
+      {/*
+        * Not `role="list"`: the columns were announced as "list, 6 items" while the cards inside
+        * them are articles, which describes the wrong structure. Each column is a region with a
+        * name, which is what somebody navigating by landmark actually wants.
+        */}
+      <div className="board" tabIndex={0} aria-label="Board columns, scrolls sideways">
         {columns.map((group) => (
-          <section key={group.title} className="board-col" role="listitem">
+          <section
+          key={group.title}
+          className="board-col"
+          aria-label={`${formatStatus(group.title)}, ${plural(group.tickets.length, 'ticket')}`}
+        >
             <header className="board-col-head">
               <span
                 className={`board-col-dot dot-${statusTone(group.tickets[0], statuses)}`}

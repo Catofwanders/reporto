@@ -32,7 +32,7 @@ export const PrTable = ({
   const all = picked === urls.length && urls.length > 0;
 
   return (
-    <div className="review-table-wrap">
+    <div className="review-table-wrap" tabIndex={0} aria-label="Pull request table, scrolls sideways">
       <table className="review-table">
         <thead>
           <tr>
@@ -49,7 +49,7 @@ export const PrTable = ({
                 aria-label={all ? 'Clear this lane' : 'Select every PR in this lane'}
               />
             </th>
-            <th>Age</th>
+            <th>Idle</th>
             <th>PR</th>
             <th>What it needs</th>
             <th className="review-col-qc">QC</th>
