@@ -403,8 +403,7 @@ session, so copying is the honest action and the palette stays open for the next
 
 ## Update buttons
 
-Every card can be refreshed from the dashboard; the calendar's Outlook half is the one
-thing a button cannot fetch (see below).
+Every card can be refreshed from the dashboard.
 
 | Report | How it refreshes |
 |---|---|
@@ -414,13 +413,10 @@ thing a button cannot fetch (see below).
 | `reviews` | `POST /api/pull/reviews` — two GitHub searches, about a second (circular-arrow icon) |
 | `stats` | `POST /api/pull/stats` — Jira, GitHub and Calendar for six months (circular-arrow icon) |
 
-The calendar pull covers **Google only**. Outlook is readable only through the Chrome
-extension, so the `/email` skill remains the only thing that can see it — and a pull would
-otherwise drop the stand-up that lives there.
-
-Both sides therefore merge instead of overwriting: the puller keeps every event whose
-`source` is not `google`, and the skill keeps the Google ones and no longer reads Google
-Calendar at all. Whichever runs last, neither half deletes the other.
+The calendar pull covers **Google only**, and it merges rather than overwrites: every event
+whose `source` is not `google` is carried over from the previous report. That exists because a
+work Outlook calendar is not reachable from a server — it needs a logged-in browser — so
+anything written there by another producer survives a pull instead of being silently dropped.
 
 The top-bar button belongs to the page: on Jira it updates Jira, on the statistics page it
 updates the statistics. Only the dashboard, which shows every report at once, offers
@@ -529,7 +525,7 @@ a mystery.
 
 Slack *could* push, over Socket Mode with an app-level token and no public URL. It needs a bot
 user and event subscriptions the app does not have, and a WebSocket held open in the dev
-server; TODO 9 has the details and the reasons it is not worth it yet.
+server. Not worth it until the mention queue starts feeling late.
 
 ## Keeping it current without pressing anything
 
@@ -655,5 +651,4 @@ vitest.config.ts       tests — its own file, so the dev-server plugins stay ou
 config.template/       committed template to copy to config/
 public/reports/        report JSON + index.json (gitignored)
 docs/                  the screenshots, and these notes
-skills/                sanitized mail skill, and the contract a report producer must meet
 ```

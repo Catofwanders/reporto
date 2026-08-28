@@ -242,9 +242,9 @@ export async function pullGoogleCalendar({
     }
   }
 
-  // Outlook lives behind the Chrome extension, so the /email skill is still the only thing
-  // that can read it. Its events are carried over rather than dropped, or a calendar pull
-  // would silently lose the stand-up that only exists there.
+  // Merge rather than overwrite: a work Outlook calendar needs a logged-in browser, so it is
+  // not reachable from here at all. Anything another producer wrote is carried over rather
+  // than dropped, or a Google pull would silently delete the meetings only it can see.
   const carried = keepEvents.filter((event) => event.source !== 'google')
 
   const sortKey = (event) => event.start ?? '￿'

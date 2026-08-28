@@ -43,3 +43,7 @@ storybook-static
 
 # vitest coverage output
 coverage/
+
+# Working notes, kept local: the backlog and the debt list name clients and workflows.
+TODO.md
+TECH-DEBT.md

@@ -71,7 +71,7 @@ survives a failed pull with yesterday's data, and can be reasoned about without 
 | `prs-<date>.json` | GitHub GraphQL | my open PRs, and who is holding each one |
 | `reviews-<date>.json` | GitHub GraphQL | PRs waiting on me, and what changed since I looked |
 | `slack-<date>.json` | Slack Web API | mentions and DMs nobody has answered |
-| `calendar-<date>.json` | Google Calendar API, plus the `/email` skill for Outlook | today, and the week ahead |
+| `calendar-<date>.json` | Google Calendar API | today, and the week ahead |
 | `stats-<date>.json` | all three | six months of counts, medians and meeting hours |
 
 `src/types.ts` is the schema of record and `src/reportSchema.ts` guards it on load. These files
@@ -137,8 +137,8 @@ The dev server writes files and starts processes, so it is not a passive static 
 Report generation runs as *me*. That is why it needs no integration work, and exactly why it
 does not generalise:
 
-1. **The credentials are mine** — my `gh` keyring auth, one Jira token, my logged-in Chrome for
-   Outlook. Serving other people means real per-user OAuth for four providers.
+1. **The credentials are mine** — my `gh` keyring auth, my Jira token, my Slack token. Serving
+   other people means real per-user OAuth for four providers.
 2. **Storage is global** — static files any page load can fetch, with no notion of who asks.
 3. **There is no server and no auth.** The API only exists in dev mode.
 4. **Job execution is one in-memory lock.** Fine for one person.
@@ -153,9 +153,6 @@ read-only snapshots.
   pre-push scan that keeps confidential words out of a public remote.
 - [docs/notes.md](docs/notes.md) — how each page works and why, including the parts where the
   obvious approach turned out to be wrong. Written while building, so it reads as a log.
-- [TODO.md](TODO.md) — what is built, and what is still open.
-- [TECH-DEBT.md](TECH-DEBT.md) — what is knowingly left undone, and what fixing it would cost.
-- [skills/](skills/) — the sanitized mail skill, and the contract any report producer must meet.
 
 MUI supplies the accordions, checkboxes and icon buttons; everything else is plain CSS with
 light/dark tokens in `src/index.css`. Charts are Recharts, taking their colours from CSS custom
