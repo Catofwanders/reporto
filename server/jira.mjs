@@ -7,6 +7,8 @@
  * JIRA_EMAIL / JIRA_API_TOKEN (or put them in .env, which is gitignored).
  */
 
+import { pooled } from './pool.mjs'
+
 /** Status names whose category Jira reports as done, whatever the site calls them. */
 const DONE_CATEGORY = 'Done'
 
@@ -178,6 +180,9 @@ export async function jiraTransition({ site, email, apiToken, key, transitionId,
 /** At most this many changelogs per pull: one request each, and a board is not a quarter. */
 const AGING_LOOKUPS = 40
 
+/** In flight at once. Jira's limits are per-token and generous; four is nowhere near them. */
+const AGING_CONCURRENCY = 4
+
 /**
  * When the ticket entered the status it is in now.
  *
@@ -271,23 +276,28 @@ export async function pullJira({
     }
   })
 
-  // Sequential rather than parallel: these share one token with the searches above, and a
-  // burst of forty requests is how a pull earns a 429.
+  /*
+   * Four at a time, not one. These share a token with the searches above, so an unbounded
+   * burst of forty is how a pull earns a 429 — but strictly sequential made this the fifteen
+   * seconds the two-phase pull exists to hide. Four is well inside Jira's limits.
+   */
   const aging = new Set(fast ? [] : agingStatuses.map((name) => name.trim().toLowerCase()))
-  let lookups = 0
-  for (const ticket of tickets) {
-    if (lookups >= AGING_LOOKUPS) break
-    if (!aging.has(ticket.status.trim().toLowerCase())) continue
-    lookups += 1
-    ticket.statusSince = await statusSinceFor({
+  const needAging = tickets
+    .filter((ticket) => aging.has(ticket.status.trim().toLowerCase()))
+    .slice(0, AGING_LOOKUPS)
+  const since = await pooled(needAging, AGING_CONCURRENCY, (ticket) =>
+    statusSinceFor({
       site,
       email,
       apiToken,
       key: ticket.key,
       status: ticket.status,
       created: ticket.created,
-    })
-  }
+    }),
+  )
+  needAging.forEach((ticket, at) => {
+    ticket.statusSince = since[at] ?? null
+  })
   for (const ticket of tickets) delete ticket.created
 
   // Named so a view can tell "not fetched yet" from "fetched, and there is none".

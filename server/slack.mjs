@@ -12,10 +12,15 @@
  * .env is the honest trade, the same one the Jira puller makes.
  */
 
+import { pooled } from './pool.mjs'
+
 const API = 'https://slack.com/api'
 
 /** How far back a mention is still worth answering. Older than this is archaeology. */
 const DEFAULT_DAYS = 14
+
+/** Thread/channel reads in flight at once. Slack's tier-3 limit is 50/min; four is safe. */
+const STATE_CONCURRENCY = 4
 
 /** Replies are read per thread, so the newest mentions are the ones worth the calls. */
 const THREAD_LOOKUPS = 40
@@ -314,6 +319,8 @@ export async function pullSlack({
   // Global, because a message can name several tickets and match.match needs the g flag.
   const ticketKey = ticketPattern ? new RegExp(ticketPattern, 'g') : null
   const rows = []
+  /** Rows whose "what happened after" is still to fetch, run through the pool below. */
+  const needState = []
   let lookups = 0
 
   for (const match of matches) {
@@ -345,35 +352,38 @@ export async function pullSlack({
     /*
      * Reading what came after costs a call per mention, so only the newest ones get it; the
      * rest keep the mention itself as the last word, which is what an unanswered mention is
-     * anyway. A threaded mention asks the thread; a bare one asks the channel, because a
-     * reply to it is an ordinary channel message and no thread exists to read.
+     * anyway. Collected here and fetched below, a few at a time — one at a time made this the
+     * slowest puller by a distance: thirty rows at 200–400ms each, in series.
      */
     if (lookups < THREAD_LOOKUPS && match.channel?.id) {
-      try {
-        // Thread first, channel second: a mention answered inside its thread and one
-        // answered in the channel below it are both answered, and only one of the two
-        // endpoints can see each case.
-        const state =
-          (await threadState(token, match.channel.id, match.ts, me.user_id)) ??
-          (await channelStateSince(token, match.channel.id, match.ts, me.user_id))
-        lookups += 1
-        row.threadTs = state.threaded ? match.ts : null
-        row.replies = state.replies
-        if (state.lastUser) {
-          row.lastFrom = names.get(state.lastUser) ?? 'unknown'
-          row.lastFromMe = state.lastUser === me.user_id
-        }
-        // In a busy channel somebody else usually has the last word, but if I have spoken
-        // since the mention then it is not waiting on me either.
-        if (state.mineSince) row.lastFromMe = true
-        row.lastAt = state.lastAt ?? row.lastAt
-      } catch {
-        // A channel I have since left, or a deleted message: the mention still stands on its
-        // own, so keep the row rather than dropping it.
-      }
+      lookups += 1
+      needState.push({ row, channel: match.channel.id, ts: match.ts })
     }
     rows.push(row)
   }
+
+  await pooled(needState, STATE_CONCURRENCY, async ({ row, channel, ts }) => {
+    try {
+      // Thread first, channel second: a mention answered inside its thread and one answered in
+      // the channel below it are both answered, and only one endpoint can see each case.
+      const state =
+        (await threadState(token, channel, ts, me.user_id)) ??
+        (await channelStateSince(token, channel, ts, me.user_id))
+      row.threadTs = state.threaded ? ts : null
+      row.replies = state.replies
+      if (state.lastUser) {
+        row.lastFrom = names.get(state.lastUser) ?? 'unknown'
+        row.lastFromMe = state.lastUser === me.user_id
+      }
+      // In a busy channel somebody else usually has the last word, but if I have spoken since
+      // the mention then it is not waiting on me either.
+      if (state.mineSince) row.lastFromMe = true
+      row.lastAt = state.lastAt ?? row.lastAt
+    } catch {
+      // A channel I have since left, or a deleted message: the mention still stands on its own,
+      // so keep the row rather than dropping it.
+    }
+  })
 
   /*
    * DMs need no thread or channel lookup: a direct message conversation has one timeline, so
