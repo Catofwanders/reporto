@@ -69,6 +69,7 @@ export const TicketDrawer = ({ ticket, prs, onClose, onChanged }: TicketDrawerPr
   const [detail, setDetail] = useState<TicketDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLElement>(null);
   const returnTo = useRef<Element | null>(null);
 
   useEffect(() => {
@@ -89,15 +90,50 @@ export const TicketDrawer = ({ ticket, prs, onClose, onChanged }: TicketDrawerPr
     // keyboard is not dumped at the top of the board.
     returnTo.current = document.activeElement;
     closeRef.current?.focus();
+
+    /*
+     * `aria-modal="true"` is a promise: everything behind this is unavailable. Without a trap
+     * it was only a label — Tab walked straight out into the board and kept going, while the
+     * screen reader was still told the board did not exist. Cycling at both ends is the whole
+     * fix; the drawer is small enough that the focusable set can be read on each Tab.
+     */
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation();
         onClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = [
+        ...(panel.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+        ) ?? []),
+      ].filter((node) => node.offsetParent !== null);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (active instanceof Node && !panel.current?.contains(active)) {
+        // Focus escaped some other way — a click on the page behind, say. Bring it back.
+        event.preventDefault();
+        first.focus();
       }
     };
     window.addEventListener('keydown', onKey);
+
+    // The page behind must not scroll under an open drawer.
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+
     return () => {
       window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = overflow;
       (returnTo.current as HTMLElement | null)?.focus?.();
     };
   }, [onClose]);
@@ -121,6 +157,7 @@ export const TicketDrawer = ({ ticket, prs, onClose, onChanged }: TicketDrawerPr
       }}
     >
       <aside
+        ref={panel}
         className="drawer"
         role="dialog"
         aria-modal="true"

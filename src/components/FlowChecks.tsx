@@ -78,6 +78,13 @@ export const FlowChecks = ({ jira, prs, slack = null, collapsed = false }: FlowC
         {shown.map((finding) => (
           <li key={finding.id} className={`flow-item flow-${finding.severity}`}>
             <div className="flow-item-head">
+              {/*
+                * The severities differ by a 4% tint and a border hue, so the head's "N serious"
+                * could not be matched to any row. A word can.
+                */}
+              <span className={`flow-tag chip chip-${finding.severity === 'bad' ? 'bad' : 'warn'}`}>
+                {finding.severity === 'bad' ? 'serious' : 'worth a look'}
+              </span>
               <p className="flow-title">{finding.title}</p>
               {finding.ticket && (
                 <a

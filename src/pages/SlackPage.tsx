@@ -12,6 +12,7 @@ import {
 import { CopyPrLinks } from '../components/CopyPrLinks';
 import { RefreshButton } from '../components/RefreshButton';
 import { SlackReply } from '../components/SlackReply';
+import { useHashTarget } from '../useHashTarget';
 
 interface SlackPageProps {
   report: SlackReport | null;
@@ -114,6 +115,9 @@ const Rows = ({
  * hunting each one down in the client.
  */
 export const SlackPage = ({ report }: SlackPageProps) => {
+  // The dashboard queue links here with `#<row id>`; the rows have carried ids all along and
+  // nothing was acting on them, so following a Slack row landed at the top of the table.
+  useHashTarget([report]);
   const [hideBots, setHideBots] = useState(true);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   /**

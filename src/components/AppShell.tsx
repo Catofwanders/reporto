@@ -5,6 +5,7 @@ import { useRefresh } from '../refreshContext';
 import { CommandPalette } from './CommandPalette';
 import { SideNav } from './SideNav';
 import { LiveRefresh } from './LiveRefresh';
+import { RefreshAnnouncer } from './RefreshAnnouncer';
 import { TopBar } from './TopBar';
 
 interface AppShellProps {
@@ -89,9 +90,17 @@ export const AppShell = ({ generatedAt, onWake, jira, prs, children }: AppShellP
 
   return (
     <div className="shell">
+      {/*
+        * Straight to the content, past nine nav rows and six update buttons. Visible only when
+        * it has focus, which is the one moment it is useful.
+        */}
+      <a className="shell-skip" href="#shell-content">
+        Skip to content
+      </a>
       <LiveRefresh generatedAt={generatedAt} onWake={onWake} />
       <CommandPalette jira={jira} prs={prs} />
       <SideNav generatedAt={generatedAt} running={running} />
+      <RefreshAnnouncer />
       <div className="shell-main">
         <TopBar
           title={heading.title}
@@ -99,7 +108,9 @@ export const AppShell = ({ generatedAt, onWake, jira, prs, children }: AppShellP
           kind={heading.kind}
           action={heading.action}
         />
-        <div className="shell-content">{children}</div>
+        <div className="shell-content" id="shell-content" tabIndex={-1}>
+          {children}
+        </div>
       </div>
     </div>
   );

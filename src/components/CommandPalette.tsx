@@ -97,9 +97,19 @@ export const CommandPalette = ({ jira, prs }: CommandPaletteProps) => {
       }}
     >
       <div className="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+        {/*
+          * Combobox semantics, so moving the cursor says something. The arrow keys used to move
+          * a CSS class and nothing else: sighted users saw the highlight travel while anything
+          * assistive heard silence, on the app's only search.
+          */}
         <input
           ref={inputRef}
           className="palette-input"
+          role="combobox"
+          aria-expanded="true"
+          aria-controls="palette-list"
+          aria-autocomplete="list"
+          aria-activedescendant={shown[cursor] ? `palette-row-${cursor}` : undefined}
           value={query}
           placeholder="Ticket, PR, page, command… or > for actions only"
           aria-label="search tickets, PRs, pages and commands; type > for actions only"
@@ -123,11 +133,14 @@ export const CommandPalette = ({ jira, prs }: CommandPaletteProps) => {
           }}
         />
 
-        <ul className="palette-list">
+        <ul className="palette-list" id="palette-list" role="listbox" aria-label="Results">
           {shown.map((item, i) => (
-            <li key={item.id}>
+            <li key={item.id} role="presentation">
               <button
                 type="button"
+                id={`palette-row-${i}`}
+                role="option"
+                aria-selected={i === cursor}
                 className={`palette-row${i === cursor ? ' is-cursor' : ''}`}
                 onMouseEnter={() => setCursor(i)}
                 onClick={() => void choose(item)}
@@ -138,7 +151,11 @@ export const CommandPalette = ({ jira, prs }: CommandPaletteProps) => {
               </button>
             </li>
           ))}
-          {shown.length === 0 && <li className="palette-empty">Nothing matches.</li>}
+          {shown.length === 0 && (
+            <li className="palette-empty" role="presentation">
+              Nothing matches.
+            </li>
+          )}
         </ul>
 
         <p className="palette-foot">

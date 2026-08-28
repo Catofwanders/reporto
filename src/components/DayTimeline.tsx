@@ -151,21 +151,17 @@ export const DayTimeline = ({ report }: DayTimelineProps) => {
       {timed.length === 0 ? (
         <p className="mini-empty">No meetings today.</p>
       ) : (
-        <div
-          className="day-track"
-          role="img"
-          aria-label={`Today: ${timed
-            .map((event) => `${clock(event.start!)} ${event.title}`)
-            .join('; ')}`}
-        >
+        <div className="day-track">
           <div
             className="day-plot"
             ref={plot}
+            role="list"
+            aria-label={`Today, ${timed.length} meeting${timed.length === 1 ? '' : 's'}`}
             style={{ height: `${(rowsAbove + rowsBelow) * ROW + 10}px` }}
           >
-            <div className="day-line" />
+            <div className="day-line" aria-hidden="true" />
             {now >= from && now <= to && (
-              <div className="day-now" style={{ left: at(now) }} title="now" />
+              <div className="day-now" style={{ left: at(now) }} title="now" aria-hidden="true" />
             )}
 
             {timed.map((event, index) => {
@@ -175,6 +171,10 @@ export const DayTimeline = ({ report }: DayTimelineProps) => {
               return (
                 <a
                   key={`${event.start}-${event.title}`}
+                  role="listitem"
+                  // Position is visual; the name has to carry the time, and "earlier today"
+                  // is the only way a dimmed pill reads as past without colour.
+                  aria-label={`${clock(event.start!)} ${event.title}${past ? ' (earlier today)' : ''}`}
                   className={`day-pill${past ? ' is-past' : ''}${
                     row % 2 ? ' is-below' : ''
                   } kind-${event.kind}`}
@@ -194,7 +194,13 @@ export const DayTimeline = ({ report }: DayTimelineProps) => {
             })}
           </div>
 
-          <div className="day-scale">
+          {/*
+            * The plot is decoration over real links: `role="img"` used to sit on the track with
+            * a summary label, and that prunes descendants — so the event pills, which are
+            * anchors, were unreachable to anything assistive. The line, the now-marker and the
+            * hour scale are the only parts that carry no information of their own.
+            */}
+          <div className="day-scale" aria-hidden="true">
             {hourTicks(from, to).map((minutes) => (
               <span key={minutes} className="day-tick" style={{ left: at(minutes) }}>
                 {minutes / 60}

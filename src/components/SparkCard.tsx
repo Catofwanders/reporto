@@ -45,6 +45,11 @@ export const SparkCard = ({ metric, months, icon: Icon }: SparkCardProps) => {
           {change.change === 0
             ? 'no change'
             : `${change.change > 0 ? '▲' : '▼'} ${Math.abs(change.change)}`}
+          {/*
+            * The arrow direction is ambiguous by design — more merged PRs is good, more days of
+            * cycle time is not — so hue was carrying the meaning alone. Now the word does.
+            */}
+          {change.change !== 0 && <em>{change.better ? 'better' : 'worse'}</em>}
           <em>vs last month</em>
         </span>
       ) : (
