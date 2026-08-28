@@ -193,7 +193,6 @@ export async function pullGoogleCalendar({
   include,
   exclude,
   upcomingDays = 7,
-  keepEvents = [],
 }) {
   const token = serviceAccount
     ? await serviceAccountToken(serviceAccount)
@@ -242,13 +241,17 @@ export async function pullGoogleCalendar({
     }
   }
 
-  // Merge rather than overwrite: a work Outlook calendar needs a logged-in browser, so it is
-  // not reachable from here at all. Anything another producer wrote is carried over rather
-  // than dropped, or a Google pull would silently delete the meetings only it can see.
-  const carried = keepEvents.filter((event) => event.source !== 'google')
-
+  /*
+   * Google only, and the report says exactly what Google said.
+   *
+   * This used to merge in every non-Google event from the previous report, so that a pull
+   * could not delete the Outlook meetings no server can read. The failure mode was worse than
+   * the problem: once nothing was writing those events any more, the merge kept re-copying a
+   * stale recurring meeting into every report, and a calendar claiming a meeting nobody has
+   * verified in a week is worse than a calendar that admits it only knows Google.
+   */
   const sortKey = (event) => event.start ?? '￿'
-  const allToday = [...carried, ...events].sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
+  const allToday = [...events].sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
 
   return {
     type: 'calendar',
@@ -258,7 +261,6 @@ export async function pullGoogleCalendar({
     upcoming: upcoming.sort((a, b) => sortKey(a).localeCompare(sortKey(b))),
     summary:
       `${allToday.length} today across ${cals.length} calendar${cals.length === 1 ? '' : 's'}` +
-      (carried.length ? `, including ${carried.length} kept from the last mail run` : '') +
       `; ${upcoming.length} in the next ${upcomingDays} days.`,
   }
 }

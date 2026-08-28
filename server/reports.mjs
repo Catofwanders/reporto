@@ -144,12 +144,8 @@ export const PULLERS = {
       ticketPattern: c.ticketPattern ?? '\\b[A-Z][A-Z0-9]+-\\d+\\b',
     }),
 
-  calendar: (c) => {
-    // Outlook is only readable through the Chrome extension, so whatever the last /email
-    // run put in the report is read back and carried over — otherwise a calendar pull
-    // would drop the stand-up that lives only there.
-    const previous = readReport('calendar')
-    return pullGoogleCalendar({
+  calendar: (c) =>
+    pullGoogleCalendar({
       serviceAccount: process.env.GOOGLE_SERVICE_ACCOUNT_KEY,
       calendarIds: c.calendarIds ?? [],
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -158,9 +154,7 @@ export const PULLERS = {
       include: c.calendars ?? [],
       exclude: c.calendarsExcluded ?? [],
       upcomingDays: c.upcomingDays ?? 7,
-      keepEvents: previous?.events ?? [],
-    })
-  },
+    }),
 
   jira: (c, options = {}) => {
     const fallbackStatuses = (c.fallbackStatuses ?? DEFAULT_FALLBACK_STATUSES).map((s) =>

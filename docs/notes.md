@@ -413,10 +413,14 @@ Every card can be refreshed from the dashboard.
 | `reviews` | `POST /api/pull/reviews` — two GitHub searches, about a second (circular-arrow icon) |
 | `stats` | `POST /api/pull/stats` — Jira, GitHub and Calendar for six months (circular-arrow icon) |
 
-The calendar pull covers **Google only**, and it merges rather than overwrites: every event
-whose `source` is not `google` is carried over from the previous report. That exists because a
-work Outlook calendar is not reachable from a server — it needs a logged-in browser — so
-anything written there by another producer survives a pull instead of being silently dropped.
+The calendar covers **Google only**, and the report says exactly what Google said.
+
+It used to merge: every event whose `source` was not `google` was carried over from the previous
+report, so that a pull could not delete the Outlook meetings no server can read — an Outlook
+calendar needs a logged-in browser. The failure mode turned out worse than the problem. Once
+nothing was writing those events any more, the merge kept re-copying one stale recurring meeting
+into every report, and a calendar that claims a meeting nobody has verified in a week is worse
+than one that admits it only knows Google.
 
 The top-bar button belongs to the page: on Jira it updates Jira, on the statistics page it
 updates the statistics. Only the dashboard, which shows every report at once, offers

@@ -1,4 +1,4 @@
-import type { CalendarEvent, CalendarReport } from '../src/types';
+import type { CalendarReport } from '../src/types';
 
 export function pullGoogleCalendar(options: {
   /** Service-account JSON key: a file path, or the JSON itself. Preferred. */
@@ -14,8 +14,6 @@ export function pullGoogleCalendar(options: {
   /** Calendar names to skip (birthdays, holidays, whatever is noise). */
   exclude?: string[];
   upcomingDays?: number;
-  /** Non-Google events from the previous report, carried over instead of dropped. */
-  keepEvents?: CalendarEvent[];
 }): Promise<CalendarReport>;
 
 export function pullMeetingLoad(options: {
