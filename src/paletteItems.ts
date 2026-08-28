@@ -27,14 +27,23 @@ export interface PaletteItem {
   action: PaletteAction;
 }
 
+/**
+ * Pages ⌘K can jump to. The report ones are derived from `KIND_META`, so a new kind is
+ * searchable the moment it exists rather than the moment somebody remembers this list.
+ */
 const PAGES: PaletteItem[] = [
   { id: 'page:/', group: 'Pages', title: 'Dashboard', action: { kind: 'goto', to: '/' } },
-  { id: 'page:/jira', group: 'Pages', title: 'Jira board', keywords: 'tickets', kind: 'jira', action: { kind: 'goto', to: '/jira' } },
-  { id: 'page:/prs', group: 'Pages', title: 'Pull requests', keywords: 'prs github', kind: 'prs', action: { kind: 'goto', to: '/prs' } },
-  { id: 'page:/reviews', group: 'Pages', title: 'Review queue', keywords: 'reviews waiting', kind: 'reviews', action: { kind: 'goto', to: '/reviews' } },
-  { id: 'page:/slack', group: 'Pages', title: 'Slack mentions', keywords: 'messages threads', kind: 'slack', action: { kind: 'goto', to: '/slack' } },
-  { id: 'page:/calendar', group: 'Pages', title: 'Calendar', keywords: 'meetings', kind: 'calendar', action: { kind: 'goto', to: '/calendar' } },
-  { id: 'page:/stats', group: 'Pages', title: 'Statistics', keywords: 'metrics charts', kind: 'stats', action: { kind: 'goto', to: '/stats' } },
+  ...REPORT_KINDS.map(
+    (kind): PaletteItem => ({
+      id: `page:${KIND_META[kind].route}`,
+      group: 'Pages',
+      title: KIND_META[kind].paletteTitle,
+      keywords: KIND_META[kind].keywords,
+      kind,
+      action: { kind: 'goto', to: KIND_META[kind].route },
+    }),
+  ),
+  { id: 'page:/projects', group: 'Pages', title: 'Projects', keywords: 'architecture flows repos', action: { kind: 'goto', to: '/projects' } },
   { id: 'page:/commands', group: 'Pages', title: 'Commands and skills', keywords: 'kit slash', action: { kind: 'goto', to: '/commands' } },
   { id: 'page:/settings', group: 'Pages', title: 'Settings', keywords: 'palette theme', action: { kind: 'goto', to: '/settings' } },
 ];

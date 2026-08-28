@@ -9,7 +9,7 @@ import ForumRoundedIcon from '@mui/icons-material/ForumRounded';
 import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import TerminalRoundedIcon from '@mui/icons-material/TerminalRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import type { ReportKind } from '../reportKinds';
+import { KIND_META, REPORT_KINDS, type ReportKind } from '../reportKinds';
 import { useCapabilities } from '../capabilitiesContext';
 import { timeAgo } from '../timeAgo';
 import { RefreshButton } from './RefreshButton';
@@ -29,24 +29,52 @@ interface NavRow {
   kind?: ReportKind;
 }
 
+/**
+ * The icon each report route wears. Only this stays per-kind here — the route and the label come
+ * from `KIND_META`, so a new kind gets a nav row without anybody remembering to add one.
+ */
+const KIND_ICONS: Record<ReportKind, typeof HomeRoundedIcon> = {
+  stats: InsightsRoundedIcon,
+  jira: ConfirmationNumberRoundedIcon,
+  prs: AltRouteRoundedIcon,
+  reviews: VisibilityRoundedIcon,
+  slack: ForumRoundedIcon,
+  calendar: EventRoundedIcon,
+};
+
+/** The order the work rows appear in; anything not named falls in after, alphabetically. */
+const WORK_ORDER: ReportKind[] = ['jira', 'prs', 'reviews', 'slack', 'calendar'];
+
+const workRows = (): NavRow[] =>
+  [...REPORT_KINDS.filter((kind) => kind !== 'stats')]
+    .sort((a, b) => {
+      const rank = (k: ReportKind) => {
+        const at = WORK_ORDER.indexOf(k);
+        return at === -1 ? WORK_ORDER.length : at;
+      };
+      return rank(a) - rank(b) || a.localeCompare(b);
+    })
+    .map((kind) => ({
+      to: KIND_META[kind].route,
+      label: KIND_META[kind].title,
+      icon: KIND_ICONS[kind],
+      kind,
+    }));
+
 const SECTIONS: { title: string; rows: NavRow[] }[] = [
   {
     title: 'Overview',
     rows: [
       { to: '/', label: 'Dashboard', icon: HomeRoundedIcon },
-      { to: '/stats', label: 'Statistics', icon: InsightsRoundedIcon, kind: 'stats' },
+      {
+        to: KIND_META.stats.route,
+        label: KIND_META.stats.title,
+        icon: KIND_ICONS.stats,
+        kind: 'stats',
+      },
     ],
   },
-  {
-    title: 'Work',
-    rows: [
-      { to: '/jira', label: 'Jira', icon: ConfirmationNumberRoundedIcon, kind: 'jira' },
-      { to: '/prs', label: 'Pull requests', icon: AltRouteRoundedIcon, kind: 'prs' },
-      { to: '/reviews', label: 'Reviews', icon: VisibilityRoundedIcon, kind: 'reviews' },
-      { to: '/slack', label: 'Slack', icon: ForumRoundedIcon, kind: 'slack' },
-      { to: '/calendar', label: 'Calendar', icon: EventRoundedIcon, kind: 'calendar' },
-    ],
-  },
+  { title: 'Work', rows: workRows() },
   {
     title: 'Toolkit',
     rows: [

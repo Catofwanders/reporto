@@ -99,5 +99,16 @@
         "Shipped"
       ]
     }
-  }
+  },
+  "fallbackStatuses": [
+    "In Progress",
+    "In Review",
+    "Ready for QA"
+  ],
+  "calendars": [],
+  "slackDays": 14,
+  "slackChannelsExcluded": [
+    "alerts",
+    "deploys"
+  ]
 }

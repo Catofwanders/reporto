@@ -1,4 +1,4 @@
-import type { ReportKind } from './reportKinds';
+import { KIND_META, REPORT_KINDS, type ReportKind } from './reportKinds';
 
 /**
  * How long each report stays believable, in minutes.
@@ -23,29 +23,25 @@ export const FRESH_MINUTES: Record<ReportKind, number> = {
   stats: 1440,
 };
 
-/** Which reports a route actually shows. Nothing else is worth fetching for that view. */
-export const ROUTE_KINDS: { match: (path: string) => boolean; kinds: ReportKind[] }[] = [
-  { match: (p) => p === '/', kinds: ['jira', 'prs', 'reviews', 'slack', 'calendar'] },
-  { match: (p) => p.startsWith('/jira'), kinds: ['jira'] },
-  { match: (p) => p.startsWith('/prs'), kinds: ['prs'] },
-  // The review queue reads ticket status for its rows, so a stale board shows there too.
-  { match: (p) => p.startsWith('/reviews'), kinds: ['reviews', 'jira'] },
-  { match: (p) => p.startsWith('/slack'), kinds: ['slack'] },
-  { match: (p) => p.startsWith('/calendar'), kinds: ['calendar'] },
-  { match: (p) => p.startsWith('/stats'), kinds: ['stats'] },
-  { match: (p) => p.startsWith('/projects'), kinds: ['jira', 'prs'] },
+/**
+ * Which reports a route actually shows — derived from `KIND_META`, so a new kind cannot be
+ * added without one. The dashboard is the exception worth stating: it draws from everything
+ * except the statistics, whose numbers do not move within a day.
+ */
+const DASHBOARD_KINDS: ReportKind[] = ['jira', 'prs', 'reviews', 'slack', 'calendar'];
+
+/** Routes that show reports without owning one. */
+const EXTRA_ROUTES: { prefix: string; kinds: ReportKind[] }[] = [
+  { prefix: '/projects', kinds: ['jira', 'prs'] },
 ];
 
-export const kindsForRoute = (path: string): ReportKind[] =>
-  ROUTE_KINDS.find((entry) => entry.match(path))?.kinds ?? [];
+export const kindsForRoute = (path: string): ReportKind[] => {
+  if (path === '/') return DASHBOARD_KINDS;
+  const own = REPORT_KINDS.find((kind) => path.startsWith(KIND_META[kind].route));
+  if (own) return [own, ...(KIND_META[own].alsoReads ?? [])];
+  return EXTRA_ROUTES.find((entry) => path.startsWith(entry.prefix))?.kinds ?? [];
+};
 
-/**
- * Age in minutes, with both "no stamp" and "unreadable stamp" reading as infinitely old.
- *
- * The second half matters more than it looks: an unparseable `generatedAt` yielded `NaN`, and
- * `NaN >= ceiling` is false, so that report counted as fresh for ever and was never refetched.
- * A broken report that looks current is the one failure this module exists to prevent.
- */
 export const minutesSince = (iso: string | undefined): number => {
   if (iso === undefined) return Number.POSITIVE_INFINITY;
   const at = new Date(iso).getTime();

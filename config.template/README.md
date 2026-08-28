@@ -33,6 +33,7 @@ stays free of employer or account specifics.
 | `upcomingDays` | How far the calendar watch-list looks ahead. Defaults to 7. |
 | `slackDays` | How far back the Slack mention search goes. Defaults to 14. |
 | `slackChannelsExcluded` | Channel names whose mentions are noise — alert feeds, announcements. |
+| `disabledModules` | Written by Settings, not by hand: the modules switched off. Listed here so an unexpected key in your config is not a mystery. |
 | `slackStandupChannel` | Where the stand-up note posts, e.g. `standup`. Empty means the button never appears. |
 | `statusAging` | Days a ticket may sit in each status before the board says so, plus a `default`. Only the statuses named here cost a changelog read per ticket, so keep it to the ones somebody waits on. |
 | `stuckStatuses` | Which of those statuses count towards "tickets sitting too long". Narrower than `statusAging`: a blocked or failed ticket is loud through its own status, not through its age. Empty means all of them. |

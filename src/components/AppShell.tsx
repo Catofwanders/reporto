@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import type { JiraReport, PrsReport } from '../types';
-import type { ReportKind } from '../reportKinds';
+import { KIND_META, REPORT_KINDS, type ReportKind } from '../reportKinds';
 import { useRefresh } from '../refreshContext';
 import { CommandPalette } from './CommandPalette';
 import { SideNav } from './SideNav';
@@ -24,44 +24,20 @@ interface AppShellProps {
  * dashboard shows every report, so only the dashboard offers "update all"; settings shows
  * no report at all and offers nothing.
  */
-const HEADINGS: Record<
-  string,
-  { title: string; subtitle: string; kind?: ReportKind; action?: 'all' | 'none' }
-> = {
+/**
+ * Heading per route, so the top bar says where you are without a breadcrumb trail, plus the
+ * report that page is about: the top-bar button updates what you are looking at.
+ *
+ * The report routes come from `KIND_META` rather than being restated here — that table is what
+ * makes a new kind appear everywhere at once. Only the pages that own no report are listed.
+ */
+type Heading = { title: string; subtitle: string; kind?: ReportKind; action?: 'all' | 'none' }
+
+const PAGE_HEADINGS: Record<string, Heading> = {
   '/': {
     title: 'Dashboard',
     subtitle: 'What needs you today, across Jira and GitHub.',
     action: 'all',
-  },
-  '/stats': {
-    title: 'Statistics',
-    subtitle: 'Six months of delivery, review and meeting load.',
-    kind: 'stats',
-  },
-  '/jira': {
-    title: 'Jira',
-    subtitle: 'Every ticket assigned to me, grouped by status.',
-    kind: 'jira',
-  },
-  '/prs': {
-    title: 'Pull requests',
-    subtitle: 'My open PRs, their review state and QC standing.',
-    kind: 'prs',
-  },
-  '/reviews': {
-    title: 'Reviews',
-    subtitle: "PRs waiting on your review, and the ones that moved since you looked.",
-    kind: 'reviews',
-  },
-  '/slack': {
-    title: 'Slack',
-    subtitle: 'Who named you, and whether the last word is still theirs.',
-    kind: 'slack',
-  },
-  '/calendar': {
-    title: 'Calendar',
-    subtitle: "Today's events and the upcoming watch-list.",
-    kind: 'calendar',
   },
   '/projects': {
     title: 'Projects',
@@ -78,7 +54,17 @@ const HEADINGS: Record<
     subtitle: 'Palette, and what this dashboard is allowed to do.',
     action: 'none',
   },
-};
+}
+
+const HEADINGS: Record<string, Heading> = {
+  ...PAGE_HEADINGS,
+  ...Object.fromEntries(
+    REPORT_KINDS.map((kind) => [
+      KIND_META[kind].route,
+      { title: KIND_META[kind].title, subtitle: KIND_META[kind].subtitle, kind },
+    ]),
+  ),
+}
 
 export const AppShell = ({ generatedAt, onWake, jira, prs, children }: AppShellProps) => {
   const { pathname } = useLocation();
