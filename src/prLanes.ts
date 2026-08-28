@@ -40,8 +40,19 @@ export interface LanePr {
   tone: 'ok' | 'na' | null;
 }
 
-export const idleDays = (iso: string): number =>
-  Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
+/**
+ * Whole days since a timestamp, and zero for anything unreadable.
+ *
+ * `Math.max(0, NaN)` is `NaN`, and every comparison against `NaN` is false — so a missing or
+ * malformed stamp used to slip through as a row that is never old, never urgent, and sorts
+ * unpredictably against its neighbours. `ticketAging` guards this case explicitly; this is the
+ * same guard for the lane maths.
+ */
+export const idleDays = (iso: string): number => {
+  const at = new Date(iso).getTime();
+  if (Number.isNaN(at)) return 0;
+  return Math.max(0, Math.floor((Date.now() - at) / 86_400_000));
+};
 
 /**
  * Aging tone. Two days is the line: inside it a silent PR is normal, past it somebody has

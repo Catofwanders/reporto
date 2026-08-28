@@ -7,10 +7,18 @@ import HourglassBottomRoundedIcon from '@mui/icons-material/HourglassBottomRound
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
 import type { Kpis } from '../needsYou';
 
+type Kind = 'prs' | 'reviews' | 'slack' | 'jira';
+
 interface KpiStripProps {
   counts: Kpis;
   /** Which report kinds are usable, so a tile for a switched-off module never appears. */
-  usable: (kind: 'prs' | 'reviews' | 'slack' | 'jira') => boolean;
+  usable: (kind: Kind) => boolean;
+  /**
+   * Whether the report a tile counts is actually loaded. Without this a never-pulled report
+   * and a genuinely clear morning are the same six grey zeroes — and "0 waiting on you" is a
+   * claim the app has no basis for making before anything has been fetched.
+   */
+  loaded?: (kind: Kind) => boolean;
 }
 
 interface Tile {
@@ -22,12 +30,16 @@ interface Tile {
   tone: 'accent' | 'warn' | 'bad';
   /** Spelled out on hover, because a two-word label cannot define what it counts. */
   title: string;
-  needs?: 'prs' | 'reviews' | 'slack' | 'jira';
+  /** The module this tile belongs to; a switched-off one drops the tile entirely. */
+  needs?: Kind;
+  /** The reports the figure is built from. None loaded means the figure is unknown, not zero. */
+  counts: Kind[];
 }
 
 const TILES: Tile[] = [
   {
     key: 'prs',
+    counts: ['prs'],
     label: 'my open PRs',
     icon: AltRouteRoundedIcon,
     to: '/prs',
@@ -37,6 +49,7 @@ const TILES: Tile[] = [
   },
   {
     key: 'reviews',
+    counts: ['reviews'],
     label: 're-reviews',
     icon: VisibilityRoundedIcon,
     to: '/reviews',
@@ -46,6 +59,7 @@ const TILES: Tile[] = [
   },
   {
     key: 'tickets',
+    counts: ['jira'],
     label: 'my active tickets',
     icon: ConfirmationNumberRoundedIcon,
     to: '/jira',
@@ -55,6 +69,7 @@ const TILES: Tile[] = [
   },
   {
     key: 'stuck',
+    counts: ['jira'],
     label: 'tickets sitting too long',
     icon: HourglassBottomRoundedIcon,
     to: '/jira',
@@ -67,6 +82,7 @@ const TILES: Tile[] = [
   },
   {
     key: 'conflicts',
+    counts: ['jira', 'prs', 'slack'],
     label: 'Jira and GitHub disagree',
     icon: ReportProblemRoundedIcon,
     to: '/jira',
@@ -86,19 +102,20 @@ const TILES: Tile[] = [
  * review" is worth knowing, and a tile that vanishes at zero makes the strip jump around
  * between loads.
  */
-export const KpiStrip = ({ counts, usable }: KpiStripProps) => (
+export const KpiStrip = ({ counts, usable, loaded = () => true }: KpiStripProps) => (
   <div className="kpi-strip">
     {TILES.filter((tile) => !tile.needs || usable(tile.needs)).map((tile) => {
+      const known = tile.counts.some((kind) => loaded(kind));
       const value = counts[tile.key];
       return (
         <Link
           key={tile.key}
           to={tile.to}
-          title={tile.title}
-          className={`kpi-tile${value > 0 ? ` is-${tile.tone}` : ' is-zero'}`}
+          title={known ? tile.title : `${tile.title}. Not pulled yet — press update.`}
+          className={`kpi-tile${known && value > 0 ? ` is-${tile.tone}` : ' is-zero'}`}
         >
           <tile.icon className="kpi-icon" fontSize="small" />
-          <strong className="kpi-value">{value}</strong>
+          <strong className="kpi-value">{known ? value : '—'}</strong>
           <span className="kpi-label">{tile.label}</span>
         </Link>
       );

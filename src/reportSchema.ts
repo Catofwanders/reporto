@@ -25,7 +25,14 @@ function validJira(v: unknown): v is JiraReport {
       isObject(g) &&
       typeof g.title === 'string' &&
       isArray(g.tickets) &&
-      g.tickets.every((t) => isObject(t) && typeof t.key === 'string' && isArray(t.prs)),
+      g.tickets.every(
+        (t) =>
+          isObject(t) &&
+          typeof t.key === 'string' &&
+          isArray(t.prs) &&
+          // The list view maps over these, so an absent array is a crash rather than a gap.
+          isArray(t.notes),
+      ),
   );
 }
 
@@ -42,7 +49,15 @@ function validPrs(v: unknown): v is PrsReport {
 
 function validReviews(v: unknown): v is ReviewsReport {
   if (!isObject(v) || typeof v.date !== 'string' || !isArray(v.prs)) return false;
-  return v.prs.every((pr) => isObject(pr) && typeof pr.num === 'number' && typeof pr.repo === 'string');
+  return v.prs.every(
+    (pr) =>
+      isObject(pr) &&
+      typeof pr.num === 'number' &&
+      typeof pr.repo === 'string' &&
+      // Every row renders its size, so a report without one passed this guard and then threw
+      // from the view — which turns a named "report is malformed" into a blank route.
+      isObject(pr.size),
+  );
 }
 
 function validSlack(v: unknown): v is SlackReport {
@@ -58,6 +73,8 @@ function validSlack(v: unknown): v is SlackReport {
 
 function validStats(v: unknown): v is StatsReport {
   if (!isObject(v) || !isArray(v.months)) return false;
+  // The caveats block reads both of these directly.
+  if (!isArray(v.notes) || !isObject(v.statuses)) return false;
   return v.months.every((m) => isObject(m) && typeof m.month === 'string');
 }
 

@@ -11,6 +11,8 @@ interface NeedsYouProps {
   items: FeedItem[];
   /** How many the feed drew from, so a cut list can say what it left out. */
   total: number;
+  /** No report has been pulled yet, so an empty queue is ignorance rather than good news. */
+  unpulled?: boolean;
 }
 
 const ICON: Record<FeedSource, SvgIconComponent> = {
@@ -44,7 +46,7 @@ const ORDER: FeedAction[] = ['push', 'review', 'answer', 'merge', 'unstick'];
  * merged list legible: it says what the group wants before any row is read. The full sentence
  * is still the tooltip, and the page behind each row has all of it.
  */
-export const NeedsYou = ({ items, total }: NeedsYouProps) => {
+export const NeedsYou = ({ items, total, unpulled = false }: NeedsYouProps) => {
   const groups = ORDER.map((action) => ({
     action,
     rows: items.filter((item) => item.action === action),
@@ -61,7 +63,9 @@ export const NeedsYou = ({ items, total }: NeedsYouProps) => {
       </div>
 
       {groups.length === 0 ? (
-        <p className="mini-empty">Nothing is waiting on you.</p>
+        <p className="mini-empty">
+          {unpulled ? 'Nothing pulled yet — press update in the rail.' : 'Nothing is waiting on you.'}
+        </p>
       ) : (
         <div className="needs-scroll">
           {groups.map((group) => (

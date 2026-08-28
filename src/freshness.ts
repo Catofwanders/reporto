@@ -39,8 +39,19 @@ export const ROUTE_KINDS: { match: (path: string) => boolean; kinds: ReportKind[
 export const kindsForRoute = (path: string): ReportKind[] =>
   ROUTE_KINDS.find((entry) => entry.match(path))?.kinds ?? [];
 
-export const minutesSince = (iso: string | undefined): number =>
-  iso === undefined ? Number.POSITIVE_INFINITY : (Date.now() - new Date(iso).getTime()) / 60_000;
+/**
+ * Age in minutes, with both "no stamp" and "unreadable stamp" reading as infinitely old.
+ *
+ * The second half matters more than it looks: an unparseable `generatedAt` yielded `NaN`, and
+ * `NaN >= ceiling` is false, so that report counted as fresh for ever and was never refetched.
+ * A broken report that looks current is the one failure this module exists to prevent.
+ */
+export const minutesSince = (iso: string | undefined): number => {
+  if (iso === undefined) return Number.POSITIVE_INFINITY;
+  const at = new Date(iso).getTime();
+  if (Number.isNaN(at)) return Number.POSITIVE_INFINITY;
+  return (Date.now() - at) / 60_000;
+};
 
 /** Undefined stamps count as stale, but only once the reports have loaded — see LiveRefresh. */
 export const isStale = (kind: ReportKind, iso: string | undefined): boolean =>

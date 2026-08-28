@@ -79,6 +79,16 @@ describe('PR lanes', () => {
     expect(idleDays(new Date(Date.now() + 60_000).toISOString())).toBe(0);
   });
 
+  /*
+   * `Math.max(0, NaN)` is `NaN`, and every comparison against it is false — so an unreadable
+   * stamp used to produce a row that was never old, never urgent, and unsorted.
+   */
+  it('reads an unusable timestamp as zero rather than as NaN', () => {
+    expect(idleDays('not-a-date')).toBe(0);
+    expect(idleDays('')).toBe(0);
+    expect(reasonOf(pr({ updatedAt: '' }), idleDays(''))).toBe('waiting for a first review');
+  });
+
   it('stays quiet for two days, then escalates', () => {
     expect(agingTone(1)).toBe('na');
     expect(agingTone(2)).toBe('warn');

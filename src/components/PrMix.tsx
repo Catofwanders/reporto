@@ -34,7 +34,21 @@ export const PrMix = ({ report }: PrMixProps) => {
     count: (lanes.get(lane.id) ?? []).length,
   })).filter((part) => part.count > 0);
   const total = parts.reduce((sum, part) => sum + part.count, 0);
-  if (total === 0) return null;
+  // Said rather than rendered as an absence: a missing card and an empty pile look the same,
+  // and only one of them is news.
+  if (total === 0) {
+    return (
+      <section className="panel pr-mix">
+        <div className="mini-head">
+          <span className="panel-icon badge-open" aria-hidden="true">
+            <AltRouteRoundedIcon fontSize="small" />
+          </span>
+          <h2>My PRs</h2>
+        </div>
+        <p className="mini-empty">No open pull requests.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="panel pr-mix">

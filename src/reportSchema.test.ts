@@ -8,15 +8,21 @@ import type { ReportKind } from './reportKinds';
  * broken: without them a missing array surfaces as a render crash with no kind attached.
  */
 const good: Record<ReportKind, unknown> = {
-  jira: { date: '2026-05-14', groups: [{ title: 'In Progress', tickets: [{ key: 'SHOP-1', prs: [] }] }] },
+  jira: {
+    date: '2026-05-14',
+    groups: [{ title: 'In Progress', tickets: [{ key: 'SHOP-1', prs: [], notes: [] }] }],
+  },
   calendar: { date: '2026-05-14', events: [], upcoming: [] },
   prs: { date: '2026-05-14', repos: [{ repo: 'orders-api', prs: [] }] },
-  reviews: { date: '2026-05-14', prs: [{ num: 7, repo: 'orders-api' }] },
+  reviews: {
+    date: '2026-05-14',
+    prs: [{ num: 7, repo: 'orders-api', size: { additions: 1, deletions: 0, files: 1 } }],
+  },
   slack: {
     date: '2026-05-14',
     rows: [{ id: 'C1:1', kind: 'mention', lastFromMe: false }],
   },
-  stats: { months: [{ month: '2026-05' }] },
+  stats: { months: [{ month: '2026-05' }], notes: [], statuses: {} },
 };
 
 describe('assertReport', () => {
@@ -38,6 +44,13 @@ describe('assertReport', () => {
     expect(() =>
       assertReport('jira', { date: '2026-05-14', groups: [{ tickets: [] }] }),
     ).toThrow();
+    // The list view maps `notes`, so an absent array is a crash rather than an empty section.
+    expect(() =>
+      assertReport('jira', {
+        date: '2026-05-14',
+        groups: [{ title: 'x', tickets: [{ key: 'A-1', prs: [] }] }],
+      }),
+    ).toThrow();
   });
 
   it('rejects a prs report whose repo groups are the wrong shape', () => {
@@ -48,6 +61,10 @@ describe('assertReport', () => {
   it('rejects a reviews report whose rows lack the keys every lane reads', () => {
     expect(() => assertReport('reviews', { date: '2026-05-14', prs: [{ num: 7 }] })).toThrow();
     expect(() => assertReport('reviews', { date: '2026-05-14', prs: [{ repo: 'a' }] })).toThrow();
+    // `size` is rendered on every row; without it the guard passed and the view threw.
+    expect(() =>
+      assertReport('reviews', { date: '2026-05-14', prs: [{ num: 7, repo: 'orders-api' }] }),
+    ).toThrow();
   });
 
   /* `kind` decides which page a row goes to, and `lastFromMe` decides whether it is waiting. */
@@ -63,6 +80,11 @@ describe('assertReport', () => {
   it('rejects a calendar report missing either list, since both are rendered', () => {
     expect(() => assertReport('calendar', { date: '2026-05-14', events: [] })).toThrow();
     expect(() => assertReport('calendar', { date: '2026-05-14', upcoming: [] })).toThrow();
+  });
+
+  it('rejects a stats report missing the fields the caveats block reads', () => {
+    expect(() => assertReport('stats', { months: [], statuses: {} })).toThrow();
+    expect(() => assertReport('stats', { months: [], notes: [] })).toThrow();
   });
 
   it('returns the value it was given, so it can be used inline', () => {

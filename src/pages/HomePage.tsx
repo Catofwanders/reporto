@@ -53,19 +53,37 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps)
   };
 
   const findings = flowFindings(sources.jira, sources.prs, sources.slack, statuses);
+  // Before the first pull there is nothing to be relieved about; the panels say so instead of
+  // rendering a confident emptiness.
+  const unpulled = !sources.jira && !sources.prs && !sources.reviews && !sources.slack;
   const items = needsYou(sources);
   const total = needsYouTotal(sources);
   const counts = kpis({ ...sources, conflicts: findings.length });
 
   return (
     <main className="home">
-      <KpiStrip counts={counts} usable={usable} />
+      {/* `loaded` is what keeps a never-pulled report from reading as a clear morning. */}
+      <KpiStrip
+        counts={counts}
+        usable={usable}
+        loaded={(kind) => Boolean(sources[kind])}
+      />
 
       <div className="home-split">
-        <NeedsYou items={items} total={total} />
+        <NeedsYou items={items} total={total} unpulled={unpulled} />
 
         <div className="home-aside">
-          {calendar && usable('calendar') && <DayTimeline report={calendar} />}
+          {usable('calendar') &&
+            (calendar ? (
+              <DayTimeline report={calendar} />
+            ) : (
+              <section className="panel day-panel">
+                <div className="mini-head">
+                  <h2>Today</h2>
+                </div>
+                <p className="mini-empty">Calendar not pulled yet.</p>
+              </section>
+            ))}
           {sources.prs && <PrMix report={sources.prs} />}
           {/* Folded by default: a contradiction is worth knowing about, not worth a third of
               the screen every morning, and its count is already in the strip above. */}

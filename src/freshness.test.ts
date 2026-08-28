@@ -49,6 +49,16 @@ describe('isStale', () => {
     expect(isStale('calendar', undefined)).toBe(true);
   });
 
+  /*
+   * An unreadable stamp used to read as fresh for ever: `NaN >= ceiling` is false, so
+   * `LiveRefresh` never refetched that kind and a broken report looked current.
+   */
+  it('treats an unreadable stamp as infinitely old, not as fresh', () => {
+    expect(minutesSince('not-a-date')).toBe(Number.POSITIVE_INFINITY);
+    expect(isStale('slack', 'not-a-date')).toBe(true);
+    expect(isStale('stats', '')).toBe(true);
+  });
+
   it('gives every kind a ceiling, so a new report cannot be forgotten', () => {
     for (const kind of REPORT_KINDS) expect(FRESH_MINUTES[kind]).toBeGreaterThan(0);
   });

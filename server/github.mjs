@@ -441,7 +441,10 @@ async function addFallbackMatches({
     )
   }
   for (const key of budget) {
-    let found
+    // Named `hits`, not `found`: it used to shadow the outer accumulator, so every merged PR
+    // matched by body search was pushed onto the parsed search result and thrown away with
+    // it — and those tickets then had no `inQc`, which is the one PR fact a board cannot show.
+    let hits
     try {
       const { stdout } = await run(
         'gh',
@@ -462,12 +465,12 @@ async function addFallbackMatches({
         ],
         { env: { ...process.env, GH_TOKEN: token }, maxBuffer: 2 * 1024 * 1024 },
       )
-      found = JSON.parse(stdout)
+      hits = JSON.parse(stdout)
     } catch (err) {
       console.warn(`[reporto] fallback search for ${key} failed: ${ghMessage(err)}`)
       continue
     }
-    const prs = (found ?? [])
+    const prs = (hits ?? [])
       // A hit whose title names a *different* ticket belongs to that one, not this one.
       .filter((n) => {
         const titled = new RegExp(ticketPattern, 'i').exec(n.title)?.[0]?.toUpperCase()

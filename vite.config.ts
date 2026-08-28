@@ -772,6 +772,27 @@ function kitPlugin(): Plugin {
 }
 
 // https://vite.dev/config/
+/**
+ * Keeps the report files out of `dist/`.
+ *
+ * `public/` is Vite's publicDir, so a build copies every report into the bundle — 350KB of
+ * ticket keys, meeting titles and Slack excerpts. The directory is gitignored, but the README
+ * describes the static build as deployable, and a zipped `dist` would publish the lot. The app
+ * fetches them at runtime from `public/reports/`, so nothing in a build should ever want them.
+ */
+function reportsOutOfBuildPlugin(): Plugin {
+  return {
+    name: 'reporto-reports-out-of-build',
+    apply: 'build',
+    closeBundle() {
+      const dir = path.join(__dirname, 'dist/reports')
+      if (!fs.existsSync(dir)) return
+      fs.rmSync(dir, { recursive: true, force: true })
+      this.info('removed dist/reports — report data never ships in a build')
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   // Vite only exposes VITE_-prefixed vars, and only to the client. The pullers run in
   // this process and need the raw ones, so lift .env into the environment by hand.
@@ -782,9 +803,24 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    // Loopback only: the dev server exposes file writes and agent runs, so it must not
-    // be reachable from the LAN.
-    server: { host: '127.0.0.1' },
+    server: {
+      // Loopback only: the dev server exposes file writes and agent runs, so it must not
+      // be reachable from the LAN.
+      host: '127.0.0.1',
+      /*
+       * Vite serves anything inside the project root, and its default deny-list is only
+       * dotfiles and keys — so `GET /config/projects.json` used to answer 200 with 130KB of
+       * the gitignored file whose entire reason for living behind `/api/projects` is that it
+       * names client systems. Same for the rules and notes under `.claude/`.
+       *
+       * Absolute patterns, because `deny` is matched against the resolved path: a bare
+       * `config/**` matches nothing here, and `**​/config/**` would also cover any dependency
+       * that ships a directory of that name.
+       */
+      fs: {
+        deny: [path.join(__dirname, 'config/**'), path.join(__dirname, '.claude/**')],
+      },
+    },
     plugins: [
       react(),
       kitPlugin(),
@@ -796,6 +832,7 @@ export default defineConfig(({ mode }) => {
       pullPlugin(),
       prActionPlugin(),
       jiraTransitionPlugin(),
+      reportsOutOfBuildPlugin(),
     ],
   }
 })
