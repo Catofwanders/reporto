@@ -94,6 +94,6 @@ export const qcChip = (
   return {
     label: `off QC · ${deployQc.aheadBy}`,
     tone: 'qcout',
-    title: `${deployQc.aheadBy} commit${deployQc.aheadBy === 1 ? '' : 's'} on this branch are not in deploy-qc`,
+    title: `${deployQc.aheadBy} commit${deployQc.aheadBy === 1 ? ' on this branch is' : 's on this branch are'} not in deploy-qc`,
   };
 };

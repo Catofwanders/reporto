@@ -425,6 +425,31 @@ written before the puller carried QC data, and empty versions of every panel.
 Storybook 10 and Vite 8 both need Node 20.19+, which is why `.nvmrc` exists; the repo
 otherwise runs on whatever `node` you have.
 
+## Tests
+
+```bash
+npm test           # vitest, 138 tests
+npm run coverage   # per-file, v8
+```
+
+Deliberately uneven. What is covered is the **derivation** — the functions that decide what
+a morning looks like, where a wrong answer is plausible enough to survive review: PR review
+state, the report guards, the status vocabulary, ticket aging, the dashboard queue and its
+counts, the flow checks, every lane rule, the palette matcher, the freshness ceilings, the
+ADF renderer, and the loader. Those sit at or near 100%; the whole tree is around 42%,
+because components and pages are checked in Storybook and in the browser and asserting on
+their markup here would buy very little.
+
+Three of them exist because the bug shipped first: a base-branch merge must not read as a
+push, an unmeasured ticket must not render as "0 days", and a `javascript:` href inside a
+Jira description must never become a link. Writing the suite found three more — `1 commit …
+are not in deploy-qc`, `3 replys`, and a story comment claiming a card rendered nothing when
+it had shown two findings for months.
+
+`App.test.tsx` mocks at the `fetch` boundary rather than stubbing the loader, so the
+content-type check that once surfaced as `Unexpected token '<'` is exercised rather than
+described.
+
 ## Keeping the page current
 
 Nothing polls on a timer. Push is not available here for four of the five sources — GitHub and

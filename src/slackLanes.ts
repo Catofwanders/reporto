@@ -57,7 +57,8 @@ export const laneOfSlack = (row: SlackRow): SlackLaneId => {
   return row.kind === 'dm' ? 'dms' : 'asked';
 };
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+/** `many` for the words an -s does not fit: "3 replys" shipped for a while. */
+const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 
 /** The row's one line: who is waiting, on what, and where the answer belongs. */
 export const reasonOfSlack = (row: SlackRow, days: number): string => {
@@ -69,7 +70,7 @@ export const reasonOfSlack = (row: SlackRow, days: number): string => {
   const who = row.lastFrom && row.lastFrom !== row.from ? row.lastFrom : row.from;
   const waited = days === 0 ? 'today' : `${plural(days, 'day')} ago`;
   if (row.replies > 0) {
-    return `${who} spoke last ${waited} · ${plural(row.replies, 'reply')} ${where}`;
+    return `${who} spoke last ${waited} · ${plural(row.replies, 'reply', 'replies')} ${where}`;
   }
   return `${row.from} asked ${waited} ${where}, no reply yet`;
 };
