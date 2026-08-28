@@ -87,6 +87,10 @@ export const ReviewsPage = ({ report, jira }: ReviewsPageProps) => {
               <p className="panel-sub">
                 {mine} from people{bots > 0 && `, ${bots} from bots`} · reviewing as{' '}
                 {report.reviewer}
+                {/* Said in the subtitle rather than a banner: it qualifies the count beside it. */}
+                {report.incomplete?.length ? (
+                  <span className="panel-pending"> · {report.incomplete.join('; ')}</span>
+                ) : null}
               </p>
             </div>
           </div>

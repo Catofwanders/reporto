@@ -187,17 +187,24 @@ const AGING_LOOKUPS = 40
  * worth aging get one, and a ticket that never transitioned falls back to when it was created.
  */
 async function statusSinceFor({ site, email, apiToken, key, status, created }) {
+  let history
   try {
-    const history = await jiraStatusHistory({ site, email, apiToken, key })
-    // Oldest first, so the last entry into this status is the one that still holds.
-    const entries = history.filter(
-      (entry) => (entry.to ?? '').trim().toLowerCase() === status.trim().toLowerCase(),
-    )
-    return entries.length ? entries[entries.length - 1].at : (created ?? null)
+    history = await jiraStatusHistory({ site, email, apiToken, key })
   } catch {
-    // One unreadable changelog costs that ticket's pill, not the report.
-    return created ?? null
+    /*
+     * Null, not `created`. This runs up to forty times per pull on one token, so a 429 or a
+     * permissions blip is ordinary — and falling back to the creation date turned a normal
+     * ticket into a years-overdue one, inflating the stuck count and inventing Unstick rows.
+     * Null is the "not measured" state the pill and the KPI already render honestly.
+     */
+    return null
   }
+  // Oldest first, so the last entry into this status is the one that still holds.
+  const entries = history.filter(
+    (entry) => (entry.to ?? '').trim().toLowerCase() === status.trim().toLowerCase(),
+  )
+  // No transition into it at all means it has been there since it existed, which is true.
+  return entries.length ? entries[entries.length - 1].at : (created ?? null)
 }
 
 /**

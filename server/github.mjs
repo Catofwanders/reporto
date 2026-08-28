@@ -47,9 +47,29 @@ function ghMessage(err) {
   return (line ?? text.split('\n').pop() ?? 'gh call failed').replace(/^gh:\s*/, '')
 }
 
+/** GraphQL search page sizes; the caps a puller can silently hit. */
+const PAGE_SIZE = 100
+const REVIEW_PAGE = 50
+
+/**
+ * `null` when everything was fetched, a sentence when it was not.
+ *
+ * GitHub's search returns `issueCount` — the real total — alongside the page it gives you, so
+ * the one thing needed to notice truncation is already on the wire and was being thrown away.
+ */
+function truncationNote(what, search, size) {
+  const total = search?.issueCount
+  const got = (search?.nodes ?? []).length
+  if (typeof total !== 'number' || total <= got || got < size) return null
+  const note = `${what}: fetched ${got} of ${total} — the rest is not in this report`
+  console.warn(`[reporto] ${note}`)
+  return note
+}
+
 const OPEN_PRS = (author, org) => `
 {
   search(query: "is:pr is:open author:${author} org:${org}", type: ISSUE, first: 100) {
+    issueCount
     nodes {
       ... on PullRequest {
         number title url isDraft updatedAt reviewDecision headRefName
@@ -199,6 +219,11 @@ export async function pullOpenPrs({
   const data = await graphql(OPEN_PRS(author, org), token)
   // An archived repo cannot be merged into, so an open PR there is history, not work.
   const nodes = data.search.nodes.filter((n) => n && n.number && !n.repository?.isArchived)
+  /*
+   * A page cap is the one failure that looks like good news: 100 PRs fetched out of 140 reads
+   * as "you have 100 open PRs". GitHub returns the true total, so compare and say so.
+   */
+  const incomplete = truncationNote('open PRs', data.search, PAGE_SIZE)
 
   const byRepo = new Map()
   for (const n of nodes) {
@@ -279,6 +304,7 @@ export async function pullOpenPrs({
     generatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
     author,
     repos,
+    ...(incomplete ? { incomplete: [incomplete] } : {}),
   }
 }
 
@@ -710,15 +736,22 @@ export async function pullReviewQueue({ author, org, account, ticketPattern }) {
   const scope = `is:pr is:open org:${org}`
   const data = await graphql(
     `query {
-      requested: search(query: "${scope} review-requested:${author}", type: ISSUE, first: 50) {
+      requested: search(query: "${scope} review-requested:${author}", type: ISSUE, first: ${REVIEW_PAGE}) {
+        issueCount
         nodes { ... on PullRequest { ${REVIEW_FIELDS} } }
       }
-      reviewed: search(query: "${scope} reviewed-by:${author} -author:${author}", type: ISSUE, first: 50) {
+      reviewed: search(query: "${scope} reviewed-by:${author} -author:${author}", type: ISSUE, first: ${REVIEW_PAGE}) {
+        issueCount
         nodes { ... on PullRequest { ${REVIEW_FIELDS} } }
       }
     }`,
     token,
   )
+
+  const incomplete = [
+    truncationNote('review requests', data.requested, REVIEW_PAGE),
+    truncationNote('PRs you have reviewed', data.reviewed, REVIEW_PAGE),
+  ].filter(Boolean)
 
   const ticket = ticketPattern ? new RegExp(ticketPattern) : null
   const seen = new Map()
@@ -823,5 +856,6 @@ export async function pullReviewQueue({ author, org, account, ticketPattern }) {
     generatedAt: new Date().toISOString(),
     reviewer: author,
     prs,
+    ...(incomplete.length ? { incomplete } : {}),
   }
 }

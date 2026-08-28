@@ -138,6 +138,12 @@ export interface PrsReport {
   generatedAt: string;
   author: string;
   repos: PrRepoGroup[];
+  /**
+   * What the pull could not see: a GraphQL page cap reached, a search that returned more than
+   * was fetched. Absent means the report is complete — which is why it has to be said when it
+   * is not, since a truncated list reads exactly like a short one.
+   */
+  incomplete?: string[];
 }
 
 /** Counts for one month. Any source that failed leaves its half null rather than zero. */
@@ -229,6 +235,8 @@ export interface ReviewsReport {
   generatedAt: string;
   reviewer: string;
   prs: ReviewPr[];
+  /** Same as `PrsReport.incomplete`: page caps the pull hit, named rather than hidden. */
+  incomplete?: string[];
 }
 
 /**

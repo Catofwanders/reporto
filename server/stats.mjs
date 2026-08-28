@@ -70,11 +70,14 @@ function median(values) {
  * bounced back from QC and picked up again should report the work, not the calendar time
  * it sat in someone else's queue.
  */
+/** Jira cases status names however each workflow author typed them; config need not match. */
+const sameStatus = (a, b) => String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase()
+
 function daysToStatus(history, { inProgress, target }) {
-  const arrival = history.find((change) => change.to === target)
+  const arrival = history.find((change) => sameStatus(change.to, target))
   if (!arrival) return null
   const started = [...history]
-    .filter((change) => change.to === inProgress && new Date(change.at) < new Date(arrival.at))
+    .filter((change) => sameStatus(change.to, inProgress) && new Date(change.at) < new Date(arrival.at))
     .pop()
   if (!started) return null
   return (new Date(arrival.at).getTime() - new Date(started.at).getTime()) / 86_400_000

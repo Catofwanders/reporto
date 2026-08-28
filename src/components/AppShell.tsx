@@ -9,6 +9,8 @@ import { TopBar } from './TopBar';
 
 interface AppShellProps {
   generatedAt: Partial<Record<ReportKind, string | undefined>>;
+  /** Re-read the report files — passed through to `LiveRefresh`, which owns "attention". */
+  onWake: () => void;
   /** What ⌘K searches: tickets and PRs, alongside pages, updates and the kit listing. */
   jira: JiraReport | null;
   prs: PrsReport | null;
@@ -77,7 +79,7 @@ const HEADINGS: Record<
   },
 };
 
-export const AppShell = ({ generatedAt, jira, prs, children }: AppShellProps) => {
+export const AppShell = ({ generatedAt, onWake, jira, prs, children }: AppShellProps) => {
   const { pathname } = useLocation();
   const { running } = useRefresh();
   // A project page is one of many, so it is titled from the path rather than the table.
@@ -87,7 +89,7 @@ export const AppShell = ({ generatedAt, jira, prs, children }: AppShellProps) =>
 
   return (
     <div className="shell">
-      <LiveRefresh generatedAt={generatedAt} />
+      <LiveRefresh generatedAt={generatedAt} onWake={onWake} />
       <CommandPalette jira={jira} prs={prs} />
       <SideNav generatedAt={generatedAt} running={running} />
       <div className="shell-main">

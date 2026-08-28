@@ -24,7 +24,14 @@ export function windowStart(now = new Date()) {
   return start
 }
 
-const iso = (date) => date.toISOString().slice(0, 10)
+/*
+ * The local calendar date, not `toISOString().slice(0, 10)`.
+ *
+ * `windowStart` returns local midnight; at any positive UTC offset the ISO form of that instant
+ * is the *previous* day, so the window opened a day early and Sunday work was reported as
+ * "since yesterday". `en-CA` formats as YYYY-MM-DD, which is what JQL wants.
+ */
+const iso = (date) => date.toLocaleDateString('en-CA')
 
 export async function readStandup({
   jiraSite,

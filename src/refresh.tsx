@@ -145,20 +145,14 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
     [apiKinds, commandOf, onReload, setBusy],
   );
 
-  // Mail and calendar are refreshed by running the skill in the user's own session, so
-  // returning to the tab is the moment their new files appear.
-  useEffect(() => {
-    const onFocus = () => {
-      if (document.visibilityState !== 'visible') return;
-      void onReload([...REPORT_KINDS]);
-    };
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onFocus);
-    return () => {
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onFocus);
-    };
-  }, [onReload]);
+  /*
+   * No focus handler here on purpose.
+   *
+   * This used to re-read all six report files on `focus` *and* on `visibilitychange`, which one
+   * tab-switch fires both of — while `LiveRefresh` was registering the same pair for its
+   * staleness sweep. Two mechanisms, four events, the same job. `LiveRefresh` owns it now: it
+   * knows which route is showing, which kinds are stale, and keeps a minimum gap between runs.
+   */
 
   /**
    * A kind is refreshable when the server can fetch it *and* the module is on. Without the

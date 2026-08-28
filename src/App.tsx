@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import type {
   CalendarReport,
@@ -160,6 +160,11 @@ export const App = () => {
     });
   }, []);
 
+  /** Every kind, re-read from disk. What `LiveRefresh` calls when the window wakes. */
+  const reload = useCallback(() => {
+    void load([...REPORT_KINDS]);
+  }, [load]);
+
   useEffect(() => {
     let cancelled = false;
     load([...REPORT_KINDS]).finally(() => {
@@ -170,14 +175,22 @@ export const App = () => {
     };
   }, [load]);
 
-  const generatedAt = {
-    stats: reports.stats?.generatedAt,
-    reviews: reports.reviews?.generatedAt,
-    slack: reports.slack?.generatedAt,
-    jira: reports.jira?.generatedAt,
-    calendar: reports.calendar?.generatedAt,
-    prs: reports.prs?.generatedAt,
-  };
+  /*
+   * Memoized because `LiveRefresh` derives its sweep from this object: as a fresh literal it
+   * changed identity on every render, tearing the focus listeners down and re-running the sweep
+   * each time. Only `MIN_GAP_MS` and a busy flag stood between that and a refetch loop.
+   */
+  const generatedAt = useMemo(
+    () => ({
+      stats: reports.stats?.generatedAt,
+      reviews: reports.reviews?.generatedAt,
+      slack: reports.slack?.generatedAt,
+      jira: reports.jira?.generatedAt,
+      calendar: reports.calendar?.generatedAt,
+      prs: reports.prs?.generatedAt,
+    }),
+    [reports],
+  );
 
   const failed = REPORT_KINDS.filter((kind) => loadErrors[kind]);
 
@@ -185,7 +198,12 @@ export const App = () => {
     <BrowserRouter>
       <CapabilitiesProvider>
         <RefreshProvider onReload={load}>
-          <AppShell generatedAt={generatedAt} jira={reports.jira} prs={reports.prs}>
+          <AppShell
+            generatedAt={generatedAt}
+            onWake={reload}
+            jira={reports.jira}
+            prs={reports.prs}
+          >
             {loading && <p className="status">Loading reports…</p>}
             {indexError && <p className="status error">Could not read the report index: {indexError}</p>}
             {failed.length > 0 && (

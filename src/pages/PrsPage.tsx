@@ -15,7 +15,15 @@ export const PrsPage = ({ report }: PrsPageProps) => {
   return (
     <main className="grid">
       {report ? (
-        <PrLanes report={report} onChanged={() => void run('prs')} />
+        <>
+          {/* A page cap looks exactly like a short list, so the pull says when it hit one. */}
+          {report.incomplete?.map((note) => (
+            <p key={note} className="status error">
+              Incomplete pull — {note}
+            </p>
+          ))}
+          <PrLanes report={report} onChanged={() => void run('prs')} />
+        </>
       ) : (
         <p className="status">No PR report yet — press the update button beside Pull requests.</p>
       )}

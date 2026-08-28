@@ -235,7 +235,11 @@ export async function pullGoogleCalendar({
 
       const mapped = toEvent(item, cal.summaryOverride ?? cal.summary ?? cal.id)
       const at = new Date(item.start?.dateTime ?? `${item.start?.date}T00:00:00`)
-      const endsAt = new Date(item.end?.dateTime ?? item.end?.date ?? at)
+      // `T00:00:00` on the bare date too: `new Date('2026-08-28')` is parsed as UTC midnight,
+      // so at a positive offset yesterday's all-day event ended "today" and showed up here.
+      const endsAt = new Date(
+        item.end?.dateTime ?? (item.end?.date ? `${item.end.date}T00:00:00` : at),
+      )
       const today = at < todayEnd && endsAt > todayStart
       ;(today ? events : upcoming).push(mapped)
     }
