@@ -2,10 +2,10 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { HomePage } from '../pages/HomePage';
 import {
   calendarReport,
+  freshJira,
   freshPrs,
   freshReviews,
   freshSlack,
-  jiraReport,
   prsReport,
   reviewsReport,
 } from './fixtures';
@@ -14,7 +14,7 @@ const meta = {
   title: 'Pages/Home',
   component: HomePage,
   args: {
-    jira: jiraReport,
+    jira: freshJira(),
     reviews: freshReviews(),
     slack: freshSlack(),
     calendar: calendarReport,
@@ -31,6 +31,19 @@ export const Default: Story = {};
 
 /** A quiet morning: nothing waiting, no conflicts. The strip still holds its shape. */
 export const NothingWaiting: Story = {
+  args: {
+    prs: { ...prsReport, repos: [] },
+    reviews: { ...reviewsReport, prs: [] },
+    slack: { ...freshSlack(), rows: [] },
+  },
+};
+
+/**
+ * A quiet queue with one stuck ticket, which is the only way to see the Unstick group: it
+ * carries the lowest weight in the feed, so on a busy morning it is the first thing cut. The
+ * row offers to open the ticket in place — the drawer the board and the list already use.
+ */
+export const TicketStuck: Story = {
   args: {
     prs: { ...prsReport, repos: [] },
     reviews: { ...reviewsReport, prs: [] },

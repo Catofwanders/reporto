@@ -101,6 +101,9 @@ export const jiraReport: JiraReport = {
           url: 'https://jira.example.com/browse/SHOP-812',
           status: 'In Progress',
           chip: 'open',
+          // Past the 5-day limit the marketplace config sets, so the age pill and the
+          // dashboard's Unstick group have something real to draw.
+          statusSince: `2026-05-05T09:00:00+02:00`,
           summary: 'Cache the seller catalogue so a cold product page stops hitting search',
           prs: [
             {
@@ -118,6 +121,7 @@ export const jiraReport: JiraReport = {
           url: 'https://jira.example.com/browse/SHOP-644',
           status: 'In Progress',
           chip: 'open',
+          statusSince: `2026-05-13T09:00:00+02:00`,
           summary: 'Move the payout report off the nightly scheduler',
           prs: [],
           notes: [],
@@ -669,3 +673,21 @@ export const marketplaceAging = {
 };
 
 export const marketplaceStuck = ['In Progress', 'In Review', 'Ready for QA', 'Awaiting sign-off'];
+
+/**
+ * The board with times-in-status stamped onto now: one ticket past the marketplace's 5-day
+ * limit for In Progress, one comfortably inside it. Without this every story either shows no
+ * age pill at all or shows every ticket as months overdue, and the dashboard's Unstick group
+ * had nothing to render.
+ */
+export const freshJira = (): JiraReport => ({
+  ...jiraReport,
+  groups: jiraReport.groups.map((group) => ({
+    ...group,
+    tickets: group.tickets.map((ticket) =>
+      ticket.statusSince
+        ? { ...ticket, statusSince: hoursAgo(ticket.key === 'SHOP-812' ? 24 * 9 : 24 * 2) }
+        : ticket,
+    ),
+  })),
+});

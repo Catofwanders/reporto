@@ -96,47 +96,38 @@ export function agentEnv(): NodeJS.ProcessEnv {
 export const MAX_BODY_BYTES = 1_000_000
 
 export function readBody(
-  req: { on: (ev: string, cb: (chunk?: Buffer) => void) => void; destroy: () => void },
+  req: { on: (event: string, handler: (chunk?: unknown) => void) => void; destroy: () => void },
   done: (body: string) => void,
+  /**
+   * Called instead of `done` when the body cannot be trusted. Without this an oversized POST
+   * destroyed the request and answered nothing at all, so the caller hung until it gave up —
+   * and an aborted request (a tab closed mid-reply) had no handler on the stream either.
+   */
+  fail: (reason: string, status: number) => void = () => {},
 ) {
   let body = ''
-  let overflow = false
+  let settled = false
+  const stop = (reason: string, status: number) => {
+    if (settled) return
+    settled = true
+    fail(reason, status)
+  }
+
   req.on('data', (chunk) => {
-    if (overflow) return
+    if (settled) return
     body += String(chunk)
     if (body.length > MAX_BODY_BYTES) {
-      overflow = true
+      // Answer first, then destroy: destroying emits `aborted` synchronously, which would
+      // otherwise win the race and report a generic 400 for what is plainly a 413.
+      stop(`body larger than ${MAX_BODY_BYTES} bytes`, 413)
       req.destroy()
     }
   })
   req.on('end', () => {
-    if (!overflow) done(body)
+    if (settled) return
+    settled = true
+    done(body)
   })
+  req.on('error', () => stop('the request ended before the body arrived', 400))
+  req.on('aborted', () => stop('the request was aborted', 400))
 }
-
-/**
- * The hand-written map of the work — projects, the ticket workflow, the infrastructure
- * sketch. It lives in config/ rather than public/ because it names an employer's systems and
- * this remote is public, so it needs an endpoint rather than being served as a static file.
- */
-/**
- * Settings the server owns: which modules are on, and which credentials exist.
- *
- * Reading is safe — it answers "set or unset", never a value, because the browser has no use
- * for a token it cannot spend. Writing is the sharp edge: this endpoint puts a secret on
- * disk, so it takes the cross-site guard, refuses any variable not on the writable list, and
- * checks the value's shape before believing it. It exists only in the dev server; a
- * production build is a static site with no API at all.
- */
-/**
- * Replying to Slack from the dashboard.
- *
- * This is the sharpest endpoint here: a user token posts as the human, in a shared workspace,
- * with no undo. Two things bound it. The destination must already be in the Slack report —
- * the dashboard can answer where I was addressed and nowhere else, so a stray page cannot
- * name an arbitrary channel — and a thread reply must name a thread the report knows. That
- * makes the report the allow-list, which is exactly what "reply from the queue" means.
- *
- * Sending is never automatic: the page confirms the destination and the text with a human
- * before it calls this, and nothing here ever composes a message of its own.
- */

@@ -14,6 +14,7 @@ import { KpiStrip } from '../components/KpiStrip';
 import { NeedsYou } from '../components/NeedsYou';
 import { PrMix } from '../components/PrMix';
 import { StandupCard } from '../components/StandupCard';
+import { useTicketReader } from '../components/useTicketReader';
 
 interface HomePageProps {
   jira: JiraReport | null;
@@ -52,6 +53,16 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps)
     vocab: statuses,
   };
 
+  /*
+   * The same drawer the board and the list use, opened from the queue. Reusing the hook rather
+   * than a second piece of open-ticket state is the point — two copies is how one of them ends
+   * up showing a status the other has already changed.
+   */
+  const reader = useTicketReader({
+    report: sources.jira ?? { type: 'jira', date: '', generatedAt: '', groups: [] },
+    prs: sources.prs,
+  });
+
   const findings = flowFindings(sources.jira, sources.prs, sources.slack, statuses);
   // Before the first pull there is nothing to be relieved about; the panels say so instead of
   // rendering a confident emptiness.
@@ -70,7 +81,12 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps)
       />
 
       <div className="home-split">
-        <NeedsYou items={items} total={total} unpulled={unpulled} />
+        <NeedsYou
+          items={items}
+          total={total}
+          unpulled={unpulled}
+          onReadTicket={sources.jira ? reader.read : undefined}
+        />
 
         <div className="home-aside">
           {usable('calendar') &&
@@ -92,6 +108,7 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps)
       </div>
 
       <StandupCard jira={sources.jira} prs={sources.prs} calendar={calendar} />
+      {reader.drawer}
     </main>
   );
 };

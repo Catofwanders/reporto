@@ -105,6 +105,9 @@ export const DEFAULT_VOCAB: StatusVocab = {
  * configured columns after the generic ones, which is the wrong order by construction. Tones
  * and groups merge, with config winning per status: a workflow adds its own names without
  * having to restate "in progress", and can still move a status the defaults already knew.
+ *
+ * A group configured as `[]` is emptied rather than ignored. That is the only way to say "no
+ * status counts as this", and it is a thing a workflow legitimately wants to say.
  */
 export const statusVocab = (config: StatusVocabConfig | null | undefined): StatusVocab => {
   if (!config) return DEFAULT_VOCAB;
@@ -114,7 +117,16 @@ export const statusVocab = (config: StatusVocabConfig | null | undefined): Statu
   const groups = { ...DEFAULT_GROUPS };
   for (const name of Object.keys(DEFAULT_GROUPS) as (keyof StatusGroups)[]) {
     const extra = config.groups?.[name];
-    if (extra?.length) groups[name] = [...new Set([...DEFAULT_GROUPS[name], ...extra].map(key))];
+    if (extra === undefined) continue;
+    /*
+     * An explicit empty list means "nothing belongs in this group", and it has to be obeyed.
+     * Testing truthiness of `length` treated `[]` as "unset" and quietly kept the generic
+     * defaults — so a board where "in review" is *not* active work, or one that wants the
+     * stand-up's blocked list silent, had no way to say so.
+     */
+    groups[name] = extra.length
+      ? [...new Set([...DEFAULT_GROUPS[name], ...extra].map(key))]
+      : [];
   }
 
   return {

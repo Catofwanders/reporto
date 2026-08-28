@@ -90,6 +90,9 @@ export function jiraPlugin(): Plugin {
               res.end(JSON.stringify({ ok: false, key, error: err.message }))
             },
           )
+        }, (reason, status) => {
+          res.statusCode = status
+          res.end(JSON.stringify({ error: reason }))
         })
       })
     },

@@ -5,6 +5,7 @@ import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import ForumRoundedIcon from '@mui/icons-material/ForumRounded';
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
+import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
 import { ACTION_LABEL, type FeedAction, type FeedItem, type FeedSource } from '../needsYou';
 
 interface NeedsYouProps {
@@ -13,6 +14,12 @@ interface NeedsYouProps {
   total: number;
   /** No report has been pulled yet, so an empty queue is ignorance rather than good news. */
   unpulled?: boolean;
+  /**
+   * Read a ticket without leaving the dashboard. Every other row leads to a page that shows it
+   * in context; a ticket row led to a board of thirty cards where the answer was one more
+   * click away, and the drawer that answers it already exists.
+   */
+  onReadTicket?: (key: string) => void;
 }
 
 const ICON: Record<FeedSource, SvgIconComponent> = {
@@ -46,7 +53,7 @@ const ORDER: FeedAction[] = ['push', 'review', 'answer', 'merge', 'unstick'];
  * merged list legible: it says what the group wants before any row is read. The full sentence
  * is still the tooltip, and the page behind each row has all of it.
  */
-export const NeedsYou = ({ items, total, unpulled = false }: NeedsYouProps) => {
+export const NeedsYou = ({ items, total, unpulled = false, onReadTicket }: NeedsYouProps) => {
   const groups = ORDER.map((action) => ({
     action,
     rows: items.filter((item) => item.action === action),
@@ -77,8 +84,20 @@ export const NeedsYou = ({ items, total, unpulled = false }: NeedsYouProps) => {
               <ul className="needs-list">
                 {group.rows.map((item) => {
                   const Icon = ICON[item.source];
+                  const readable = item.source === 'ticket' && onReadTicket;
                   return (
                     <li key={item.id} className={`needs-row is-${item.tone}`}>
+                      {readable && (
+                        <button
+                          type="button"
+                          className="needs-read"
+                          title={`Read ${item.label} here`}
+                          aria-label={`Read ${item.label} without leaving the dashboard`}
+                          onClick={() => onReadTicket(item.label)}
+                        >
+                          <ArticleRoundedIcon fontSize="small" />
+                        </button>
+                      )}
                       <Link to={item.to} title={item.detail}>
                         <Icon className={`needs-icon is-${item.source}`} fontSize="small" />
                         <span className="needs-body">

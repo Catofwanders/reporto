@@ -87,6 +87,20 @@ describe('statusVocab', () => {
     expect(inStatusGroup(vocab, 'devDone', 'In Progress')).toBe(false);
   });
 
+  /*
+   * The distinction that was missing: `[]` is a statement, not an omission. Without it a board
+   * where "in review" is not active work, or one that wants no blocked group at all, could not
+   * say so — the generic defaults won.
+   */
+  it('empties a group configured as an empty list, rather than keeping the defaults', () => {
+    const emptied = statusVocab({ groups: { blocked: [], inFlight: [] } });
+    expect(emptied.groups.blocked).toEqual([]);
+    expect(inStatusGroup(emptied, 'blocked', 'Blocked')).toBe(false);
+    expect(inStatusGroup(emptied, 'inFlight', 'In Progress')).toBe(false);
+    // A group left out of the config is untouched.
+    expect(inStatusGroup(emptied, 'active', 'In Progress')).toBe(true);
+  });
+
   it('leaves the defaults untouched, so one page cannot poison another', () => {
     expect(DEFAULT_VOCAB.groups.devDone).toEqual([]);
     expect(statusToneOf(DEFAULT_VOCAB, 'Ready for QA')).toBeNull();

@@ -42,7 +42,9 @@ const feed = (over: Partial<Parameters<typeof needsYou>[0]> = {}) => {
 const meta = {
   title: 'Panels/NeedsYou',
   component: NeedsYou,
-  args: feed(),
+  // `onReadTicket` is what puts the "read it here" control on a ticket row; the dashboard
+  // passes the shared drawer's opener, and a story only needs to prove the control appears.
+  args: { ...feed(), onReadTicket: () => {} },
   parameters: { layout: 'padded' },
 } satisfies Meta<typeof NeedsYou>;
 

@@ -4,6 +4,18 @@ import { loadConfig, readReport } from '../reports.mjs'
 import { secretOf } from '../capabilities.mjs'
 import { readBody, rejectCrossSite } from './guard.js'
 
+/**
+ * Replying to Slack from the dashboard.
+ *
+ * This is the sharpest endpoint here: a user token posts as the human, in a shared workspace,
+ * with no undo. Two things bound it. The destination must already be in the Slack report —
+ * the dashboard can answer where I was addressed and nowhere else, so a stray page cannot
+ * name an arbitrary channel — and a thread reply must name a thread the report knows. That
+ * makes the report the allow-list, which is exactly what "reply from the queue" means.
+ *
+ * Sending is never automatic: the page confirms the destination and the text with a human
+ * before it calls this, and nothing here ever composes a message of its own.
+ */
 export function slackPlugin(): Plugin {
   return {
     name: 'reporto-slack',
@@ -107,6 +119,9 @@ export function slackPlugin(): Plugin {
               res.end(JSON.stringify({ ok: false, error: err.message }))
             },
           )
+        }, (reason, status) => {
+          res.statusCode = status
+          res.end(JSON.stringify({ error: reason }))
         })
       })
     },

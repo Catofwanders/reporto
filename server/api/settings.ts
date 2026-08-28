@@ -3,6 +3,15 @@ import { loadConfig } from '../reports.mjs'
 import { capabilities, setEnabled, setSecret } from '../capabilities.mjs'
 import { readBody, rejectCrossSite } from './guard.js'
 
+/**
+ * Settings the server owns: which modules are on, and which credentials exist.
+ *
+ * Reading is safe — it answers "set or unset", never a value, because the browser has no use
+ * for a token it cannot spend. Writing is the sharp edge: this endpoint puts a secret on
+ * disk, so it takes the cross-site guard, refuses any variable not on the writable list, and
+ * checks the value's shape before believing it. It exists only in the dev server; a
+ * production build is a static site with no API at all.
+ */
 export function settingsPlugin(): Plugin {
   return {
     name: 'reporto-settings',
@@ -72,6 +81,9 @@ export function settingsPlugin(): Plugin {
             res.statusCode = 400
             res.end(JSON.stringify({ ok: false, error: (err as Error).message }))
           }
+        }, (reason, status) => {
+          res.statusCode = status
+          res.end(JSON.stringify({ error: reason }))
         })
       })
     },

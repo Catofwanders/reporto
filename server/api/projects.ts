@@ -4,6 +4,11 @@ import type { Plugin } from 'vite'
 
 const __dirname = path.resolve(import.meta.dirname, '../..')
 
+/**
+ * The hand-written map of the work — projects, the ticket workflow, the infrastructure
+ * sketch. It lives in config/ rather than public/ because it names an employer's systems and
+ * this remote is public, so it needs an endpoint rather than being served as a static file.
+ */
 export function projectsPlugin(): Plugin {
   return {
     name: 'reporto-projects',
