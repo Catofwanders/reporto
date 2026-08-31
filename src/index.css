@@ -282,7 +282,20 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   /* stretch, not start: with start the middle row's item keeps its content height and
      overflows the bound, which is exactly the bug that let the page grow. */
   align-items: stretch;
-  grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; min-height: 0;
+  /*
+   * `min-height`, not `height`, and a floor under the middle row.
+   *
+   * With `height: 100%` and `minmax(0, 1fr)` the queue row was the only flexible thing on the
+   * page, so a tall third row took everything: building the weekly wrap collapsed the split to
+   * **zero** height while its cards kept drawing — 357px of queue and timeline painted straight
+   * over the note — and because the grid was still exactly one viewport tall, `.shell-content`
+   * had nothing to scroll, so the overflowing half was unreachable as well as unreadable.
+   *
+   * A floor means the split cannot be starved, and `min-height` means the grid may exceed the
+   * window when the content genuinely does, at which point the content area scrolls like any
+   * other page. One screen is the promise for a normal morning, not a cage.
+   */
+  grid-template-rows: auto minmax(12rem, 1fr) auto; min-height: 100%;
 }
 
 /* The strip: read in a second, so icon and figure carry it and nothing wraps. */
@@ -328,7 +341,8 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
  */
 @media (max-width: 82rem) {
   .home-split { grid-template-columns: minmax(0, 1fr); }
-  .home { height: auto; }
+  /* Stacked: the columns are full width and the page scrolls, so no floor and no frame. */
+  .home { height: auto; min-height: auto; grid-template-rows: auto auto auto; }
 }
 /*
  * The queue is the one part whose length is not ours to choose — it is however much is
@@ -338,11 +352,17 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .needs-you {
   min-width: 0; min-height: 0; padding: .8rem 1rem .85rem;
   display: flex; flex-direction: column;
+  /* Clip rather than paint outside: a squeezed card must not land on its neighbour. */
+  overflow: hidden;
 }
 .needs-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: .2rem; }
 /* A thin scrollbar, so a list that scrolls does not announce it in the layout. */
 .needs-scroll { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-.home-aside { min-width: 0; min-height: 0; display: grid; gap: .8rem; align-content: start; }
+.home-aside {
+  min-width: 0; min-height: 0; display: grid; gap: .8rem; align-content: start;
+  /* Same reason: three panels in a short column scroll here instead of over the note. */
+  overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
 
 .needs-you .mini-head { margin-bottom: .5rem; }
 .needs-count {
@@ -884,7 +904,17 @@ body { background: var(--canvas); }
 .flow-prs { display: flex; flex-wrap: wrap; gap: .5rem; margin: .1rem 0 0; font-size: .75rem; }
 
 /* Stand-up note: three blocks, plain enough to read out loud. */
-.standup { display: grid; gap: 1rem; margin-top: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+/*
+ * The note is bounded because its length is not ours to choose: a stand-up is five lines and a
+ * weekly wrap over sixty tickets is not, and the difference used to be the whole page's
+ * layout. It scrolls inside the card, like the queue does.
+ */
+.standup {
+  display: grid; gap: 1rem; margin-top: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  max-height: 24rem; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
 .standup-block h3 {
   margin: 0 0 .4rem; font-size: .75rem; font-weight: 600;
   letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2);

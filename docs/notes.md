@@ -794,6 +794,31 @@ fail: green↔red sits at ΔE 5.3 for a deuteranope and blue↔purple at ΔE 8.7
 colour vision. So the donut carries the two biggest repos plus a folded tail, and the full
 ranking sits under it as labelled bars, where identity comes from text.
 
+## The dashboard's frame, and what broke it
+
+The dashboard sizes itself to the window: a fixed frame, the rail and top bar outside it, and
+the one part whose length is not ours to choose — the queue — scrolling inside its own card.
+That worked while every other section was short.
+
+The weekly wrap broke it, and the numbers are worth keeping. `.home` was
+`grid-template-rows: auto minmax(0, 1fr) auto` at `height: 100%`, so the queue row was the only
+flexible thing on the page and a tall third row simply took it: building a wrap over sixty
+tickets collapsed the split row to **zero** height while its cards kept drawing, painting 357px
+of queue and timeline straight over the note. And because the grid was still exactly one
+viewport tall, the scrolling area had nothing to scroll — the overflowing half was unreachable
+as well as unreadable.
+
+Three changes, each fixing a different half of it:
+
+- **A floor under the middle row** (`minmax(12rem, 1fr)`), so the split can never be starved.
+- **`min-height: 100%` instead of `height: 100%`**, so the grid may exceed the window when the
+  content genuinely does, and the content area then scrolls like any other page. One screen is
+  the promise for a normal morning, not a cage.
+- **The note is bounded** (`max-height: 24rem`, scrolls inside the card) for the same reason the
+  queue is: a stand-up is five lines, a weekly wrap is sixty tickets, and the difference should
+  not be the page's layout. Cards clip rather than paint outside, so a squeezed one can never
+  land on its neighbour again.
+
 ## Layout
 
 ```
