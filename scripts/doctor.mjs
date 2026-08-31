@@ -17,7 +17,7 @@ import { execFile } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { promisify } from 'node:util'
-import { loadConfig, loadDotEnv } from '../server/reports.mjs'
+import { loadDotEnv } from '../server/reports.mjs'
 import { capabilities } from '../server/capabilities.mjs'
 
 const run = promisify(execFile)
@@ -80,8 +80,8 @@ try {
 
 heading('Modules')
 
+// `capabilities()` reads config itself; this only lifts .env, which a plain node run needs.
 loadDotEnv()
-const config = loadConfig()
 
 for (const cap of capabilities()) {
   const missing = [...cap.missingEnv, ...cap.missingConfig]
