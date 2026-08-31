@@ -114,11 +114,13 @@ Stories run on synthetic fixtures describing an invented online marketplace, nev
 reports: example data shaped like the real work describes it even when every name is changed.
 
 Tests cover the **derivation** — the functions that decide what a morning looks like, where a
-wrong answer is plausible enough to survive review. Those sit at or near 100%; the tree is
-around 42%, because components are checked in Storybook and in the browser. Three of the tests
-exist because the bug shipped first: a base-branch merge must not read as a push, an unmeasured
-ticket must not render as "0 days", and a `javascript:` href in a Jira description must never
-become a link.
+wrong answer is plausible enough to survive review — and the **pullers**, at their own
+boundaries: `fetch` is stubbed for Jira, Slack and Calendar, and a fake `gh` first on `PATH`
+stands in for GitHub, so no test needs a token or a network. Those modules sit at or near 100%;
+the tree is around 40%, because components are checked in Storybook and in the browser. Several
+tests exist because the bug shipped first: a base-branch merge must not read as a push, an
+unmeasured ticket must not render as "0 days", a failed changelog read must not date a ticket
+from its creation, and a `javascript:` href in a Jira description must never become a link.
 
 ## Security model
 
