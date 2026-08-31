@@ -162,6 +162,23 @@ default 14; `slackChannelsExcluded` — channel names whose mentions are noise, 
 button does not appear at all, which is the safe default: nothing can post anywhere until you
 name a destination.
 
+## Checking it from the terminal
+
+```bash
+npm run doctor
+```
+
+The Settings page reports which modules are configured, which is no help in the case where you
+need it most: the app will not start. This prints the same standing from outside — Node against
+`.nvmrc`, `config/` and `.env`, a `gh` token, every module's missing variables, how old each
+report is, and whether the pre-push hook is wired and the scanner has terms. It writes nothing
+and prints no credential value, only whether one is present, and exits non-zero when something
+is broken rather than merely switched off.
+
+One thing it will tell you that is easy to miss: with no `config/reporto.json`, `loadConfig`
+falls back to `config.template` so a fresh clone still boots — which is why a module can look
+configured while pointing at `your-github-org`.
+
 ## Modules and credentials
 
 Settings → **Modules** lists what this machine can fetch. Each row says whether it is

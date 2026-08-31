@@ -108,6 +108,7 @@ npm run build        # tsc -b + vite build — the real type check
 npm run lint         # oxlint
 npm run shots        # re-shoot the README screenshots
 npm run pull         # headless pull, for cron
+npm run doctor       # what is configured, what is stale, what is missing
 ```
 
 Stories run on synthetic fixtures describing an invented online marketplace, never on real
