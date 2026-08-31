@@ -20,6 +20,22 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
 
 function validJira(v: unknown): v is JiraReport {
   if (!isObject(v) || typeof v.date !== 'string' || !isArray(v.groups)) return false;
+  // Absent activity means "not fetched"; a present one is walked by the subsection, so a
+  // row without a timestamp would render "Invalid Date" rather than be reported as malformed.
+  if (v.activity !== undefined) {
+    if (!isArray(v.activity)) return false;
+    if (
+      !v.activity.every(
+        (item) =>
+          isObject(item) &&
+          typeof item.id === 'string' &&
+          typeof item.ticket === 'string' &&
+          typeof item.at === 'string',
+      )
+    ) {
+      return false;
+    }
+  }
   return v.groups.every(
     (g) =>
       isObject(g) &&

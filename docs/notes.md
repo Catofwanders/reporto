@@ -43,6 +43,39 @@ A board card holds the summary, its PRs, and a deploy-qc warning when a merged P
 from that branch. Everything else — per-ticket notes, PR remarks — lives in the **List**
 view behind the toggle in the card header.
 
+## Unread activity on the Jira page
+
+Above the board: comments other people left on my tickets, and which of them I have not read.
+
+Jira's own bell is not available to this app. The feed behind it lives on a gateway route —
+`/gateway/api/notification-log/api/2/notifications` — that answers **404 to API-token auth**;
+it only works with a browser session cookie. So there is no notification list to fetch and no
+read flag to read or write back.
+
+What is reachable is the comments themselves. The full pull reads the last five comments on
+each of the first forty board tickets, four requests in flight, keeps the ones somebody else
+wrote inside a fourteen-day window, and flattens each body to a one-line excerpt. A comment
+that tags me is marked by **accountId, never by display name** — two colleagues here share a
+first name, and a name match would put someone else's mention in my queue.
+
+Read state is therefore ours, in `localStorage`: a `seenAt` instant plus the ids dismissed out
+of order. Two details that are not obvious:
+
+- **"Mark all read" stores the newest item's own timestamp, not `Date.now()`.** A comment
+  written an hour ago that this pull has not fetched yet would otherwise arrive already read.
+- The mark **never moves backwards**, so opening a stale report cannot un-read anything.
+
+An empty list has three causes that look identical and mean opposite things, so the panel says
+which: *not fetched* (an old report, or only the fast phase ran), *nobody has commented in the
+last 14 days*, and *all read* — the last one with the time the mark was set, and the **All**
+filter to see them again. The same reasoning covers the scan's edges: tickets past the
+forty-ticket cap, and tickets whose comments would not load, are counted in the panel head
+rather than passed off as silence.
+
+Opening a row opens the ticket drawer, which is where a comment can actually be read, and
+marks that one read. The tick marks it read without opening it, for the ones the excerpt
+already answered.
+
 ## Open PRs, by who is holding the ball
 
 The PR list is grouped by what has to happen next, not by repo — repo sorts work by where

@@ -37,6 +37,30 @@ export interface TicketGroup {
   tickets: Ticket[];
 }
 
+/**
+ * One comment somebody else left on a ticket of mine, inside the activity window.
+ *
+ * This is the closest thing to Jira's notification bell that an API token can see: the feed
+ * the bell reads lives behind a gateway route that answers 404 to token auth, so there is no
+ * read flag to fetch either. Read state is therefore ours and local — see `src/jiraActivity.ts`.
+ */
+export interface JiraActivityItem {
+  /** `<KEY>:<commentId>` — stable across refetches, so a dismissal is not undone by one. */
+  id: string;
+  ticket: string;
+  ticketUrl: string;
+  /** The ticket's summary and status, so a row reads without looking back at the board. */
+  summary: string;
+  status: string;
+  author: string | null;
+  avatar: string | null;
+  at: string;
+  /** Tagged by accountId, never by display name — two colleagues share a first name. */
+  mentionsMe: boolean;
+  /** ADF flattened to one line, capped. The drawer renders the real thing. */
+  excerpt: string;
+}
+
 export interface JiraReport {
   type: 'jira';
   date: string;
@@ -49,7 +73,11 @@ export interface JiraReport {
    * which would read as "there are none".
    */
   partial?: boolean;
-  pending?: ('prs' | 'aging')[];
+  pending?: ('prs' | 'aging' | 'activity')[];
+  /** Comments by other people, newest first. Absent means not fetched, not none. */
+  activity?: JiraActivityItem[];
+  /** What the activity scan could not cover — a cap hit, or tickets that would not read. */
+  activityNote?: string;
   restNote?: string;
   footer?: string;
 }

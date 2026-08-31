@@ -191,6 +191,47 @@ export const jiraReport: JiraReport = {
       ],
     },
   ],
+  activity: [
+    {
+      id: 'SHOP-790:10241',
+      ticket: 'SHOP-790',
+      ticketUrl: 'https://jira.example.com/browse/SHOP-790',
+      summary: 'Confirm payment before the order-confirmation screen renders',
+      status: 'Ready for QA',
+      author: 'Ola',
+      avatar: null,
+      at: AT('09:40'),
+      mentionsMe: true,
+      excerpt:
+        '@you the QA build still shows the confirmation before the charge settles — is 512 the one that fixes it, or does that need the payout contract first?',
+    },
+    {
+      id: 'SHOP-455:10238',
+      ticket: 'SHOP-455',
+      ticketUrl: 'https://jira.example.com/browse/SHOP-455',
+      summary: 'Seller onboarding needs the new payout fields',
+      status: 'BLOCKED',
+      author: 'Dana',
+      avatar: null,
+      at: AT('08:05'),
+      mentionsMe: false,
+      excerpt: 'Parking this until the payout contract is signed. Nothing to do here this week.',
+    },
+    {
+      // No text at all: a comment that is one screenshot. The row still has to read.
+      id: 'SHOP-781:10230',
+      ticket: 'SHOP-781',
+      ticketUrl: 'https://jira.example.com/browse/SHOP-781',
+      summary: 'Reconnect the delivery-tracking socket after a terminate frame',
+      status: 'Ready for QA',
+      author: 'a QC tester',
+      avatar: null,
+      at: '2026-05-18T14:12:00+02:00',
+      mentionsMe: false,
+      excerpt: '',
+    },
+  ],
+  activityNote: '2 tickets could not be read',
   footer: '5 tickets from JQL, PRs matched by key in title.',
 };
 

@@ -86,7 +86,7 @@ detail; `public/reports/` is gitignored and stays on your disk.
 | | |
 |---|---|
 | **Dashboard** | the queue, the counts, today, the stand-up note |
-| **Jira** | the board in workflow order, or a list; click a card to read the ticket in place |
+| **Jira** | unread comments on my tickets, then the board in workflow order or a list; click a card to read the ticket in place |
 | **Pull requests** | my open PRs in four lanes, by who is holding the ball |
 | **Reviews** | what is waiting on my review, and what was pushed after I looked |
 | **Slack** | mentions and DMs still owed a reply — answerable from the row |

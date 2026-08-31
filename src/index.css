@@ -1363,3 +1363,57 @@ body { background: var(--canvas); }
 @media (hover: none) {
   .needs-read { opacity: 1; }
 }
+
+/*
+ * Unread activity on the Jira page.
+ *
+ * Capped and scrollable: it sits above the board, and a fortnight of comments on twenty
+ * tickets must not push the board off the screen. Unread carries a left edge; read rows stay
+ * in the list under "All" with the edge gone, so the difference is visible without colour
+ * being the only signal — the tick button is present on unread rows and absent on read ones.
+ */
+.activity-list {
+  list-style: none; margin: 0; padding: 0; display: grid; gap: .2rem;
+  max-height: 13rem; overflow-y: auto; padding-right: .2rem;
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+.activity-row { position: relative; }
+.activity-main {
+  width: 100%; display: grid; gap: .1rem; text-align: left; cursor: pointer;
+  padding: .3rem 2rem .3rem .5rem; border-radius: .35rem;
+  background: none; border: 0; border-left: 2px solid transparent; color: inherit;
+  font: inherit;
+}
+.activity-main:hover { background: var(--bg); }
+.activity-main:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.activity-row.is-unread .activity-main { border-left-color: var(--accent); }
+.activity-row.is-mention.is-unread .activity-main { border-left-color: var(--warn-ink); }
+.activity-line {
+  display: flex; align-items: center; gap: .35rem; flex-wrap: wrap;
+  font-size: .8rem; min-width: 0;
+}
+.activity-key { font-weight: 600; font-variant-numeric: tabular-nums; }
+.activity-who { color: var(--ink-2); }
+.activity-age { color: var(--ink-2); margin-left: auto; font-size: .75rem; }
+.activity-excerpt {
+  color: var(--ink-2); font-size: .78rem; line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.activity-mentions { color: var(--warn-ink); font-weight: 600; }
+.activity-clear {
+  background: var(--panel); border: 1px solid var(--line); color: var(--ink-2);
+  border-radius: .35rem; padding: .15rem .4rem; font-size: .75rem; cursor: pointer;
+}
+.activity-clear:hover { color: var(--ink); border-color: var(--accent); }
+.activity-dismiss {
+  position: absolute; right: .4rem; top: 50%; transform: translateY(-50%);
+  display: inline-flex; padding: .1rem .3rem; border-radius: .35rem; z-index: 1; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--line); color: var(--ink-2);
+  font-size: .8rem; line-height: 1.4;
+}
+/* Same `:focus` rule as `.needs-read`: it must be visible while it holds the keyboard. */
+.activity-dismiss:hover, .activity-dismiss:focus { color: var(--ok-ink); border-color: var(--accent); }
+/* The quiet case: one line, not a panel head, so an empty queue costs almost no screen. */
+.activity.is-quiet { padding: .45rem .6rem; }
+.activity.is-quiet .status { margin: 0; display: flex; align-items: center; gap: .35rem; font-size: .8rem; }
+.activity.is-quiet .status svg { color: var(--ink-2); }

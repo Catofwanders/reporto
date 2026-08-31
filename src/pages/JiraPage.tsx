@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import type { JiraReport, PrsReport } from '../types';
 import { useRefresh } from '../refreshContext';
+import { JiraActivity } from '../components/JiraActivity';
 import { JiraBoard } from '../components/JiraBoard';
 import { JiraReportView } from '../components/JiraReportView';
 import { RefreshButton } from '../components/RefreshButton';
@@ -30,6 +31,10 @@ export const JiraPage = ({ report, prs = null }: JiraPageProps) => {
 
   return (
     <main className="grid">
+      {/* Above the board on purpose: a comment somebody is waiting on an answer to is news,
+          and the board is the same board it was yesterday. */}
+      <JiraActivity report={report} prs={prs} onChanged={() => void run('jira')} />
+
       <section className="panel">
         <div className="panel-head">
           <div className="panel-title">

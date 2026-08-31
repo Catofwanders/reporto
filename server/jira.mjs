@@ -183,6 +183,114 @@ const AGING_LOOKUPS = 40
 /** In flight at once. Jira's limits are per-token and generous; four is nowhere near them. */
 const AGING_CONCURRENCY = 4
 
+/** Comments read per ticket. Newest first, because an old comment is not news. */
+const ACTIVITY_COMMENTS = 5
+
+/** Tickets scanned for comments per pull: one request each, same budget as the changelogs. */
+const ACTIVITY_LOOKUPS = 40
+
+/** In flight at once, sharing the token with the searches and changelogs above. */
+const ACTIVITY_CONCURRENCY = 4
+
+/**
+ * Older than this is history rather than a notification, however unread it is. Mirrored as
+ * `ACTIVITY_WINDOW_DAYS` in `src/jiraActivity.ts`, which words the empty list — change both.
+ */
+const ACTIVITY_DAYS = 14
+
+/** ADF node types that sit inside a line of text; everything else ends one. */
+const ADF_INLINE = new Set([
+  'text',
+  'mention',
+  'emoji',
+  'date',
+  'status',
+  'inlineCard',
+  'hardBreak',
+])
+
+/**
+ * ADF flattened to one line, for a row that has no room for the real thing.
+ *
+ * The drawer renders ADF properly; this is the excerpt beside a notification, so structure is
+ * deliberately thrown away — but not content: a comment whose whole point is a mention or a
+ * link would otherwise flatten to an empty string and read as a blank row.
+ */
+function adfText(node) {
+  if (!node || typeof node !== 'object') return ''
+  switch (node.type) {
+    case 'text':
+      return node.text ?? ''
+    case 'mention':
+      return node.attrs?.text ? String(node.attrs.text) : '@someone'
+    case 'emoji':
+      return node.attrs?.text ?? node.attrs?.shortName ?? ''
+    case 'inlineCard':
+      return node.attrs?.url ?? ''
+    case 'hardBreak':
+      return ' '
+    default:
+      break
+  }
+  const inner = (node.content ?? []).map(adfText).join('')
+  return ADF_INLINE.has(node.type) ? inner : `${inner} `
+}
+
+/** One line, capped. The row is a pointer at the ticket, not a reader for it. */
+function excerptOf(body, limit = 240) {
+  const text = adfText(body).replace(/\s+/g, ' ').trim()
+  return text.length > limit ? `${text.slice(0, limit - 1).trimEnd()}…` : text
+}
+
+/**
+ * Whether a comment tags this account. Checked by accountId, never by display name: two
+ * colleagues share a first name here, and a name match would put someone else's mention in
+ * my queue.
+ */
+function mentionsAccount(node, accountId) {
+  if (!accountId || !node || typeof node !== 'object') return false
+  if (node.type === 'mention' && node.attrs?.id === accountId) return true
+  return (node.content ?? []).some((child) => mentionsAccount(child, accountId))
+}
+
+/**
+ * Recent comments on one ticket that somebody else wrote.
+ *
+ * Jira's notification feed — the bell — is not reachable with an API token: the gateway route
+ * it uses answers 404 to anything but a browser session. So there is no read flag to read, and
+ * this derives the same queue from the data a token can see. What "read" means is the client's
+ * to decide and keep.
+ *
+ * Throws on a failed request rather than returning nothing, so the caller can count the
+ * tickets it could not read instead of reporting silence.
+ */
+async function ticketActivity({ base, auth, ticket, accountId, since }) {
+  const res = await fetch(
+    `${base}/rest/api/3/issue/${encodeURIComponent(ticket.key)}/comment` +
+      `?orderBy=-created&maxResults=${ACTIVITY_COMMENTS}`,
+    { headers: { Authorization: auth, Accept: 'application/json' } },
+  )
+  if (!res.ok) {
+    throw new Error(`Jira comments for ${ticket.key} failed: ${res.status} ${res.statusText}`)
+  }
+  const body = await res.json()
+  return (body.comments ?? [])
+    .filter((comment) => (comment.author?.accountId ?? null) !== accountId)
+    .filter((comment) => comment.created && new Date(comment.created).getTime() >= since)
+    .map((comment) => ({
+      id: `${ticket.key}:${comment.id}`,
+      ticket: ticket.key,
+      ticketUrl: ticket.url,
+      summary: ticket.summary,
+      status: ticket.status,
+      author: comment.author?.displayName ?? null,
+      avatar: comment.author?.avatarUrls?.['24x24'] ?? null,
+      at: comment.created,
+      mentionsMe: mentionsAccount(comment.body, accountId),
+      excerpt: excerptOf(comment.body),
+    }))
+}
+
 /**
  * When the ticket entered the status it is in now.
  *
@@ -300,9 +408,37 @@ export async function pullJira({
   })
   for (const ticket of tickets) delete ticket.created
 
+  /*
+   * Comments other people wrote, which is as close to the bell as a token gets. Same phase
+   * rule as the ages: the fast pass names it pending so the subsection shimmers instead of
+   * claiming there is nothing new.
+   */
+  let activity
+  let activityNote
+  if (!fast) {
+    const { base, auth } = requireAuth({ site, email, apiToken })
+    const scanned = tickets.slice(0, ACTIVITY_LOOKUPS)
+    const cutoff = Date.now() - ACTIVITY_DAYS * 24 * 60 * 60 * 1000
+    const comments = await pooled(scanned, ACTIVITY_CONCURRENCY, (ticket) =>
+      ticketActivity({ base, auth, ticket, accountId: me.accountId ?? null, since: cutoff }),
+    )
+    activity = comments
+      .filter(Boolean)
+      .flat()
+      .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    // A ticket whose comments would not load is not a ticket with no comments. Say which.
+    const unreadable = comments.filter((result) => result === undefined).length
+    const skipped = tickets.length - scanned.length
+    const notes = [
+      unreadable ? `${unreadable} ticket${unreadable === 1 ? '' : 's'} could not be read` : '',
+      skipped ? `${skipped} beyond the ${ACTIVITY_LOOKUPS}-ticket scan` : '',
+    ].filter(Boolean)
+    if (notes.length) activityNote = notes.join(', ')
+  }
+
   // Named so a view can tell "not fetched yet" from "fetched, and there is none".
   const pending = fast
-    ? [...(resolvePrs ? ['prs'] : []), ...(agingStatuses.length ? ['aging'] : [])]
+    ? [...(resolvePrs ? ['prs'] : []), ...(agingStatuses.length ? ['aging'] : []), 'activity']
     : []
 
   return {
@@ -310,6 +446,8 @@ export async function pullJira({
     date: new Date().toLocaleDateString('en-CA'),
     generatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
     groups: groupByStatus(tickets),
+    ...(activity ? { activity } : {}),
+    ...(activityNote ? { activityNote } : {}),
     ...(pending.length ? { partial: true, pending } : {}),
     footer:
       `${tickets.length} ticket${tickets.length === 1 ? '' : 's'} for ` +
