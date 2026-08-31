@@ -80,6 +80,61 @@ export function readReport(kind) {
   }
 }
 
+/**
+ * How many days of reports to keep on disk.
+ *
+ * Reports are the app's history — the stand-up reads yesterday, and a failed pull falls back
+ * to the last good day — so they cannot be deleted on write. But nothing was ever removing
+ * them either: the directory grows by six files a day forever, and `index.history` grows with
+ * it, parsed in full on every boot. A month is longer than anything here looks back.
+ */
+const RETAIN_DAYS = 30
+
+/**
+ * What to keep, decided without touching the disk so it can be tested without one.
+ *
+ * `index.latest` is kept whatever its age: a kind that has not been pulled in six weeks —
+ * statistics, usually — still has its newest report as the only thing the app can draw, and
+ * deleting it because the date is old would blank that route.
+ */
+export function prunePlan(index, keepDays = RETAIN_DAYS, now = new Date()) {
+  const cutoff = new Date(now)
+  cutoff.setDate(cutoff.getDate() - keepDays)
+  const oldest = cutoff.toLocaleDateString('en-CA')
+
+  const history = (index.history ?? []).filter((entry) => String(entry.date ?? '') >= oldest)
+  const keep = new Set(Object.values(index.latest ?? {}).filter(Boolean))
+  for (const entry of history) {
+    for (const [key, file] of Object.entries(entry)) {
+      if (key !== 'date' && file) keep.add(file)
+    }
+  }
+  return { history, keep }
+}
+
+/**
+ * Drop reports older than the retention window, and the history entries naming them.
+ *
+ * Deliberately defensive about deleting: an index with nothing to keep means something is
+ * wrong with the index, not that every report is garbage, so it removes nothing.
+ */
+function pruneReports(index) {
+  const { history, keep } = prunePlan(index)
+  if (keep.size === 0) return index
+  let removed = 0
+  for (const name of fs.readdirSync(REPORTS)) {
+    if (name === 'index.json' || !name.endsWith('.json') || keep.has(name)) continue
+    try {
+      fs.unlinkSync(path.join(REPORTS, name))
+      removed += 1
+    } catch {
+      // A file we cannot delete is not worth failing a pull over.
+    }
+  }
+  if (removed) console.log(`[reporto] pruned ${removed} report${removed === 1 ? '' : 's'} over ${RETAIN_DAYS} days old`)
+  return { ...index, history }
+}
+
 // A crash mid-write would leave a truncated report, so write beside it and rename.
 function writeJsonAtomic(file, value) {
   const tmp = `${file}.tmp`
@@ -216,7 +271,7 @@ export async function pullReport(kind, config = loadConfig(), options = {}) {
     index.history.unshift(day)
   }
   day[kind] = file
-  writeJsonAtomic(indexFile, index)
+  writeJsonAtomic(indexFile, pruneReports(index))
 
   return { kind, file, date: report.date, durationMs: Date.now() - started }
 }
