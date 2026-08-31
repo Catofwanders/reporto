@@ -8,6 +8,7 @@
  */
 
 import { pooled } from './pool.mjs'
+import { fetchWithTimeout } from './http.mjs'
 
 /** Status names whose category Jira reports as done, whatever the site calls them. */
 const DONE_CATEGORY = 'Done'
@@ -48,7 +49,7 @@ function authHeader(email, apiToken) {
  * correct empty result. /myself does return 401, so ask it first.
  */
 async function whoAmI({ site, email, apiToken }) {
-  const res = await fetch(`${site.replace(/\/$/, '')}/rest/api/3/myself`, {
+  const res = await fetchWithTimeout(`${site.replace(/\/$/, '')}/rest/api/3/myself`, {
     headers: { Authorization: authHeader(email, apiToken), Accept: 'application/json' },
   })
   if (res.status === 401 || res.status === 403) {
@@ -72,7 +73,7 @@ async function searchIssues({ site, email, apiToken, jql }) {
   const issues = []
   let nextPageToken
   do {
-    const res = await fetch(`${site.replace(/\/$/, '')}/rest/api/3/search/jql`, {
+    const res = await fetchWithTimeout(`${site.replace(/\/$/, '')}/rest/api/3/search/jql`, {
       method: 'POST',
       headers: {
         Authorization: authHeader(email, apiToken),
@@ -129,7 +130,7 @@ function requireAuth({ site, email, apiToken }) {
  */
 export async function jiraTransitions({ site, email, apiToken, key, allow = [] }) {
   const { base, auth } = requireAuth({ site, email, apiToken })
-  const res = await fetch(`${base}/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, {
+  const res = await fetchWithTimeout(`${base}/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, {
     headers: { Authorization: auth, Accept: 'application/json' },
   })
   if (!res.ok) {
@@ -162,7 +163,7 @@ export async function jiraTransition({ site, email, apiToken, key, transitionId,
       )
     }
   }
-  const res = await fetch(`${base}/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, {
+  const res = await fetchWithTimeout(`${base}/rest/api/3/issue/${encodeURIComponent(key)}/transitions`, {
     method: 'POST',
     headers: { Authorization: auth, 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ transition: { id: String(transitionId) } }),
@@ -265,7 +266,7 @@ function mentionsAccount(node, accountId) {
  * tickets it could not read instead of reporting silence.
  */
 async function ticketActivity({ base, auth, ticket, accountId, since }) {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${base}/rest/api/3/issue/${encodeURIComponent(ticket.key)}/comment` +
       `?orderBy=-created&maxResults=${ACTIVITY_COMMENTS}`,
     { headers: { Authorization: auth, Accept: 'application/json' } },
@@ -465,7 +466,7 @@ export async function jiraSearchKeys({ site, email, apiToken, jql }) {
   const keys = []
   let nextPageToken
   do {
-    const res = await fetch(`${base}/rest/api/3/search/jql`, {
+    const res = await fetchWithTimeout(`${base}/rest/api/3/search/jql`, {
       method: 'POST',
       headers: { Authorization: auth, 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
@@ -493,7 +494,7 @@ export async function jiraSearchKeys({ site, email, apiToken, jql }) {
  */
 export async function jiraStatusHistory({ site, email, apiToken, key }) {
   const { base, auth } = requireAuth({ site, email, apiToken })
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${base}/rest/api/3/issue/${encodeURIComponent(key)}/changelog?maxResults=100`,
     { headers: { Authorization: auth, Accept: 'application/json' } },
   )
@@ -545,7 +546,7 @@ export async function jiraIssueDetail({
   const { base, auth } = requireAuth({ site, email, apiToken })
   const headers = { Authorization: auth, Accept: 'application/json' }
 
-  const issueRes = await fetch(
+  const issueRes = await fetchWithTimeout(
     `${base}/rest/api/3/issue/${encodeURIComponent(key)}?fields=${DETAIL_FIELDS}`,
     { headers },
   )
@@ -559,7 +560,7 @@ export async function jiraIssueDetail({
   // A ticket with an unreadable comment list is still worth opening, so this half fails soft.
   let commentList = []
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `${base}/rest/api/3/issue/${encodeURIComponent(key)}/comment` +
         `?orderBy=-created&maxResults=${Math.max(1, Math.min(20, comments))}`,
       { headers },

@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from './apiFetch';
+
 export interface JiraTransition {
   id: string;
   name: string;
@@ -20,12 +22,12 @@ async function body<T>(res: Response): Promise<T> {
 
 /** What the workflow allows for this ticket right now. */
 export async function fetchTransitions(key: string): Promise<JiraTransition[]> {
-  const res = await fetch(`/api/jira/${key}/transitions`);
+  const res = await fetchWithTimeout(`/api/jira/${key}/transitions`);
   return (await body<{ transitions: JiraTransition[] }>(res)).transitions;
 }
 
 export async function applyTransition(key: string, transitionId: string): Promise<void> {
-  const res = await fetch(`/api/jira/${key}/transition`, {
+  const res = await fetchWithTimeout(`/api/jira/${key}/transition`, {
     method: 'POST',
     headers: HEADERS,
     body: JSON.stringify({ transitionId }),

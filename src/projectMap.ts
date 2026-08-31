@@ -1,8 +1,9 @@
 import type { InfraNode, InfraSystem, ProjectMap } from './types';
+import { fetchWithTimeout } from './apiFetch';
 
 /** Client for the hand-written map. Dev-server only; a static build has no API. */
 export async function fetchProjectMap(): Promise<ProjectMap> {
-  const res = await fetch('/api/projects', { cache: 'no-store' });
+  const res = await fetchWithTimeout('/api/projects', { cache: 'no-store' });
   if (!res.headers.get('content-type')?.includes('json')) {
     throw new Error('no /api/projects — is the dev server running?');
   }

@@ -1,4 +1,5 @@
 import type { KitReport } from './types';
+import { fetchWithTimeout } from './apiFetch';
 
 /**
  * The commands and skills installed on this machine, read live from `~/.claude`.
@@ -7,7 +8,7 @@ import type { KitReport } from './types';
  * through the pull API — the dev server reads the directory when asked.
  */
 export async function fetchKit(): Promise<KitReport> {
-  const res = await fetch('/api/kit', { cache: 'no-store' });
+  const res = await fetchWithTimeout('/api/kit', { cache: 'no-store' });
   if (!res.headers.get('content-type')?.includes('json')) {
     throw new Error('no /api/kit — is the dev server running? A static build has no API.');
   }

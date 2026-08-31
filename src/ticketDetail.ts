@@ -5,6 +5,7 @@
  * a board card knows the key, and the detail is fetched the moment somebody asks to read it.
  * A production build has no API, which is why every caller has to handle the failure.
  */
+import { fetchWithTimeout } from './apiFetch';
 
 /** An Atlassian Document Format node, as Jira returns it. */
 export interface AdfNode {
@@ -46,7 +47,9 @@ export interface TicketDetail {
 }
 
 export async function fetchTicketDetail(key: string): Promise<TicketDetail> {
-  const res = await fetch(`/api/jira/${encodeURIComponent(key)}`, { cache: 'no-store' });
+  const res = await fetchWithTimeout(`/api/jira/${encodeURIComponent(key)}`, {
+    cache: 'no-store',
+  });
   if (!res.headers.get('content-type')?.includes('json')) {
     throw new Error('no /api/jira — is the dev server running? A static build has no API.');
   }

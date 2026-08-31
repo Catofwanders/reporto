@@ -5,14 +5,19 @@
  * holds and refuses anything that is not in it. So the worst a bug here can do is answer a
  * conversation that is already on the page.
  */
+import { ACTION_TIMEOUT_MS, fetchWithTimeout } from './apiFetch';
 const post = async (path: string, body: unknown) => {
-  const res = await fetch(`/api/slack${path}`, {
-    method: 'POST',
-    // The custom header forces a preflight the dev server never answers, so no other page
-    // can reach this endpoint.
-    headers: { 'Content-Type': 'application/json', 'X-Reporto-Write': '1' },
-    body: JSON.stringify(body),
-  });
+  const res = await fetchWithTimeout(
+    `/api/slack${path}`,
+    {
+      method: 'POST',
+      // The custom header forces a preflight the dev server never answers, so no other page
+      // can reach this endpoint.
+      headers: { 'Content-Type': 'application/json', 'X-Reporto-Write': '1' },
+      body: JSON.stringify(body),
+    },
+    ACTION_TIMEOUT_MS,
+  );
   const answer = (await res.json()) as { ok?: boolean; error?: string; ts?: string };
   if (!res.ok || !answer.ok) throw new Error(answer.error ?? `HTTP ${res.status}`);
   return answer;
@@ -30,7 +35,7 @@ export const sendSlackReaction = (id: string, name?: string) => post('/react', {
  */
 export const standupChannel = async (): Promise<string | null> => {
   try {
-    const res = await fetch('/api/slack/standup');
+    const res = await fetchWithTimeout('/api/slack/standup');
     if (!res.ok) return null;
     const body = (await res.json()) as { channel?: string | null };
     return body.channel ?? null;

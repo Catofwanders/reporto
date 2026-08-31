@@ -27,6 +27,7 @@ import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectPage } from './pages/ProjectPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { fetchWithTimeout } from './apiFetch';
 
 /*
  * The only route that draws charts, and Recharts is most of the bundle — 925KB raw before
@@ -46,7 +47,7 @@ const BASE = `${import.meta.env.BASE_URL}reports/`;
  * from JSON.parse. Check what came back before trusting it.
  */
 async function fetchJson<T>(file: string): Promise<T> {
-  const res = await fetch(`${BASE}${file}`, { cache: 'no-store' });
+  const res = await fetchWithTimeout(`${BASE}${file}`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
   if (!res.headers.get('content-type')?.includes('json')) {
     throw new Error(`${file}: missing — the server returned the app shell, not JSON`);
@@ -62,7 +63,7 @@ const EMPTY_INDEX: ReportIndex = { latest: {}, history: [] };
  * half-written JSON) must surface instead of masquerading as "no reports".
  */
 async function fetchIndex(): Promise<ReportIndex> {
-  const res = await fetch(`${BASE}index.json`, { cache: 'no-store' });
+  const res = await fetchWithTimeout(`${BASE}index.json`, { cache: 'no-store' });
   if (res.status === 404) return EMPTY_INDEX;
   if (!res.ok) throw new Error(`index.json: HTTP ${res.status}`);
   if (!res.headers.get('content-type')?.includes('json')) return EMPTY_INDEX;

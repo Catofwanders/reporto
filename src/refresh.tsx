@@ -3,6 +3,7 @@ import type { ReportKind } from './reportKinds';
 import { REPORT_KINDS } from './reportKinds';
 import { RefreshContext } from './refreshContext';
 import { useCapabilities } from './capabilitiesContext';
+import { fetchWithTimeout, PULL_TIMEOUT_MS } from './apiFetch';
 
 interface RefreshResult {
   ok?: boolean;
@@ -30,7 +31,7 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
   // a single run covers.
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/refresh')
+    fetchWithTimeout('/api/refresh')
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { commandOf?: Record<string, string> } | null) => {
         if (!cancelled && body?.commandOf) setCommandOf(body.commandOf as typeof commandOf);
@@ -47,7 +48,7 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
   // about a second and fetch exactly what the caller asked for.
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/pull')
+    fetchWithTimeout('/api/pull')
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { kinds?: string[] } | null) => {
         if (!cancelled && body?.kinds) setApiKinds(new Set(body.kinds as ReportKind[]));
@@ -86,10 +87,11 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
       });
 
       const pull = async (query = '') => {
-        const res = await fetch(`/api/pull/${kind}${query}`, {
-          method: 'POST',
-          headers: { 'X-Reporto-Write': '1' },
-        });
+        const res = await fetchWithTimeout(
+          `/api/pull/${kind}${query}`,
+          { method: 'POST', headers: { 'X-Reporto-Write': '1' } },
+          PULL_TIMEOUT_MS,
+        );
         const body = (await res.json()) as RefreshResult;
         if (!res.ok || !body.ok) throw new Error(body.error ?? `exit ${res.status}`);
         await onReload(body.writes ?? [kind]);
@@ -109,10 +111,11 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
           return;
         }
 
-        const res = await fetch(`/api/refresh/${kind}`, {
-          method: 'POST',
-          headers: { 'X-Reporto-Write': '1' },
-        });
+        const res = await fetchWithTimeout(
+          `/api/refresh/${kind}`,
+          { method: 'POST', headers: { 'X-Reporto-Write': '1' } },
+          PULL_TIMEOUT_MS,
+        );
         const body = (await res.json()) as RefreshResult;
 
         if (res.status === 409) {
@@ -120,7 +123,7 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
           // instead of reporting a failure the user cannot act on.
           while (true) {
             await sleep(POLL_MS);
-            const status = await fetch('/api/refresh').then(
+            const status = await fetchWithTimeout('/api/refresh').then(
               (r) => r.json() as Promise<{ running: string[] }>,
             );
             if (!command || !status.running.includes(command)) break;

@@ -13,6 +13,7 @@
  */
 
 import { pooled } from './pool.mjs'
+import { fetchWithTimeout } from './http.mjs'
 
 const API = 'https://slack.com/api'
 
@@ -35,7 +36,7 @@ const isoOf = (ts) => new Date(Number(String(ts).split('.')[0]) * 1000).toISOStr
  * a partial report.
  */
 async function call(token, method, params = {}, attempt = 0) {
-  const res = await fetch(`${API}/${method}`, {
+  const res = await fetchWithTimeout(`${API}/${method}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,

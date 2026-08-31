@@ -12,15 +12,17 @@ export interface PrActionResult {
  * Flips one pull request's state through the dev server. The action is chosen from a fixed
  * set server-side; this only names which one.
  */
+import { ACTION_TIMEOUT_MS, fetchWithTimeout } from './apiFetch';
 export async function runPrAction(
   repo: string,
   num: number,
   action: PrActionName,
 ): Promise<PrActionResult> {
-  const res = await fetch(`/api/pr/${repo}/${num}/${action}`, {
-    method: 'POST',
-    headers: { 'X-Reporto-Write': '1' },
-  });
+  const res = await fetchWithTimeout(
+    `/api/pr/${repo}/${num}/${action}`,
+    { method: 'POST', headers: { 'X-Reporto-Write': '1' } },
+    ACTION_TIMEOUT_MS,
+  );
   const body = (await res.json()) as PrActionResult;
   if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
   return body;

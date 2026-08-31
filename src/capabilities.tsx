@@ -4,6 +4,7 @@ import type { ReportKind } from './reportKinds';
 import type { Capability } from './capabilitiesContext';
 import { CapabilitiesContext } from './capabilitiesContext';
 import { statusVocab, type StatusVocabConfig } from './statusVocab';
+import { fetchWithTimeout } from './apiFetch';
 
 /**
  * What this machine can do, fetched once from the dev server.
@@ -24,7 +25,7 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/settings')
+    fetchWithTimeout('/api/settings')
       .then((res) => (res.ok ? res.json() : null))
       .then(
         (
@@ -69,7 +70,7 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const post = useCallback(async (path: string, body: unknown) => {
-    const res = await fetch(`/api/settings${path}`, {
+    const res = await fetchWithTimeout(`/api/settings${path}`, {
       method: 'POST',
       // The custom header is half the cross-site guard: it forces a preflight the dev
       // server never answers, so no other page can write settings or secrets here.

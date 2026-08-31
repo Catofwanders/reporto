@@ -1,7 +1,31 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { GH_TIMEOUT_MS } from './http.mjs'
 
-const run = promisify(execFile)
+const execFileAsync = promisify(execFile)
+
+/**
+ * `gh`, with a deadline.
+ *
+ * Same reasoning as `fetchWithTimeout`: the failure that costs a whole morning is not an error
+ * but a hang — `gh` waiting on a socket that will never answer keeps the pull unresolved, the
+ * button spinning and a cron run alive until the next one overlaps it. `execFile`'s own
+ * `timeout` kills the child, and this names what happened, because a SIGTERM'd `gh` otherwise
+ * surfaces as an empty error message.
+ */
+async function run(command, args, options = {}) {
+  try {
+    return await execFileAsync(command, args, { timeout: GH_TIMEOUT_MS, ...options })
+  } catch (err) {
+    if (err?.killed || err?.signal === 'SIGTERM') {
+      throw new Error(
+        `gh ${args[0] ?? ''} gave no answer within ${Math.round(GH_TIMEOUT_MS / 1000)}s — ` +
+          'GitHub or the network is not answering',
+      )
+    }
+    throw err
+  }
+}
 
 /**
  * Org repos are often visible to only one of the accounts a `gh` keyring holds, and the

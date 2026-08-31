@@ -16,6 +16,7 @@
  */
 import crypto from 'node:crypto'
 import fs from 'node:fs'
+import { fetchWithTimeout } from './http.mjs'
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const API = 'https://www.googleapis.com/calendar/v3'
@@ -57,7 +58,7 @@ async function serviceAccountToken(value) {
     .sign(key.private_key)
     .toString('base64url')
 
-  const res = await fetch(key.token_uri ?? TOKEN_URL, {
+  const res = await fetchWithTimeout(key.token_uri ?? TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -75,7 +76,7 @@ async function serviceAccountToken(value) {
 }
 
 async function refreshedToken({ clientId, clientSecret, refreshToken }) {
-  const res = await fetch(TOKEN_URL, {
+  const res = await fetchWithTimeout(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -101,7 +102,7 @@ async function refreshedToken({ clientId, clientSecret, refreshToken }) {
 async function api(path, token, params = {}) {
   const url = new URL(`${API}${path}`)
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, String(value))
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+  const res = await fetchWithTimeout(url, { headers: { Authorization: `Bearer ${token}` } })
   if (!res.ok) {
     const text = await res.text()
     throw new Error(`Google ${path} failed: ${res.status} ${text.slice(0, 200)}`)
