@@ -29,7 +29,9 @@ export const CAPABILITIES = {
     label: 'Jira',
     requires: [['JIRA_EMAIL', 'JIRA_API_TOKEN']],
     config: ['jiraSite'],
-    note: 'A personal Atlassian API token, plus the account e-mail it belongs to.',
+    note:
+      'A personal Atlassian API token, plus the account e-mail it belongs to. ' +
+      'Where to create one is in docs/setup.md.',
   },
   prs: {
     label: 'Pull requests',
@@ -49,7 +51,9 @@ export const CAPABILITIES = {
     label: 'Slack',
     requires: [['SLACK_USER_TOKEN']],
     config: [],
-    note: 'A user token (xoxp) from your own Slack app — it reads as you and posts as you.',
+    note:
+      'A user token (xoxp-) from your own Slack app — it reads as you and posts as you. ' +
+      'Scopes and the app-creation steps are in docs/setup.md.',
   },
   calendar: {
     label: 'Calendar',

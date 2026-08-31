@@ -97,6 +97,46 @@ repos pinned to the top of the PR list, and which slash command produces which r
 [`config.template/README.md`](config.template/README.md). Without it the committed
 template is used as a fallback.
 
+### Slack
+
+One **user** token, `SLACK_USER_TOKEN`, and nothing else. A user token reads what you can
+already read and posts as you — which is the whole design: this replies in your name or not at
+all. A bot token (`xoxb-`) cannot see your mentions, and an app-level token (`xapp-`) is not a
+Web API token at all. Settings refuses anything that does not start `xoxp-` for exactly that
+reason.
+
+**Getting one.** api.slack.com/apps → *Create New App* → *From scratch* → pick your workspace.
+Then *OAuth & Permissions* → **User Token Scopes** (the second table, not the bot one):
+
+| Scope | What stops working without it |
+|---|---|
+| `search:read` | everything — mentions and DMs are both found through `search.messages` |
+| `channels:history`, `groups:history` | reading what came after a mention, so every row says "no reply yet" |
+| `im:history`, `im:read` | DMs, and resolving whose DM it is |
+| `users:read` | names — rows show raw member ids instead |
+| `chat:write` | replying from the queue, and posting the stand-up note |
+| `reactions:write` | the ✅ shortcut on a row |
+
+*Install to Workspace*, approve, and copy the **User OAuth Token** from the top of that page. It
+starts `xoxp-`. Paste it into Settings → Modules → Slack, which writes it to `.env` for you —
+or put `SLACK_USER_TOKEN=xoxp-…` in `.env` by hand and restart the dev server, because `.env` is
+lifted into the environment at boot.
+
+**Three traps worth knowing**, all of which cost time here once:
+
+- An `xapp-` token answers `auth.test` with `ok: true` and **no `user_id`**, so it looks valid
+  and then finds nothing. The missing user is the tell.
+- Adding a scope after installing needs a **reinstall** before the token carries it; the old
+  token keeps working, minus the new permission, with a `missing_scope` error per call.
+- A workspace can require admin approval for app installation. Then this needs an admin, and
+  there is no way around it from here.
+
+**Config keys** (`config/reporto.json`, all optional): `slackDays` — how far back to search,
+default 14; `slackChannelsExcluded` — channel names whose mentions are noise, like alert feeds;
+`slackStandupChannel` — where the stand-up note posts. Leave the last one unset and the Post
+button does not appear at all, which is the safe default: nothing can post anywhere until you
+name a destination.
+
 ## Modules and credentials
 
 Settings → **Modules** lists what this machine can fetch. Each row says whether it is
