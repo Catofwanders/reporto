@@ -8,9 +8,9 @@ import { DEFAULT_VOCAB, inStatusGroup, type StatusVocab } from './statusVocab';
  * somebody, and it is still mine until it ships. Which statuses those are is configuration —
  * see `statusVocab.ts` — because the names past "in review" belong to whoever owns the board.
  *
- * This lives on its own because two places ask the question — the Jira panel and the dashboard
- * queue — and two copies of the list is how they start disagreeing about which tickets are
- * yours today.
+ * This lives on its own so the question has one answer. Only the dashboard queue asks it
+ * today, through `activeTickets`; the predicates are exported because the answer belongs here
+ * rather than inlined at the next call site that needs it.
  */
 export const isActiveStatus = (status: string, vocab: StatusVocab = DEFAULT_VOCAB) =>
   inStatusGroup(vocab, 'active', status);

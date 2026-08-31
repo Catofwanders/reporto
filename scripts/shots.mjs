@@ -12,6 +12,7 @@
  * ticket, repository or person.
  */
 import { spawn } from 'node:child_process'
+import net from 'node:net'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { chromium } from 'playwright'
 
@@ -22,6 +23,36 @@ const SHOTS = [
   { palette: 'default', file: 'docs/home.jpg' },
   { palette: 'nord', file: 'docs/home-nord.jpg' },
 ]
+
+/**
+ * Whether the Storybook answering here is *this* project's.
+ *
+ * It found another project's Storybook on 6007, decided it was already running, and shot the
+ * README pictures against it. What saved the repo from publishing somebody else's UI was the
+ * `.kpi-strip` wait timing out — which is luck, not a check. So the port is now identified by
+ * the story it must contain.
+ */
+const hasStory = async (url) => {
+  try {
+    const res = await fetch(`${url}/index.json`, { signal: AbortSignal.timeout(3000) })
+    if (!res.ok) return false
+    const body = await res.json()
+    return Boolean((body.entries ?? body.stories ?? {})[STORY])
+  } catch {
+    return false
+  }
+}
+
+/** A port nothing is listening on, for when the usual one is taken by something else. */
+const freePort = () =>
+  new Promise((resolve, reject) => {
+    const probe = net.createServer()
+    probe.on('error', reject)
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address()
+      probe.close(() => resolve(port))
+    })
+  })
 
 const alive = async (url) => {
   try {
@@ -39,22 +70,38 @@ const waitFor = async (url, seconds) => {
   return false
 }
 
-const root = `http://localhost:${PORT}`
+let port = PORT
+let root = `http://localhost:${port}`
 let storybook = null
 
-if (await alive(root)) {
-  console.log(`using the Storybook already on ${PORT}`)
+const occupied = await alive(root)
+const ours = occupied && (await hasStory(root))
+
+if (ours) {
+  console.log(`using the Storybook already on ${port}`)
 } else {
-  console.log('starting Storybook…')
+  if (occupied) {
+    // Another project's Storybook, or anything else — do not shoot it into this README.
+    port = await freePort()
+    root = `http://localhost:${port}`
+    console.log(`${PORT} is serving something else; starting ours on ${port}`)
+  } else {
+    console.log('starting Storybook…')
+  }
   // Storybook needs Node >= 20.19 (see .nvmrc); an older default fails here rather than
   // silently shooting a stale build.
-  storybook = spawn('npx', ['storybook', 'dev', '-p', String(PORT), '--ci', '--quiet'], {
+  storybook = spawn('npx', ['storybook', 'dev', '-p', String(port), '--ci', '--quiet'], {
     stdio: 'ignore',
     detached: true,
   })
   if (!(await waitFor(root, 90))) {
     storybook.kill()
-    console.error(`Storybook did not come up on ${PORT}. Node is ${process.version}; it needs >= 20.19.`)
+    console.error(`Storybook did not come up on ${port}. Node is ${process.version}; it needs >= 20.19.`)
+    process.exit(1)
+  }
+  if (!(await hasStory(root))) {
+    if (!process.argv.includes('--keep')) process.kill(-storybook.pid)
+    console.error(`the Storybook on ${port} has no "${STORY}" story — nothing was shot.`)
     process.exit(1)
   }
 }

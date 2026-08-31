@@ -1,0 +1,40 @@
+# The gates that rules/review-flow.md says must be clean, run by something other than me.
+#
+# There is no reviewer on this repo, so a broken main is only noticed the next time the app is
+# opened. These three commands are exactly what a local check runs, in the same order.
+#
+# macOS, not Ubuntu, and not by preference: `@oxlint/binding-darwin-arm64` and
+# `@rolldown/binding-darwin-arm64` are pinned as devDependencies to work around npm skipping
+# optional native bindings (npm/cli#4828), and both declare `os: darwin, cpu: arm64` — so
+# `npm ci` on Linux fails with EBADPLATFORM before it reaches a single test. This project runs
+# on one Apple laptop; the runner may as well match it.
+#
+# The NDA scan is deliberately absent: it reads its terms from gitignored files, so it can only
+# run where those exist. The pre-push hook is its home.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # `tsc -b` is the real type check; the vite build is what catches a broken import.
+      - run: npm run build
+
+      - run: npm run lint
+
+      - run: npm test
