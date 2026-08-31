@@ -4,11 +4,14 @@ import ForumRoundedIcon from '@mui/icons-material/ForumRounded';
 import type { SlackReport } from '../types';
 import { agingTone } from '../prLanes';
 import {
+  QUIET_LANES,
   SLACK_LANES,
   type SlackLaneId,
   type SlackLaneRow,
   toSlackLanes,
 } from '../slackLanes';
+import { isDone, markDone, readDone, undoDone, writeDone } from '../slackDone';
+import { useCapabilities } from '../capabilitiesContext';
 import { CopyPrLinks } from '../components/CopyPrLinks';
 import { RefreshButton } from '../components/RefreshButton';
 import { SlackReply } from '../components/SlackReply';
@@ -24,12 +27,17 @@ const Rows = ({
   onToggle,
   onToggleAll,
   onAnswered,
+  onDone,
+  done,
 }: {
   rows: SlackLaneRow[];
   selected: ReadonlySet<string>;
   onToggle: (id: string) => void;
   onToggleAll: (ids: string[], next: boolean) => void;
   onAnswered: (id: string) => void;
+  /** "This needs nothing" — the judgement the classifier cannot make from the words. */
+  onDone: (id: string, next: boolean) => void;
+  done: (id: string) => boolean;
 }) => {
   const ids = rows.map((entry) => entry.row.id);
   const picked = ids.filter((id) => selected.has(id)).length;
@@ -97,6 +105,20 @@ const Rows = ({
                 </td>
                 <td className="pr-cell-actions">
                   <SlackReply row={row} onSent={() => onAnswered(row.id)} />
+                  {/*
+                    The escape hatch for a row whose words do not say what it needs. Without
+                    it the only way to clear a row is to answer it in Slack, which is
+                    answering a message to fix a dashboard.
+                  */}
+                  <button
+                    type="button"
+                    className="slack-done"
+                    aria-pressed={done(row.id)}
+                    title={done(row.id) ? 'Bring it back' : 'Nothing to answer here'}
+                    onClick={() => onDone(row.id, !done(row.id))}
+                  >
+                    {done(row.id) ? '↩' : '✕'}
+                  </button>
                 </td>
               </tr>
             );
@@ -126,17 +148,33 @@ export const SlackPage = ({ report }: SlackPageProps) => {
    * same lie the unread badge tells.
    */
   const [answeredHere, setAnsweredHere] = useState<Set<string>>(new Set());
+  /** Rows dismissed by hand, kept in the browser — Slack has no "handled" flag to write. */
+  const [done, setDone] = useState(readDone);
+  /**
+   * Which quiet lanes are open. Folded by default: on a real fortnight nine of twelve rows
+   * were already answered, and a page that opens on nine rows of history buries the three
+   * that want something.
+   */
+  const [open, setOpen] = useState<ReadonlySet<SlackLaneId>>(new Set());
+  const { slackWords } = useCapabilities();
 
   const answered = (id: string) =>
     setAnsweredHere((prev) => new Set(prev).add(id));
 
   const lanes = useMemo<Map<SlackLaneId, SlackLaneRow[]>>(() => {
     if (!report) return new Map();
-    const seen = { ...report, rows: report.rows.map((row) => (
-      answeredHere.has(row.id) ? { ...row, lastFromMe: true, lastFrom: report.me } : row
-    )) };
-    return toSlackLanes(seen);
-  }, [report, answeredHere]);
+    const seen = {
+      ...report,
+      rows: report.rows.map((row) => {
+        // Answered in this session, or dismissed by hand: either way it is not waiting, and
+        // the report will not know until the next pull.
+        if (answeredHere.has(row.id)) return { ...row, lastFromMe: true, lastFrom: report.me };
+        if (isDone(row.id, done)) return { ...row, lastText: 'ok', lastMentionsMe: false };
+        return row;
+      }),
+    };
+    return toSlackLanes(seen, slackWords);
+  }, [report, answeredHere, done, slackWords]);
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -168,9 +206,10 @@ export const SlackPage = ({ report }: SlackPageProps) => {
   const bots = (lanes.get('bots') ?? []).length;
   const people = report.rows.filter((row) => !row.bot).length;
 
-  const shown = SLACK_LANES.filter((lane) => !(lane.id === 'bots' && hideBots)).flatMap(
-    (lane) => lanes.get(lane.id) ?? [],
-  );
+  const shown = SLACK_LANES.filter(
+    (lane) =>
+      !(lane.id === 'bots' && hideBots) && (!QUIET_LANES.includes(lane.id) || open.has(lane.id)),
+  ).flatMap((lane) => lanes.get(lane.id) ?? []);
   const picked = shown
     .filter((entry) => selected.has(entry.row.id))
     .map((entry) => entry.row.permalink)
@@ -227,24 +266,57 @@ export const SlackPage = ({ report }: SlackPageProps) => {
           <p className="status">Nothing has named you in the last {report.days} days.</p>
         )}
 
+        {/* A cap the pull hit is not a quiet fortnight; the report says so and so does this. */}
+        {report.incomplete?.map((note) => (
+          <p key={note} className="banner banner-warn">
+            {note}
+          </p>
+        ))}
+
         {SLACK_LANES.map((lane) => {
           if (lane.id === 'bots' && hideBots) return null;
           const rows = lanes.get(lane.id) ?? [];
           if (rows.length === 0) return null;
+          const quiet = QUIET_LANES.includes(lane.id);
+          const shownHere = !quiet || open.has(lane.id);
           return (
             <section key={lane.id} className={`pr-lane pr-lane-${lane.id}`}>
               <header className="pr-lane-head">
                 <h3>{lane.title}</h3>
                 <span className="count">{rows.length}</span>
                 <p className="pr-lane-hint">{lane.hint}</p>
+                {quiet && (
+                  <button
+                    type="button"
+                    className="needs-snoozed-toggle"
+                    aria-expanded={shownHere}
+                    onClick={() =>
+                      setOpen((prev) => {
+                        const next = new Set(prev);
+                        if (!next.delete(lane.id)) next.add(lane.id);
+                        return next;
+                      })
+                    }
+                  >
+                    {shownHere ? 'hide' : 'show'}
+                  </button>
+                )}
               </header>
-              <Rows
-                rows={rows}
-                selected={selected}
-                onToggle={toggle}
-                onToggleAll={toggleAll}
-                onAnswered={answered}
-              />
+              {shownHere && (
+                <Rows
+                  rows={rows}
+                  selected={selected}
+                  onToggle={toggle}
+                  onToggleAll={toggleAll}
+                  onAnswered={answered}
+                  done={(id) => isDone(id, done)}
+                  onDone={(id, next) => {
+                    const marks = next ? markDone(id, done) : undoDone(id, done);
+                    writeDone(marks);
+                    setDone(marks);
+                  }}
+                />
+              )}
             </section>
           );
         })}

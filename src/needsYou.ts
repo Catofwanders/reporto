@@ -10,7 +10,8 @@ import type {
 import { prState } from './prState';
 import { idleDays, laneOf, reasonOf } from './prLanes';
 import { laneOfReview, reasonOfReview, toReviewLanes } from './reviewLanes';
-import { laneOfSlack, reasonOfSlack } from './slackLanes';
+import { laneOfSlack, reasonOfSlack, WAITING_LANES } from './slackLanes';
+import type { SlackWords } from './slackIntent';
 import { activeTickets } from './jiraActive';
 import { type AgingLimits, agingOf, countsAsStuck } from './ticketAging';
 import { DEFAULT_VOCAB, type StatusVocab } from './statusVocab';
@@ -120,6 +121,8 @@ export function needsYou({
   aging = {},
   stuckStatuses = [],
   vocab = DEFAULT_VOCAB,
+  slackWords = {},
+  slackDone = () => false,
   limit = 7,
 }: {
   prs: PrsReport | null;
@@ -131,6 +134,10 @@ export function needsYou({
   stuckStatuses?: string[];
   /** The board's status vocabulary, so "in flight" means what this workflow calls it. */
   vocab?: StatusVocab;
+  /** Extra ask/closer phrases from config, so the queue and the Slack page classify alike. */
+  slackWords?: SlackWords;
+  /** Rows dismissed by hand. The mark is in the browser, so only the caller knows it. */
+  slackDone?: (id: string) => boolean;
   limit?: number;
 }): FeedItem[] {
   const items: FeedItem[] = [];
@@ -190,8 +197,15 @@ export function needsYou({
 
   if (slack) {
     for (const row of slack.rows) {
-      const lane = laneOfSlack(row);
-      if (lane !== 'asked' && lane !== 'stale' && lane !== 'dms') continue;
+      // Decided about by hand: it never needed an answer, and the row stops asking for one.
+      if (slackDone(row.id)) continue;
+      /*
+       * Only the lanes that actually want a reply. "Told you something" and "nothing to
+       * answer" are readable on the Slack page and are not work: measured on a real
+       * fortnight, two of the three rows in "waiting on you" were statements.
+       */
+      if (!WAITING_LANES.includes(laneOfSlack(row, slackWords))) continue;
+      const lane = laneOfSlack(row, slackWords);
       const days = idleDays(row.lastAt ?? row.at);
       items.push({
         id: `slack:${row.id}`,

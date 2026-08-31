@@ -416,6 +416,10 @@ const slackRow = (over: Partial<SlackRow> & Pick<SlackRow, 'id' | 'excerpt'>): S
   lastFrom: 'colleague',
   lastFromMe: false,
   lastAt: AT('09:10'),
+  // What a pull writes now: the last word's own text, so the lanes classify rather than guess.
+  lastText: over.lastText ?? over.excerpt,
+  lastMentionsMe: false,
+  stateRead: true,
   tickets: [],
   prs: [],
   ...over,
@@ -466,6 +470,30 @@ export const slackReport: SlackReport = {
       bot: true,
       excerpt: 'orders-api deploy finished · 3 migrations applied',
       lastFrom: 'deploy-bot',
+    }),
+    // A conversation that ended: the row the queue used to carry as if somebody were waiting.
+    slackRow({
+      id: 'C0000002:6',
+      channel: 'checkout',
+      channelId: 'C0000002',
+      excerpt: 'can you re-run the QC deploy?',
+      lastText: 'thanks!',
+      threadTs: 'C0000002:6',
+      replies: 3,
+    }),
+    // Told, not asked. Worth reading; not an answer anybody is waiting for.
+    slackRow({
+      id: 'C0000001:7',
+      excerpt: 'heads up: the payout contract lands on Friday, so SHOP-455 unblocks then',
+      lastText: 'heads up: the payout contract lands on Friday, so SHOP-455 unblocks then',
+      tickets: ['SHOP-455'],
+    }),
+    // Answered with a ✅ rather than a sentence — which this app's own button does.
+    slackRow({
+      id: 'C0000001:8',
+      excerpt: 'is the seller catalogue cache live?',
+      lastText: 'is the seller catalogue cache live?',
+      iReacted: true,
     }),
   ],
 };

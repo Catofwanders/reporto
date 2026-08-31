@@ -33,6 +33,16 @@ export function settingsPlugin(): Plugin {
               // The board's own words — column order, tones and status groups. Config only:
               // committed code knows universal Jira vocabulary and nothing else.
               statuses: config.statuses ?? {},
+              /*
+               * Extra phrases that make a Slack message an ask or a closer. Committed code
+               * knows English requests and acknowledgements; a workspace that says "готово"
+               * needs to be able to say so without a patch, and its words are nobody else's
+               * business either.
+               */
+              slackWords: {
+                ask: config.slackAskWords ?? [],
+                closer: config.slackCloserWords ?? [],
+              },
             }),
           )
           return

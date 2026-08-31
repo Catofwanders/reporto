@@ -1450,3 +1450,24 @@ body { background: var(--canvas); }
 .since-toggle { margin-left: .4rem; }
 .since-list { max-height: 14rem; overflow-y: auto; margin-top: .35rem; padding-right: .2rem; }
 .since-list { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+
+/* "Nothing to answer" on a Slack row: the judgement the words cannot carry. */
+.slack-done {
+  background: none; border: 1px solid transparent; border-radius: .35rem; cursor: pointer;
+  color: var(--ink-2); font-size: .8rem; line-height: 1.4; padding: .1rem .3rem;
+}
+.slack-done:hover { color: var(--ink); border-color: var(--line); }
+.slack-done[aria-pressed='true'] { color: var(--ok-ink); }
+.slack-done:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The fold control sits at the end of a lane head, which is a grid of title/count/hint. */
+.pr-lane-head .needs-snoozed-toggle { margin-left: auto; }
+
+/* A folded waiting-room column: its count is the whole content until somebody opens it. */
+.board-col.is-folded { align-self: flex-start; min-width: 0; width: auto; }
+.board-col.is-folded .board-col-head { padding-right: .5rem; }
+.board-col-fold {
+  margin-left: .35rem; background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--accent); font: inherit; font-size: .72rem; text-decoration: underline;
+}
+.board-col-fold:hover { color: var(--ink); }
+.board-col-fold:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

@@ -25,6 +25,7 @@ import {
   writeSnoozes,
 } from '../snooze';
 import { readMarks, unreadCount } from '../jiraActivity';
+import { isDone, readDone } from '../slackDone';
 
 interface HomePageProps {
   jira: JiraReport | null;
@@ -52,8 +53,10 @@ interface HomePageProps {
  * the page that owns it. This screen decides where to look; it does not do the work.
  */
 export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePageProps) => {
-  const { usable, statusAging, stuckStatuses, statuses } = useCapabilities();
+  const { usable, statusAging, stuckStatuses, statuses, slackWords } = useCapabilities();
   const [snoozes, setSnoozes] = useState(readSnoozes);
+  // Slack rows dismissed by hand, read once on mount like the other local marks.
+  const [slackDone] = useState(readDone);
   const [showSnoozed, setShowSnoozed] = useState(false);
 
   // A module switched off in Settings, or one whose credentials are missing, contributes
@@ -82,7 +85,11 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
   // Before the first pull there is nothing to be relieved about; the panels say so instead of
   // rendering a confident emptiness.
   const unpulled = !sources.jira && !sources.prs && !sources.reviews && !sources.slack;
-  const queue = needsYou(sources);
+  const queue = needsYou({
+    ...sources,
+    slackWords,
+    slackDone: (id) => isDone(id, slackDone),
+  });
   /*
    * Snoozed rows leave the list but not the counting: the KPI strip keeps the true total, and
    * the panel says how many it is holding back. A number that quietly shrinks when a row is
@@ -90,7 +97,13 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
    */
   const snoozedNow = queue.filter((item) => rowSnoozed(item.id, snoozes));
   const items = showSnoozed ? queue : queue.filter((item) => !rowSnoozed(item.id, snoozes));
-  const total = needsYouTotal(sources);
+  // Same arguments as the queue itself: a total that counted rows the queue filters out would
+  // make the "N more waiting" line claim work that is not there.
+  const total = needsYouTotal({
+    ...sources,
+    slackWords,
+    slackDone: (id) => isDone(id, slackDone),
+  });
   /*
    * Read from `localStorage` on mount, not on every render: this is the same mark the Jira
    * page owns, and the strip only needs the number. Opening the panel there and coming back

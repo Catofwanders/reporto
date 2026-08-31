@@ -71,6 +71,21 @@ summary rewording and backlog rank are exactly the noise that makes a queue unre
 Being assigned a ticket counts as a mention, matched by account id like every other mention
 here — it is the strongest "this is yours now" signal Jira has.
 
+### Slack wording
+
+The Slack page decides whether a row wants an answer by reading its last message: a question or
+a request goes in the queue, an acknowledgement leaves it. Committed code knows English requests
+("can you", "please", "any update") and English acknowledgements ("thanks", "ok", "will do").
+Add the ones your workspace actually uses:
+
+```jsonc
+"slackAskWords": ["подивись", "потрібно"],
+"slackCloserWords": ["готово", "дякую"]
+```
+
+Same reasoning as the status vocabulary: the words are merged over the defaults, and a
+workspace's own vocabulary is nobody else's business — `config/` is gitignored.
+
 ### Google Calendar
 
 Two ways in. A plain API key is not one of them: Google accepts keys only for public data.

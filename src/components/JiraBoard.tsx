@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import type { JiraReport, PrsReport, Ticket } from '../types';
 import { formatStatus, statusTone } from '../jiraStatus';
 import { useHashTarget } from '../useHashTarget';
 import { TicketStatus } from './TicketStatus';
 import { agingOf } from '../ticketAging';
 import { useCapabilities } from '../capabilitiesContext';
-import { statusRank } from '../statusVocab';
+import { inStatusGroup, statusRank, type StatusVocab } from '../statusVocab';
 import { useRefresh } from '../refreshContext';
 import { useTicketReader } from './useTicketReader';
 import { plural, prLabel } from '../format';
@@ -125,6 +126,29 @@ const BoardCard = ({
 };
 
 /**
+ * Whether a column is a waiting room rather than work in progress.
+ *
+ * Derived from the vocabulary, never from a list of column names here: everything the board
+ * treats as in flight, active, blocked, dev-done or shipped is work somebody is doing, and
+ * what is left — a backlog, a "next", a "to do" — is the pile it comes from. That pile is
+ * most of the board and none of today, so it folds.
+ *
+ * A status the vocabulary has never seen is *not* folded. Guessing that an unknown column is
+ * a backlog would hide real work, which is the expensive direction to be wrong in.
+ */
+const isWaitingRoom = (vocab: StatusVocab, status: string) => {
+  const groups: (keyof StatusVocab['groups'])[] = [
+    'active',
+    'inFlight',
+    'blocked',
+    'devDone',
+    'shipped',
+  ];
+  if (groups.some((group) => inStatusGroup(vocab, group, status))) return false;
+  return vocab.tones.get(status.trim().toLowerCase()) === 'na';
+};
+
+/**
  * The board a Jira user expects: one column per status, cards inside, scrolling sideways
  * when the workflow is wider than the screen. The status chip on a card is still the way
  * to move a ticket — dragging would need a drop target per column and a transition guess
@@ -135,6 +159,8 @@ export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => 
   const { statuses } = useCapabilities();
   const pendingPrs = Boolean(report.partial && report.pending?.includes('prs'));
   const { read, drawer } = useTicketReader({ report, prs, onChanged });
+  /** Columns opened by hand this visit. The default is what matters; it need not persist. */
+  const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
 
   const columns = [...report.groups]
     .filter((group) => group.tickets.length > 0)
@@ -150,10 +176,12 @@ export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => 
         * name, which is what somebody navigating by landmark actually wants.
         */}
       <div className="board" tabIndex={0} aria-label="Board columns, scrolls sideways">
-        {columns.map((group) => (
+        {columns.map((group) => {
+          const folded = isWaitingRoom(statuses, group.title) && !opened.has(group.title);
+          return (
           <section
           key={group.title}
-          className="board-col"
+          className={`board-col${folded ? ' is-folded' : ''}`}
           aria-label={`${formatStatus(group.title)}, ${plural(group.tickets.length, 'ticket')}`}
         >
             <header className="board-col-head">
@@ -163,7 +191,30 @@ export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => 
               />
               <h3>{formatStatus(group.title)}</h3>
               <span className="count">{group.tickets.length}</span>
+              {/*
+                A waiting room — backlog, next, to do — is most of the board and none of the
+                work: seventeen of twenty-three cards here, in the first column you look at.
+                Folded to its count, one click from open, and never hidden.
+              */}
+              {isWaitingRoom(statuses, group.title) && (
+                <button
+                  type="button"
+                  className="board-col-fold"
+                  aria-expanded={!folded}
+                  title={folded ? `Show the ${formatStatus(group.title)} cards` : 'Fold this column'}
+                  onClick={() =>
+                    setOpened((prev) => {
+                      const next = new Set(prev);
+                      if (!next.delete(group.title)) next.add(group.title);
+                      return next;
+                    })
+                  }
+                >
+                  {folded ? 'show' : 'fold'}
+                </button>
+              )}
             </header>
+            {!folded && (
             <div className="board-col-body">
               {group.tickets.map((ticket) => (
                 <BoardCard
@@ -175,8 +226,10 @@ export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => 
                 />
               ))}
             </div>
+            )}
           </section>
-        ))}
+          );
+        })}
       </div>
 
       {drawer}

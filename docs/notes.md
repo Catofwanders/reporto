@@ -35,6 +35,14 @@ does not know keeps its place after the ones it does, so an unfamiliar column ap
 right instead of vanishing. Columns are a fixed width and the row scrolls sideways; a column
 that grew with its content would make a busy status wider than a quiet one.
 
+**A waiting room folds.** Backlog was the first column you looked at and seventeen of the
+twenty-three cards on it — the largest thing on the page and none of the work, while the KPI
+strip beside it said *1 active ticket*. Columns the vocabulary does not place in flight,
+active, blocked, dev-done or shipped now render as a header and a count, one click from open.
+The rule is derived from the vocabulary rather than a list of column names here, and a status
+the vocabulary has never seen is **not** folded: guessing that an unknown column is a backlog
+would hide real work, which is the expensive direction to be wrong in.
+
 The status chip on a card is still how a ticket moves. Dragging would need a drop target per
 column and a guess at which transition a drop means, while the chip asks Jira what the
 workflow actually allows for that ticket right now.
@@ -291,6 +299,63 @@ being carried, not at the top of today's list.
 
 Auth is a **user token** (`xoxp`), so what it reads is what you can read and anything it
 posts is your own message. A bot token cannot see your mentions at all.
+
+### Whether a row wants an answer at all
+
+"The last word is theirs" was the whole test, and it over-reports badly. Measured on a real
+fortnight: twelve rows, three of them in *waiting on you*, and **one** of those was a question.
+The other two were statements — somebody said a thing and stopped. A queue that cannot tell
+those apart teaches you to skim past all of them, which is the failure the page exists to
+prevent.
+
+The fix was already on the wire. `conversations.replies` and `conversations.history` return the
+last message in full; the puller read `user` and `ts` off it and **threw the text away**. So it
+now keeps that text, whether the last message tags me (read from the raw form, before
+`<@U123>` is flattened to "@someone" and the signal is gone), and whether I reacted to it.
+
+From there each row is one of three things:
+
+- **ask** — a question mark, a request in words, or my handle in the *last* message. This is
+  the queue.
+- **closer** — "thanks", "ok", "will do", an emoji on its own. Whole-message match and short
+  only: "thanks, and can you also…" is an ask wearing a polite hat, and a forty-word paragraph
+  that opens with "ok" is not an acknowledgement.
+- **statement** — everything else. Reading, not work.
+
+Two lanes came out of it — *Told you something* and *Nothing to answer* — and the queue takes
+neither. **DMs are not exempt**, which was the second decision: a one-to-one felt too personal
+to filter until the measurement showed two of the three queue rows were exactly that. On this
+data the morning queue went from three rows to one.
+
+Conservative in one direction on purpose: anything that looks like an ask is an ask. A missed
+question costs a colleague a day; a statement in the queue costs one line.
+
+The word lists are extendable from config (`slackAskWords`, `slackCloserWords`), because a
+workspace that closes conversations in Ukrainian cannot be served by an English list — same
+reasoning as the status vocabulary.
+
+### A ✅ of mine is an answer
+
+This one was closer to a bug. The row offers a ✅ button; you press it; the next pull had no
+idea, so the row came back as *waiting on you* until somebody spoke. Slack ships `reactions`
+with the message, so reading them costs nothing — and the channel read now asks
+`inclusive: true` so the mention's own reactions are in the page, which is the only place a ✅
+answer to a channel mention appears.
+
+### The escape hatch, and the cap
+
+A classifier cannot read intent that is not in the words, so a row can be marked **nothing to
+answer** by hand. That mark lives in `localStorage` next to the palette and the snoozes: Slack
+has no "handled" flag to write to, and posting a reaction to fix a display problem would be
+sending a message on somebody's behalf. It expires after thirty days, which is longer than the
+report keeps the row anyway.
+
+And the quiet lanes are folded rather than absent — nine of those twelve rows were already
+answered, and history is worth having, once you ask for it.
+
+Beyond the lookup cap (`THREAD_LOOKUPS = 40`) nothing after a mention is read, so its last word
+is the mention itself. That used to read exactly like "nobody replied"; the report now says so
+in `incomplete`, and the page shows it as a banner.
 
 ### Replying from the queue
 

@@ -48,6 +48,10 @@ export interface ReportoConfig {
   };
   /** How far back the Slack mention search goes. */
   slackDays?: number;
+  /** Extra phrases that make a message an ask — this vocabulary is not English-only. */
+  slackAskWords?: string[];
+  /** Extra phrases that end a conversation: the local "thanks", "will do", "got it". */
+  slackCloserWords?: string[];
   /** Channel names whose mentions are noise — announcements, alert feeds. */
   slackChannelsExcluded?: string[];
   /** Where the stand-up note posts. A name or an id; the browser never names a channel. */

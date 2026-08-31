@@ -119,6 +119,23 @@ async function mentionsOf(token, handle, days) {
 }
 
 /**
+ * Whether a message tags this user.
+ *
+ * Read from the raw text, before `excerptOf` flattens `<@U123>` to "@someone" — which is the
+ * right thing for a row to display and destroys the one signal that says a message is
+ * addressed to *me* rather than merely landing near me.
+ */
+const mentionsUser = (text, userId) =>
+  Boolean(userId) && String(text ?? '').includes(`<@${userId}>`)
+
+/**
+ * Whether I reacted to this message. Slack ships `reactions` with the message, so this costs
+ * nothing beyond reading a field that was already on the wire.
+ */
+const reactedBy = (message, userId) =>
+  (message?.reactions ?? []).some((reaction) => (reaction.users ?? []).includes(userId))
+
+/**
  * The last word in the thread this message belongs to, or null when it is not in one.
  *
  * `conversations.replies` accepts any message in a thread, not only the parent, which is the
@@ -131,12 +148,23 @@ async function threadState(token, channel, ts, meId) {
   const messages = body.messages ?? []
   if (messages.length <= 1) return null
   const last = messages[messages.length - 1]
+  const mention = messages.find((message) => message.ts === ts)
   return {
     replies: messages.length - 1,
     lastUser: last?.user ?? last?.bot_id ?? null,
     lastAt: last?.ts ? isoOf(last.ts) : null,
     // Somebody else may have spoken last while my answer sits above it: still not on me.
     mineSince: messages.some((message) => message.ts !== ts && message.user === meId),
+    /*
+     * The last word's text, which this used to read and throw away. Without it nothing
+     * downstream can tell "can you check this?" from "thanks!", and the queue treats both as
+     * somebody waiting — which is most of what makes it noisy.
+     */
+    lastText: last?.text ?? null,
+    lastMentionsMe: mentionsUser(last?.text, meId),
+    // My ✅ on either the mention or the last word is an answer. The row offers that button,
+    // so without this the app creates rows it then refuses to recognise as handled.
+    iReacted: reactedBy(mention, meId) || reactedBy(last, meId),
     threaded: true,
   }
 }
@@ -185,10 +213,14 @@ async function channelStateSince(token, channel, ts, meId) {
   const body = await call(token, 'conversations.history', {
     channel,
     oldest: ts,
-    inclusive: 'false',
+    // Inclusive so the mention itself is in the page: its own reactions are the only place a
+    // ✅ answer to a channel mention shows up, and they are not visible from anywhere else.
+    inclusive: 'true',
     limit: '50',
   })
-  const after = (body.messages ?? []).filter((message) => message.ts !== ts)
+  const messages = body.messages ?? []
+  const mention = messages.find((message) => message.ts === ts)
+  const after = messages.filter((message) => message.ts !== ts)
   // history returns newest first, so the first entry is the last word in the channel.
   const last = after[0]
   return {
@@ -196,6 +228,9 @@ async function channelStateSince(token, channel, ts, meId) {
     lastUser: last?.user ?? last?.bot_id ?? null,
     lastAt: last?.ts ? isoOf(last.ts) : null,
     mineSince: after.some((message) => message.user === meId),
+    lastText: last?.text ?? null,
+    lastMentionsMe: mentionsUser(last?.text, meId),
+    iReacted: reactedBy(mention, meId) || reactedBy(last, meId),
   }
 }
 
@@ -348,6 +383,14 @@ export async function pullSlack({
       lastFrom: names.get(match.user) ?? match.username ?? 'unknown',
       lastFromMe: false,
       lastAt: isoOf(match.ts),
+      /*
+       * Until the state read happens the mention *is* the last word we know of, so the last
+       * text is its own text. `stateRead` says which of the two this is, because "nobody has
+       * replied" and "nobody has looked" must not read the same.
+       */
+      lastText: excerptOf(match.text),
+      lastMentionsMe: mentionsUser(match.text, me.user_id),
+      stateRead: false,
     }
 
     /*
@@ -372,6 +415,7 @@ export async function pullSlack({
         (await channelStateSince(token, channel, ts, me.user_id))
       row.threadTs = state.threaded ? ts : null
       row.replies = state.replies
+      row.stateRead = true
       if (state.lastUser) {
         row.lastFrom = names.get(state.lastUser) ?? 'unknown'
         row.lastFromMe = state.lastUser === me.user_id
@@ -380,6 +424,12 @@ export async function pullSlack({
       // the mention then it is not waiting on me either.
       if (state.mineSince) row.lastFromMe = true
       row.lastAt = state.lastAt ?? row.lastAt
+      if (state.lastText !== null && state.lastText !== undefined) {
+        row.lastText = excerptOf(state.lastText)
+        row.lastMentionsMe = Boolean(state.lastMentionsMe)
+      }
+      // A ✅ of mine on the mention or on the last word answers it as much as a sentence does.
+      row.iReacted = Boolean(state.iReacted)
     } catch {
       // A channel I have since left, or a deleted message: the mention still stands on its own,
       // so keep the row rather than dropping it.
@@ -419,10 +469,28 @@ export async function pullSlack({
       lastFrom: names.get(match.user) ?? match.username ?? other,
       lastFromMe: match.user === me.user_id,
       lastAt: isoOf(match.ts),
+      /*
+       * A direct message conversation has one timeline, so its newest message *is* the last
+       * word — no thread or channel read needed, and the two texts are the same text. Its
+       * reactions are not in a search match though, so `iReacted` stays unknown here.
+       */
+      lastText: excerptOf(match.text),
+      lastMentionsMe: mentionsUser(match.text, me.user_id),
+      stateRead: true,
     })
   }
 
   rows.sort((a, b) => new Date(a.lastAt).getTime() - new Date(b.lastAt).getTime())
+
+  /*
+   * Rows past the lookup cap keep the mention as their last word without anybody having
+   * checked, which reads exactly like "nobody replied". Name it, the way the GitHub pullers
+   * name a page cap, rather than letting a guess pass for a reading.
+   */
+  const unread = rows.filter((row) => row.stateRead === false).length
+  const incomplete = unread
+    ? [`${unread} mention${unread === 1 ? '' : 's'} past the ${THREAD_LOOKUPS}-lookup cap: what came after them was not read`]
+    : []
 
   return {
     type: 'slack',
@@ -431,5 +499,6 @@ export async function pullSlack({
     me: handle,
     days,
     rows,
+    ...(incomplete.length ? { incomplete } : {}),
   }
 }

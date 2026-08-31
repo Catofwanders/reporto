@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { ReportKind } from './reportKinds';
 import { DEFAULT_VOCAB, type StatusVocab } from './statusVocab';
+import type { SlackWords } from './slackIntent';
 
 /** One module's standing, as the server reports it. Never carries a credential's value. */
 export interface Capability {
@@ -34,6 +35,12 @@ export interface CapabilitiesValue {
    * owns the board and this repo is public. Falls back to universal Jira words.
    */
   statuses: StatusVocab;
+  /**
+   * Extra phrases that make a Slack message an ask or a closer, from config. Committed code
+   * knows English requests and acknowledgements; a workspace answering in another language
+   * needs to add its own, and those words are its own business.
+   */
+  slackWords: SlackWords;
   /** Configured *and* switched on — the test for showing a nav row, a module or a card. */
   usable: (kind: ReportKind) => boolean;
   of: (kind: ReportKind) => Capability | null;
@@ -54,6 +61,7 @@ export const CapabilitiesContext = createContext<CapabilitiesValue>({
   statusAging: {},
   stuckStatuses: [],
   statuses: DEFAULT_VOCAB,
+  slackWords: {},
   usable: () => true,
   of: () => null,
   loaded: false,

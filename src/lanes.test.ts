@@ -200,6 +200,68 @@ describe('Slack lanes', () => {
     expect(laneOfSlack(row())).toBe('asked');
   });
 
+  /*
+   * The measurement that produced these lanes: three rows sat in "waiting on you" and one was
+   * a question. A statement and an acknowledgement are readable, and neither is work.
+   */
+  it('keeps a conversation-ender out of the waiting lanes', () => {
+    expect(laneOfSlack(row({ lastText: 'thanks!' }))).toBe('nothing');
+    expect(laneOfSlack(row({ kind: 'dm', lastText: '👍' }))).toBe('nothing');
+  });
+
+  it('files a channel statement as reading, not as an answer', () => {
+    expect(laneOfSlack(row({ lastText: 'deployed the payout report to QC' }))).toBe('fyi');
+  });
+
+  /*
+   * DMs are not exempt, and the measurement is why: of three rows in a real queue, two were
+   * DMs where somebody had told me something and stopped. A one-to-one statement is still
+   * reading rather than work — it is one fold away, not gone.
+   */
+  it('files a DM statement as reading too', () => {
+    expect(laneOfSlack(row({ kind: 'dm', lastText: 'the client moved the call to Friday' }))).toBe(
+      'fyi',
+    );
+  });
+
+  it('keeps a DM that asks something in the queue', () => {
+    expect(laneOfSlack(row({ kind: 'dm', lastText: 'can you join the client call?' }))).toBe('dms');
+  });
+
+  /* An old *ask* is still stale; an old statement is not suddenly urgent. */
+  it('only ages asks into stale', () => {
+    expect(laneOfSlack(row({ lastAt: daysAgo(9) }))).toBe('stale');
+    expect(laneOfSlack(row({ lastAt: daysAgo(9), lastText: 'deployed it' }))).toBe('fyi');
+  });
+
+  it('says what the last message is, rather than assuming a question', () => {
+    expect(reasonOfSlack(row({ lastText: 'deployed the payout report' }), 2)).toBe(
+      'colleague told you something 2 days ago in the channel',
+    );
+    expect(reasonOfSlack(row({ lastText: 'thanks!' }), 1)).toBe(
+      'colleague closed it off 1 day ago in the channel',
+    );
+  });
+
+  /* This app offers the ✅ button, so it has to recognise its own answer. */
+  it('treats my reaction as an answer', () => {
+    expect(laneOfSlack(row({ iReacted: true }))).toBe('answered');
+    expect(reasonOfSlack(row({ iReacted: true }), 0)).toBe('you reacted today');
+  });
+
+  /* Config words, for a workspace that does not close conversations in English. */
+  it('accepts extra closer words from config', () => {
+    expect(laneOfSlack(row({ lastText: 'готово' }))).toBe('fyi');
+    expect(laneOfSlack(row({ lastText: 'готово' }), { closer: ['готово'] })).toBe('nothing');
+  });
+
+  /* A row past the lookup cap must not claim nobody replied. */
+  it('says the replies were not read when the cap was hit', () => {
+    expect(reasonOfSlack(row({ stateRead: false }), 2)).toBe(
+      'colleague mentioned you 2 days ago in the channel · replies not read',
+    );
+  });
+
   it('says who is waiting, where, and for how long', () => {
     expect(reasonOfSlack(row(), 0)).toBe('colleague asked today in the channel, no reply yet');
     expect(reasonOfSlack(row({ kind: 'dm' }), 2)).toBe('colleague asked 2 days ago in your DMs, no reply yet');

@@ -317,6 +317,28 @@ export interface SlackRow {
   lastAt: string | null;
   /** First line, with Slack's markup flattened. */
   excerpt: string;
+  /**
+   * The last message in the conversation, flattened — the mention's own text when nothing has
+   * been read after it. This is what makes "asks you something" separable from "thanks!", and
+   * it was on the wire all along: the state readers had it and dropped it.
+   */
+  lastText?: string;
+  /**
+   * Whether that last message tags me. Read from the raw text before the markup is flattened,
+   * because `<@U123>` becomes "@someone" and the signal is gone.
+   */
+  lastMentionsMe?: boolean;
+  /**
+   * Whether I reacted to the mention or to the last word. A ✅ is an answer — and this app
+   * offers that button, so without it the row it created comes back as still waiting.
+   * Undefined where it could not be checked, which is every DM.
+   */
+  iReacted?: boolean;
+  /**
+   * Whether anything after the mention was actually read. False means the lookup cap was hit,
+   * so "no reply yet" is a guess rather than a reading.
+   */
+  stateRead?: boolean;
   /** Ticket keys named in the message — the hook the flow checks hang on. */
   tickets: string[];
   /** Pull requests named in it, as "repo#num". */
@@ -332,6 +354,8 @@ export interface SlackReport {
   /** How many days back the search went. */
   days: number;
   rows: SlackRow[];
+  /** Caps this pull hit, named rather than hidden — same contract as the GitHub reports. */
+  incomplete?: string[];
 }
 
 /** A lane in a flow diagram: who or what performs a step. */

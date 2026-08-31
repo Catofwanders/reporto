@@ -5,6 +5,7 @@ import type { Capability } from './capabilitiesContext';
 import { CapabilitiesContext } from './capabilitiesContext';
 import { statusVocab, type StatusVocabConfig } from './statusVocab';
 import { fetchWithTimeout } from './apiFetch';
+import type { SlackWords } from './slackIntent';
 
 /**
  * What this machine can do, fetched once from the dev server.
@@ -21,6 +22,7 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
   const [statusAging, setStatusAging] = useState<Record<string, number>>({});
   const [stuckStatuses, setStuckStatuses] = useState<string[]>([]);
   const [vocabConfig, setVocabConfig] = useState<StatusVocabConfig | null>(null);
+  const [slackWords, setSlackWords] = useState<SlackWords>({});
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -35,6 +37,7 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
                 statusAging?: Record<string, number>;
                 stuckStatuses?: string[];
                 statuses?: StatusVocabConfig;
+                slackWords?: SlackWords;
               }
             | null,
         ) => {
@@ -43,6 +46,7 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
           if (body?.statusAging) setStatusAging(body.statusAging);
           if (body?.stuckStatuses) setStuckStatuses(body.stuckStatuses);
           if (body?.statuses) setVocabConfig(body.statuses);
+          if (body?.slackWords) setSlackWords(body.slackWords);
           setLoaded(true);
         },
       )
@@ -103,13 +107,25 @@ export const CapabilitiesProvider = ({ children }: { children: ReactNode }) => {
       statusAging,
       stuckStatuses,
       statuses,
+      slackWords,
       usable,
       of,
       loaded,
       setEnabled,
       saveSecret,
     }),
-    [modules, statusAging, stuckStatuses, statuses, usable, of, loaded, setEnabled, saveSecret],
+    [
+      modules,
+      statusAging,
+      stuckStatuses,
+      statuses,
+      slackWords,
+      usable,
+      of,
+      loaded,
+      setEnabled,
+      saveSecret,
+    ],
   );
 
   return <CapabilitiesContext.Provider value={value}>{children}</CapabilitiesContext.Provider>;
