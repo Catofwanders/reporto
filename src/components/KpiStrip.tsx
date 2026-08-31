@@ -5,6 +5,7 @@ import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import HourglassBottomRoundedIcon from '@mui/icons-material/HourglassBottomRounded';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
+import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import type { Kpis } from '../needsYou';
 
 type Kind = 'prs' | 'reviews' | 'slack' | 'jira';
@@ -78,6 +79,18 @@ const TILES: Tile[] = [
       'Tickets in one of the statuses watched for this (stuckStatuses in ' +
       'config/reporto.json) for longer than that status allows. Blocked and QC-failed ' +
       'tickets are excluded: they are loud through their own status, not through their age',
+    needs: 'jira',
+  },
+  {
+    key: 'activity',
+    counts: ['jira'],
+    label: 'unread on my tickets',
+    icon: NotificationsRoundedIcon,
+    to: '/jira',
+    tone: 'warn',
+    title:
+      'Comments and changes other people made to my tickets that I have not read. The read ' +
+      'mark is this browser\u2019s: Jira will not tell anybody what has been read',
     needs: 'jira',
   },
   {

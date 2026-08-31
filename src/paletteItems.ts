@@ -1,4 +1,4 @@
-import type { JiraReport, KitEntry, PrsReport } from './types';
+import type { JiraActivityItem, JiraReport, KitEntry, PrsReport } from './types';
 import type { ReportKind } from './reportKinds';
 import { KIND_META, REPORT_KINDS } from './reportKinds';
 import { formatStatus } from './jiraStatus';
@@ -59,6 +59,11 @@ export function buildItems(
   kit: KitEntry[],
   /** Which report kinds this machine can actually fetch; everything else is left out. */
   usable: (kind: ReportKind) => boolean = () => true,
+  /**
+   * Unread activity, already filtered by the caller — the read mark lives in the browser, so
+   * this module cannot work out which items are unread and does not try.
+   */
+  unread: JiraActivityItem[] = [],
 ): PaletteItem[] {
   // A palette that offers "Update Statistics" on a machine with no Jira token is a list of
   // ways to fail. Pages tied to a report go the same way as their nav row.
@@ -74,6 +79,22 @@ export function buildItems(
       subtitle: 'fetch it again now',
       keywords: 'refresh pull reload',
       action: { kind: 'refresh', report: kind },
+    });
+  }
+
+  /*
+   * Unread first among the ticket rows: what somebody said about a ticket this morning is a
+   * more likely search than the ticket itself, and typing the key finds both.
+   */
+  for (const item of usable('jira') ? unread : []) {
+    items.push({
+      id: `unread:${item.id}`,
+      group: 'Unread',
+      title: `${item.ticket} — ${item.excerpt}`,
+      subtitle: `${item.author ?? 'someone'}${item.mentionsMe ? ' · tagged you' : ''}`,
+      keywords: 'unread activity comment change mention',
+      kind: 'jira',
+      action: { kind: 'goto', to: `/jira#${item.ticket}` },
     });
   }
 

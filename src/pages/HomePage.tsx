@@ -22,6 +22,7 @@ import {
   snooze as snoozeRow,
   writeSnoozes,
 } from '../snooze';
+import { readMarks, unreadCount } from '../jiraActivity';
 
 interface HomePageProps {
   jira: JiraReport | null;
@@ -85,7 +86,13 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps)
   const snoozedNow = queue.filter((item) => rowSnoozed(item.id, snoozes));
   const items = showSnoozed ? queue : queue.filter((item) => !rowSnoozed(item.id, snoozes));
   const total = needsYouTotal(sources);
-  const counts = kpis({ ...sources, conflicts: findings.length });
+  /*
+   * Read from `localStorage` on mount, not on every render: this is the same mark the Jira
+   * page owns, and the strip only needs the number. Opening the panel there and coming back
+   * re-mounts this page, so the count does not go stale in practice.
+   */
+  const unread = sources.jira?.activity ? unreadCount(sources.jira.activity, readMarks()) : 0;
+  const counts = kpis({ ...sources, conflicts: findings.length, unread });
 
   return (
     <main className="home">

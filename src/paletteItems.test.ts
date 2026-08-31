@@ -69,6 +69,46 @@ const kit: KitEntry[] = [
 const items = buildItems(jira, prs, kit);
 const titles = (query: string) => matchItems(items, query).map((item) => item.title);
 
+describe('buildItems with unread activity', () => {
+  const unread = [
+    {
+      id: 'SHOP-1:change:9:assignee',
+      kind: 'change' as const,
+      field: 'assignee',
+      ticket: 'SHOP-1',
+      ticketUrl: 'https://jira.example.com/browse/SHOP-1',
+      summary: 'basket totals ignore the seller discount',
+      status: 'In Progress',
+      author: 'A teammate',
+      avatar: null,
+      at: '2026-05-14T08:00:00Z',
+      mentionsMe: true,
+      excerpt: 'assigned it to you',
+    },
+  ];
+
+  /*
+   * What somebody did to a ticket this morning is a likelier search than the ticket itself,
+   * and the row has to lead to the page that shows it rather than to Jira.
+   */
+  it('offers an unread row that lands on the ticket', () => {
+    const rows = buildItems(jira, prs, kit, () => true, unread);
+    const row = rows.find((item) => item.group === 'Unread');
+    expect(row?.title).toBe('SHOP-1 — assigned it to you');
+    expect(row?.subtitle).toBe('A teammate · tagged you');
+    expect(row?.action).toEqual({ kind: 'goto', to: '/jira#SHOP-1' });
+  });
+
+  it('offers none when nothing is unread', () => {
+    expect(buildItems(jira, prs, kit).some((item) => item.group === 'Unread')).toBe(false);
+  });
+
+  it('leaves unread rows out when Jira is switched off', () => {
+    const rows = buildItems(jira, prs, kit, (kind) => kind !== 'jira', unread);
+    expect(rows.some((item) => item.group === 'Unread')).toBe(false);
+  });
+});
+
 describe('buildItems', () => {
   it('offers pages, updates, tickets, PRs and the kit', () => {
     expect([...new Set(items.map((item) => item.group))]).toEqual(

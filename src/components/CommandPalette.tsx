@@ -6,6 +6,7 @@ import { fetchKit } from '../kit';
 import { copyText } from '../copyText';
 import { buildItems, matchItems, parseQuery, type PaletteItem } from '../paletteItems';
 import { useCapabilities } from '../capabilitiesContext';
+import { readMarks, unreadItems } from '../jiraActivity';
 
 interface CommandPaletteProps {
   jira: JiraReport | null;
@@ -55,7 +56,14 @@ export const CommandPalette = ({ jira, prs }: CommandPaletteProps) => {
   }, [open, kit.length]);
 
   const { usable } = useCapabilities();
-  const items = useMemo(() => buildItems(jira, prs, kit, usable), [jira, prs, kit, usable]);
+  /*
+   * The read mark is read once per palette build rather than held in state: the palette is
+   * rebuilt when it opens, which is the only moment its rows are looked at.
+   */
+  const items = useMemo(
+    () => buildItems(jira, prs, kit, usable, jira?.activity ? unreadItems(jira.activity, readMarks()) : []),
+    [jira, prs, kit, usable],
+  );
   const shown = useMemo(() => matchItems(items, query), [items, query]);
   const { actionsOnly } = parseQuery(query);
 

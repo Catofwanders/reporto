@@ -115,6 +115,12 @@ Opening a row opens the ticket drawer, which is where a comment can actually be 
 marks that one read. The tick marks it read without opening it, for the ones the excerpt
 already answered.
 
+The count reaches two other places, because a panel one route deep is a panel you have to
+remember to visit: a tile in the dashboard's strip, and a row per unread item in ⌘K — where
+what somebody did this morning is a likelier search than the ticket itself, and both find the
+same key. Neither can derive the number itself, since the read mark is in `localStorage` rather
+than in any report, so both are handed it by the page that owns the mark.
+
 ## Open PRs, by who is holding the ball
 
 The PR list is grouped by what has to happen next, not by repo — repo sorts work by where

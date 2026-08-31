@@ -250,6 +250,11 @@ export interface Kpis {
   /** Tickets past the days-in-status limit configured for their status. */
   stuck: number;
   conflicts: number;
+  /**
+   * Unread comments and changes on my tickets. Passed in rather than derived: the read mark
+   * lives in the browser, not in any report, so only the caller can know it.
+   */
+  activity: number;
 }
 
 export const kpis = ({
@@ -260,6 +265,7 @@ export const kpis = ({
   stuckStatuses = [],
   vocab = DEFAULT_VOCAB,
   conflicts = 0,
+  unread = 0,
 }: {
   prs: PrsReport | null;
   reviews: ReviewsReport | null;
@@ -270,6 +276,7 @@ export const kpis = ({
   stuckStatuses?: string[];
   vocab?: StatusVocab;
   conflicts?: number;
+  unread?: number;
 }): Kpis => {
   const reviewLanes = reviews ? toReviewLanes(reviews, jira) : new Map();
   const active = jira ? activeTickets(jira, vocab) : [];
@@ -284,5 +291,6 @@ export const kpis = ({
       (ticket) => countsAsStuck(ticket.status, stuckStatuses) && agingOf(ticket, aging)?.over,
     ).length,
     conflicts,
+    activity: unread,
   };
 };

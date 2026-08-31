@@ -262,7 +262,7 @@ describe('kpis', () => {
       stuckStatuses: ['In Progress'],
       conflicts: 2,
     });
-    expect(counts).toEqual({ prs: 2, reviews: 1, tickets: 1, stuck: 1, conflicts: 2 });
+    expect(counts).toEqual({ prs: 2, reviews: 1, tickets: 1, stuck: 1, conflicts: 2, activity: 0 });
   });
 
   it('is all zeros with no reports, rather than throwing', () => {
@@ -272,6 +272,15 @@ describe('kpis', () => {
       tickets: 0,
       stuck: 0,
       conflicts: 0,
+      activity: 0,
     });
+  });
+
+  /*
+   * The unread count is passed in, because the read mark lives in the browser and no report
+   * knows it. Zero must therefore mean "nothing unread", never "nobody told me".
+   */
+  it('carries the unread count through untouched', () => {
+    expect(kpis({ prs: null, reviews: null, jira: null, unread: 4 }).activity).toBe(4);
   });
 });
