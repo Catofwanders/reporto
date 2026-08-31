@@ -85,7 +85,7 @@ detail; `public/reports/` is gitignored and stays on your disk.
 
 | | |
 |---|---|
-| **Dashboard** | the queue, the counts, today, the stand-up note |
+| **Dashboard** | the queue, the counts, today, what moved since the last report, the stand-up note |
 | **Jira** | unread comments on my tickets, then the board in workflow order or a list; click a card to read the ticket in place |
 | **Pull requests** | my open PRs in four lanes, by who is holding the ball |
 | **Reviews** | what is waiting on my review, and what was pushed after I looked |
@@ -118,7 +118,7 @@ Tests cover the **derivation** — the functions that decide what a morning look
 wrong answer is plausible enough to survive review — and the **pullers**, at their own
 boundaries: `fetch` is stubbed for Jira, Slack and Calendar, and a fake `gh` first on `PATH`
 stands in for GitHub, so no test needs a token or a network. Those modules sit at or near 100%;
-the tree is around 40%, because components are checked in Storybook and in the browser. Several
+the tree is around 43%, because components are checked in Storybook and in the browser. Several
 tests exist because the bug shipped first: a base-branch merge must not read as a push, an
 unmeasured ticket must not render as "0 days", a failed changelog read must not date a ticket
 from its creation, and a `javascript:` href in a Jira description must never become a link.
