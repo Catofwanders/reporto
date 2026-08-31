@@ -43,6 +43,30 @@ A board card holds the summary, its PRs, and a deploy-qc warning when a merged P
 from that branch. Everything else — per-ticket notes, PR remarks — lives in the **List**
 view behind the toggle in the card header.
 
+## Since the last report
+
+Every other panel describes *now*: what is open, what is waiting, how long it has waited. None
+of them answered the question you actually have on a Monday — what moved while I was not
+looking — and the data for it had been on disk all along, because a report is a dated file and
+last week's is still there.
+
+So this one costs **no API call**. It is a diff of two files: the board and the open PRs from
+the newest day that is not today's, against today's. Tickets that arrived, tickets that moved
+and to where, tickets that left the board; PRs opened, review verdicts that landed, drafts that
+became ready, and PRs that are no longer open.
+
+Three things it refuses to guess:
+
+- **A half that is missing from the older day is skipped**, not compared against nothing. A
+  morning whose pull failed would otherwise read as "your whole board arrived today".
+- **A PR that is gone says "merged or closed"**, because the report holds open PRs only and
+  which of the two happened is genuinely not in these files.
+- **No earlier report at all renders nothing.** A fresh clone has one day of history, and
+  "nothing changed" would be a claim rather than a reading.
+
+Folded by default, with the count in the head: it answers a Monday question, and the first
+screen belongs to what is waiting now.
+
 ## "Not today" on the queue
 
 The queue had no triage. A row you have looked at, decided about and cannot act on yet — a PR

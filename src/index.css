@@ -1444,3 +1444,9 @@ body { background: var(--canvas); }
   margin-left: .4rem; background: none; border: 0; padding: 0; cursor: pointer;
   color: var(--accent); font: inherit; text-decoration: underline;
 }
+
+/* "Since <day>" — folded by default, so it costs one line until somebody asks for it. */
+.since .needs-count { margin-left: auto; }
+.since-toggle { margin-left: .4rem; }
+.since-list { max-height: 14rem; overflow-y: auto; margin-top: .35rem; padding-right: .2rem; }
+.since-list { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }

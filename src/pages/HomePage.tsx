@@ -16,6 +16,8 @@ import { NeedsYou } from '../components/NeedsYou';
 import { PrMix } from '../components/PrMix';
 import { StandupCard } from '../components/StandupCard';
 import { useTicketReader } from '../components/useTicketReader';
+import { SinceYesterday } from '../components/SinceYesterday';
+import type { SinceReport } from '../sinceYesterday';
 import {
   isSnoozed as rowSnoozed,
   readSnoozes,
@@ -30,6 +32,9 @@ interface HomePageProps {
   slack: SlackReport | null;
   calendar: CalendarReport | null;
   prs: PrsReport | null;
+  /** What moved since the last day there is a report for; costs no API call. */
+  since?: SinceReport;
+
 }
 
 /**
@@ -46,7 +51,7 @@ interface HomePageProps {
  * the next thing" is a distance rather than a sentence. Nothing is lost — every item links to
  * the page that owns it. This screen decides where to look; it does not do the work.
  */
-export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps) => {
+export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePageProps) => {
   const { usable, statusAging, stuckStatuses, statuses } = useCapabilities();
   const [snoozes, setSnoozes] = useState(readSnoozes);
   const [showSnoozed, setShowSnoozed] = useState(false);
@@ -133,6 +138,8 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps)
               </section>
             ))}
           {sources.prs && <PrMix report={sources.prs} />}
+          {/* Folded: this answers a Monday question, not an every-morning one. */}
+          {since && <SinceYesterday report={since} />}
           {/* Folded by default: a contradiction is worth knowing about, not worth a third of
               the screen every morning, and its count is already in the strip above. */}
           <FlowChecks jira={sources.jira} prs={sources.prs} slack={sources.slack} collapsed />

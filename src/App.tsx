@@ -14,6 +14,7 @@ import { REPORT_KINDS } from './reportKinds';
 import { RefreshProvider } from './refresh';
 import { CapabilitiesProvider } from './capabilities';
 import { assertReport } from './reportSchema';
+import { previousFiles, sinceYesterday } from './sinceYesterday';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ModuleGate } from './components/ModuleGate';
@@ -70,6 +71,42 @@ async function fetchIndex(): Promise<ReportIndex> {
   return (await res.json()) as ReportIndex;
 }
 
+interface Previous {
+  date: string | null;
+  jira: JiraReport | null;
+  prs: PrsReport | null;
+}
+
+const NO_PREVIOUS: Previous = { date: null, jira: null, prs: null };
+
+/**
+ * Yesterday's board and PRs, for the "since" panel.
+ *
+ * Two extra reads of local files, and no API call at all — the whole point of that panel is
+ * that the history is already on disk. Failures are swallowed: an unreadable older report
+ * costs the comparison, never the dashboard.
+ */
+async function fetchPrevious(index: ReportIndex, today: string | undefined): Promise<Previous> {
+  const files = previousFiles(index, today);
+  if (!files.date) return NO_PREVIOUS;
+  const read = async (kind: 'jira' | 'prs', file?: string) => {
+    if (!file) return null;
+    try {
+      const value = await fetchJson<unknown>(file);
+      assertReport(kind, value);
+      return value;
+    } catch {
+      return null;
+    }
+  };
+  const [jira, prs] = await Promise.all([read('jira', files.jira), read('prs', files.prs)]);
+  return {
+    date: files.date,
+    jira: (jira as JiraReport | null) ?? null,
+    prs: (prs as PrsReport | null) ?? null,
+  };
+}
+
 interface Reports {
   jira: JiraReport | null;
   stats: StatsReport | null;
@@ -121,6 +158,7 @@ export const App = () => {
   const [loadErrors, setLoadErrors] = useState<KindErrors>({});
   const [indexError, setIndexError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [previous, setPrevious] = useState<Previous>(NO_PREVIOUS);
 
   /**
    * Loads the given kinds independently: one broken report must not blank the others,
@@ -137,6 +175,12 @@ export const App = () => {
     }
 
     const settled = await Promise.allSettled(kinds.map((kind) => fetchKind(index, kind)));
+    // Only when the board itself was re-read: nothing else can change what yesterday was.
+    if (kinds.includes('jira') || kinds.includes('prs')) {
+      void fetchPrevious(index, index.history?.[0]?.date).then(setPrevious, () =>
+        setPrevious(NO_PREVIOUS),
+      );
+    }
     setReports((prev) => {
       const next = { ...prev };
       kinds.forEach((kind, i) => {
@@ -225,6 +269,10 @@ export const App = () => {
                         slack={reports.slack}
                         calendar={reports.calendar}
                         prs={reports.prs}
+                        since={sinceYesterday(previous, {
+                          jira: reports.jira,
+                          prs: reports.prs,
+                        })}
                       />
                     }
                   />
