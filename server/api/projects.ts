@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { Plugin } from 'vite'
 
-const __dirname = path.resolve(import.meta.dirname, '../..')
+/** The repo root, two levels up from `server/api`. */
+const projectRoot = path.resolve(import.meta.dirname, '../..')
 
 /**
  * The hand-written map of the work — projects, the ticket workflow, the infrastructure
@@ -21,7 +22,7 @@ export function projectsPlugin(): Plugin {
           return
         }
         for (const dir of ['config', 'config.template']) {
-          const file = path.resolve(__dirname, dir, 'projects.json')
+          const file = path.resolve(projectRoot, dir, 'projects.json')
           if (!fs.existsSync(file)) continue
           try {
             res.end(fs.readFileSync(file, 'utf8'))

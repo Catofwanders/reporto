@@ -4,7 +4,8 @@ import path from 'node:path'
 import type { Plugin } from 'vite'
 import { REFRESH_COMMANDS, RUN_TIMEOUT_MS, agentEnv, rejectCrossSite } from './guard.js'
 
-const __dirname = path.resolve(import.meta.dirname, '../..')
+/** The repo root, two levels up from `server/api`. */
+const projectRoot = path.resolve(import.meta.dirname, '../..')
 
 export function refreshPlugin(): Plugin {
   const running = new Map<string, Promise<unknown>>()
@@ -56,7 +57,7 @@ export function refreshPlugin(): Plugin {
         // A skill that cannot do its job may still exit 0 after explaining why (the mail
         // skill does exactly that when the Chrome extension is absent). Exit status alone
         // would report success while nothing changed, so compare the report files too.
-        const reportsDir = path.resolve(__dirname, 'public/reports')
+        const reportsDir = path.resolve(projectRoot, 'public/reports')
         const stamps = (kinds: string[]) =>
           kinds.map((kind) => {
             if (!fs.existsSync(reportsDir)) return `${kind}:none`
@@ -74,7 +75,7 @@ export function refreshPlugin(): Plugin {
           const child = spawn(
             'claude',
             ['-p', entry.command, '--allowedTools', ...entry.allowedTools],
-            { cwd: __dirname, env: agentEnv(), stdio: ['ignore', 'pipe', 'pipe'] },
+            { cwd: projectRoot, env: agentEnv(), stdio: ['ignore', 'pipe', 'pipe'] },
           )
           let out = ''
           let settled = false

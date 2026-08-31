@@ -9,12 +9,13 @@
 import path from 'node:path'
 import { loadConfig } from '../reports.mjs'
 
-const __dirname = path.resolve(import.meta.dirname, '../..')
+/** The repo root, two levels up from `server/api`. */
+const projectRoot = path.resolve(import.meta.dirname, '../..')
 
 export function buildToolLists(githubOrg: string | undefined) {
   const reportWrite = [
     'Read',
-    `Edit(//${path.join(__dirname, 'public/reports')}/**)`,
+    `Edit(//${path.join(projectRoot, 'public/reports')}/**)`,
     'Bash(jq:*)',
   ]
   return {

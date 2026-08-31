@@ -1,5 +1,8 @@
+import path from 'node:path'
 import type { Plugin } from 'vite'
 import { readKit } from '../kit.mjs'
+
+const projectRoot = path.resolve(import.meta.dirname, '../..')
 
 export function kitPlugin(): Plugin {
   return {
@@ -13,7 +16,7 @@ export function kitPlugin(): Plugin {
           return
         }
         try {
-          res.end(JSON.stringify(readKit({ projectDir: __dirname })))
+          res.end(JSON.stringify(readKit({ projectDir: projectRoot })))
         } catch (err) {
           res.statusCode = 500
           res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }))

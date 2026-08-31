@@ -20,10 +20,17 @@ import { standupPlugin } from './server/api/standup.js'
  * This file used to hold all nine plugins and reached 850 lines, at which point two of its doc
  * comments had drifted away from the code they described. It is a plugin list again.
  */
+/*
+ * `import.meta.dirname`, not `__dirname`: this file is ESM, and Vite's native config loader —
+ * planned to become the default — does not inject the CommonJS globals. It warned on every
+ * start, which is the kind of notice only running the app shows you.
+ */
+const root = path.resolve(import.meta.dirname)
+
 export default defineConfig(({ mode }) => {
   // Vite only exposes VITE_-prefixed vars, and only to the client. The pullers run in this
   // process and need the raw ones, so lift .env into the environment by hand.
-  for (const [key, value] of Object.entries(loadEnv(mode, __dirname, ''))) {
+  for (const [key, value] of Object.entries(loadEnv(mode, root, ''))) {
     // An empty var is as good as unset here: a placeholder line left blank in .env must not
     // win over a value filled in later, which `??=` would have let it do.
     if (!process.env[key]) process.env[key] = value
@@ -41,7 +48,7 @@ export default defineConfig(({ mode }) => {
        * client systems. Absolute patterns, because `deny` matches the resolved path.
        */
       fs: {
-        deny: [path.join(__dirname, 'config/**'), path.join(__dirname, '.claude/**')],
+        deny: [path.join(root, 'config/**'), path.join(root, '.claude/**')],
       },
     },
     plugins: [

@@ -1351,8 +1351,13 @@ body { background: var(--canvas); }
   opacity: 0;
 }
 .needs-row { position: relative; }
+/*
+ * `:focus`, not `:focus-visible`. Closing the drawer returns focus here programmatically, and
+ * `:focus-visible` does not match that — so the control was focused and invisible, which is
+ * the one state a focusable thing must never be in.
+ */
 .needs-row:hover .needs-read,
-.needs-read:focus-visible { opacity: 1; }
+.needs-read:focus { opacity: 1; }
 .needs-read:hover { color: var(--ink); border-color: var(--accent); }
 /* A control that only appears on hover is unusable by keyboard unless focus reveals it too. */
 @media (hover: none) {
