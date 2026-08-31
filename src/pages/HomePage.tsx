@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type {
   CalendarReport,
   JiraReport,
@@ -15,6 +16,12 @@ import { NeedsYou } from '../components/NeedsYou';
 import { PrMix } from '../components/PrMix';
 import { StandupCard } from '../components/StandupCard';
 import { useTicketReader } from '../components/useTicketReader';
+import {
+  isSnoozed as rowSnoozed,
+  readSnoozes,
+  snooze as snoozeRow,
+  writeSnoozes,
+} from '../snooze';
 
 interface HomePageProps {
   jira: JiraReport | null;
@@ -40,6 +47,8 @@ interface HomePageProps {
  */
 export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps) => {
   const { usable, statusAging, stuckStatuses, statuses } = useCapabilities();
+  const [snoozes, setSnoozes] = useState(readSnoozes);
+  const [showSnoozed, setShowSnoozed] = useState(false);
 
   // A module switched off in Settings, or one whose credentials are missing, contributes
   // nothing — not an empty row, not a zero in the strip.
@@ -67,7 +76,14 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps)
   // Before the first pull there is nothing to be relieved about; the panels say so instead of
   // rendering a confident emptiness.
   const unpulled = !sources.jira && !sources.prs && !sources.reviews && !sources.slack;
-  const items = needsYou(sources);
+  const queue = needsYou(sources);
+  /*
+   * Snoozed rows leave the list but not the counting: the KPI strip keeps the true total, and
+   * the panel says how many it is holding back. A number that quietly shrinks when a row is
+   * dismissed is the failure mode this whole dashboard exists to avoid.
+   */
+  const snoozedNow = queue.filter((item) => rowSnoozed(item.id, snoozes));
+  const items = showSnoozed ? queue : queue.filter((item) => !rowSnoozed(item.id, snoozes));
   const total = needsYouTotal(sources);
   const counts = kpis({ ...sources, conflicts: findings.length });
 
@@ -86,6 +102,15 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack }: HomePageProps)
           total={total}
           unpulled={unpulled}
           onReadTicket={sources.jira ? reader.read : undefined}
+          onSnooze={(id) => {
+            const next = snoozeRow(id, snoozes);
+            writeSnoozes(next);
+            setSnoozes(next);
+          }}
+          snoozed={snoozedNow.length}
+          showSnoozed={showSnoozed}
+          onToggleSnoozed={() => setShowSnoozed((on: boolean) => !on)}
+          isSnoozed={(id) => rowSnoozed(id, snoozes)}
         />
 
         <div className="home-aside">

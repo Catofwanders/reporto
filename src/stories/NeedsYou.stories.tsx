@@ -69,3 +69,25 @@ export const GithubOnly: Story = { args: feed({ slack: null, jira: null }) };
 
 /** Nothing blocked on me. Said in one line rather than as five empty groups. */
 export const Clear: Story = { args: { items: [], total: 0 } };
+
+/**
+ * With snoozing wired up: every row carries a "not today", and the line underneath says how
+ * many are being held back. The count in the head stays the whole queue — a number that
+ * shrinks when a row is dismissed is the failure this dashboard exists to avoid.
+ */
+export const Snoozing: Story = {
+  args: { ...feed({ limit: 20 }), onSnooze: () => {}, snoozed: 2, onToggleSnoozed: () => {} },
+};
+
+/** Snoozed rows while they are being shown: set aside, still readable. */
+export const SnoozedShown: Story = {
+  args: {
+    ...feed({ limit: 20 }),
+    onSnooze: () => {},
+    snoozed: 2,
+    showSnoozed: true,
+    onToggleSnoozed: () => {},
+    // The first two rows of whatever the feed produced, so the story does not name real ids.
+    isSnoozed: (id: string) => id.endsWith('71') || id.endsWith('74'),
+  },
+};

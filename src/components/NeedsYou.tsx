@@ -6,6 +6,7 @@ import ForumRoundedIcon from '@mui/icons-material/ForumRounded';
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
 import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
+import SnoozeRoundedIcon from '@mui/icons-material/SnoozeRounded';
 import { ACTION_LABEL, type FeedAction, type FeedItem, type FeedSource } from '../needsYou';
 
 interface NeedsYouProps {
@@ -20,6 +21,18 @@ interface NeedsYouProps {
    * click away, and the drawer that answers it already exists.
    */
   onReadTicket?: (key: string) => void;
+  /**
+   * "Not today" for one row. A snooze lasts until tomorrow and is never silent: the count
+   * below says how many are hidden, and they can be shown again from there.
+   */
+  onSnooze?: (id: string) => void;
+  /** How many rows are snoozed right now, so hiding them is stated rather than assumed. */
+  snoozed?: number;
+  /** Snoozed rows are in `items` and marked, rather than filtered out. */
+  showSnoozed?: boolean;
+  onToggleSnoozed?: () => void;
+  /** Which of the given items are snoozed, when they are being shown. */
+  isSnoozed?: (id: string) => boolean;
 }
 
 const ICON: Record<FeedSource, SvgIconComponent> = {
@@ -53,7 +66,17 @@ const ORDER: FeedAction[] = ['push', 'review', 'answer', 'merge', 'unstick'];
  * merged list legible: it says what the group wants before any row is read. The full sentence
  * is still the tooltip, and the page behind each row has all of it.
  */
-export const NeedsYou = ({ items, total, unpulled = false, onReadTicket }: NeedsYouProps) => {
+export const NeedsYou = ({
+  items,
+  total,
+  unpulled = false,
+  onReadTicket,
+  onSnooze,
+  snoozed = 0,
+  showSnoozed = false,
+  onToggleSnoozed,
+  isSnoozed,
+}: NeedsYouProps) => {
   const groups = ORDER.map((action) => ({
     action,
     rows: items.filter((item) => item.action === action),
@@ -86,7 +109,21 @@ export const NeedsYou = ({ items, total, unpulled = false, onReadTicket }: Needs
                   const Icon = ICON[item.source];
                   const readable = item.source === 'ticket' && onReadTicket;
                   return (
-                    <li key={item.id} className={`needs-row is-${item.tone}`}>
+                    <li
+                      key={item.id}
+                      className={`needs-row is-${item.tone}${isSnoozed?.(item.id) ? ' is-snoozed' : ''}`}
+                    >
+                      {onSnooze && (
+                        <button
+                          type="button"
+                          className="needs-snooze"
+                          title={`Not today — hide ${item.label} until tomorrow`}
+                          aria-label={`Snooze ${item.label} until tomorrow`}
+                          onClick={() => onSnooze(item.id)}
+                        >
+                          <SnoozeRoundedIcon fontSize="small" />
+                        </button>
+                      )}
                       {readable && (
                         <button
                           type="button"
@@ -122,6 +159,18 @@ export const NeedsYou = ({ items, total, unpulled = false, onReadTicket }: Needs
 
       {total > items.length && (
         <p className="needs-more">{total - items.length} more waiting</p>
+      )}
+
+      {/* Snoozing must never be able to hide the fact that something is hidden. */}
+      {snoozed > 0 && (
+        <p className="needs-more">
+          {snoozed} snoozed until tomorrow
+          {onToggleSnoozed && (
+            <button type="button" className="needs-snoozed-toggle" onClick={onToggleSnoozed}>
+              {showSnoozed ? 'hide' : 'show'}
+            </button>
+          )}
+        </p>
       )}
     </section>
   );

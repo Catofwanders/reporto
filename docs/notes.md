@@ -43,6 +43,25 @@ A board card holds the summary, its PRs, and a deploy-qc warning when a merged P
 from that branch. Everything else — per-ticket notes, PR remarks — lives in the **List**
 view behind the toggle in the card header.
 
+## "Not today" on the queue
+
+The queue had no triage. A row you have looked at, decided about and cannot act on yet — a PR
+waiting on somebody's holiday, a ticket blocked on a contract — kept shouting every morning
+until the state behind it changed, and the honest response of ignoring it teaches you to ignore
+the panel. So a row can be snoozed.
+
+Deliberately weak, in three ways:
+
+- **Until tomorrow, never longer.** It hides a row for one morning rather than letting me bury
+  something for a week.
+- **The count does not move.** The KPI strip and the panel head keep the true total; only the
+  list shortens, and the line underneath says how many are held back and shows them again. A
+  number that quietly shrinks when a row is dismissed is exactly the failure this dashboard
+  exists to prevent.
+- **Local, in `localStorage`**, next to the palette and the activity read mark — the dates are
+  local calendar dates, because `toISOString().slice(0, 10)` on local midnight is yesterday at
+  a positive offset, which would wake every snooze the moment it was set.
+
 ## Unread activity on the Jira page
 
 Above the board: comments other people left on my tickets, and which of them I have not read.
