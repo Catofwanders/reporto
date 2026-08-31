@@ -136,8 +136,24 @@ export const statusVocab = (config: StatusVocabConfig | null | undefined): Statu
   };
 };
 
-/** Position in the workflow. Unknown statuses sort after every known one. */
+export const inStatusGroup = (
+  vocab: StatusVocab,
+  group: keyof StatusGroups,
+  status: string,
+): boolean => vocab.groups[group].some((name) => key(name) === key(status));
+
+/**
+ * Position on the board, left to right.
+ *
+ * Blocked comes first, whatever the configured order says. A blocked ticket is the only kind
+ * whose position in the workflow is beside the point — it is not moving, and somebody has to
+ * unstick it — so it belongs where the eye lands rather than wherever the pipeline puts it.
+ * Expressed through the `blocked` group, so no status name is needed here (rules/nda.md).
+ *
+ * Unknown statuses sort after every known one.
+ */
 export const statusRank = (vocab: StatusVocab, status: string): number => {
+  if (inStatusGroup(vocab, 'blocked', status)) return -1;
   const at = vocab.order.indexOf(key(status));
   return at === -1 ? vocab.order.length : at;
 };
@@ -146,8 +162,3 @@ export const statusRank = (vocab: StatusVocab, status: string): number => {
 export const statusToneOf = (vocab: StatusVocab, status: string): Chip | null =>
   vocab.tones.get(key(status)) ?? null;
 
-export const inStatusGroup = (
-  vocab: StatusVocab,
-  group: keyof StatusGroups,
-  status: string,
-): boolean => vocab.groups[group].some((name) => key(name) === key(status));

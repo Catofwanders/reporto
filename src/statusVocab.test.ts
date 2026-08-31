@@ -72,6 +72,30 @@ describe('statusVocab', () => {
     expect(statusRank(vocab, 'Some Future Column')).toBe(vocab.order.length);
   });
 
+  /*
+   * Blocked first, wherever the configured order puts it. A blocked ticket is the one kind
+   * whose place in the pipeline says nothing: it is not moving, and somebody has to unstick it.
+   */
+  it('ranks a blocked status ahead of every column, whatever the order says', () => {
+    const withBlocked = statusVocab({
+      order: ['Backlog', 'In Progress', 'QA rejected', 'Ready to ship'],
+      groups: { blocked: ['QA rejected'] },
+    });
+    expect(statusRank(withBlocked, 'QA rejected')).toBeLessThan(
+      statusRank(withBlocked, 'Backlog'),
+    );
+    // The universal word too, even though the default order lists it near the end.
+    expect(statusRank(DEFAULT_VOCAB, 'Blocked')).toBeLessThan(
+      statusRank(DEFAULT_VOCAB, 'Backlog'),
+    );
+  });
+
+  /* A group emptied by config means the rule does not fire — no blocked statuses, no reorder. */
+  it('does not move anything when the workflow has no blocked group', () => {
+    const none = statusVocab({ order: ['Backlog', 'In Progress'], groups: { blocked: [] } });
+    expect(statusRank(none, 'Blocked')).toBe(none.order.length);
+  });
+
   it('merges tones, and lets config move a status the defaults already knew', () => {
     // Untouched by config, so still the generic answer.
     expect(statusToneOf(vocab, 'In Progress')).toBe('open');

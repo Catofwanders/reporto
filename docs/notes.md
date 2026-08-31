@@ -35,13 +35,17 @@ does not know keeps its place after the ones it does, so an unfamiliar column ap
 right instead of vanishing. Columns are a fixed width and the row scrolls sideways; a column
 that grew with its content would make a busy status wider than a quiet one.
 
-**A waiting room folds.** Backlog was the first column you looked at and seventeen of the
-twenty-three cards on it — the largest thing on the page and none of the work, while the KPI
-strip beside it said *1 active ticket*. Columns the vocabulary does not place in flight,
-active, blocked, dev-done or shipped now render as a header and a count, one click from open.
-The rule is derived from the vocabulary rather than a list of column names here, and a status
-the vocabulary has never seen is **not** folded: guessing that an unknown column is a backlog
-would hide real work, which is the expensive direction to be wrong in.
+**Blocked is the first column**, wherever the configured order puts it. It is the one status
+whose place in the pipeline says nothing — the ticket is not moving, and somebody has to unstick
+it — so it goes where the eye lands. The rule reads the `blocked` *group* rather than any status
+name, so it works for a workflow whose blocking column is called something else, and a workflow
+that empties that group simply keeps its own order.
+
+**Every column shows by default, and any column can be folded** to a header and a count. That
+default was briefly the other way round — the backlog is seventeen of the twenty-three cards
+here, and folding it makes the board read as the work in flight — but a column hidden by default
+is a column you have to remember to check, and a count in a folded header does not tell you
+which ticket moved into it. Folding stays one click away for the days when the backlog is noise.
 
 The status chip on a card is still how a ticket moves. Dragging would need a drop target per
 column and a guess at which transition a drop means, while the chip asks Jira what the
