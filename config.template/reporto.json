@@ -34,6 +34,9 @@
     "inProgress": "In Progress"
   },
   "statsMonths": 6,
+  "$comment_activity": "The unread-activity panel on the Jira page. activityDays is how far back it looks — a board where colleagues touch your tickets once a month wants 30 or 60, not 14. activityFields names this board's own custom changelog fields; the universal ones (status, assignee, priority, resolution, duedate, labels, Sprint, Epic Link) are already covered in code.",
+  "activityDays": 14,
+  "activityFields": [],
   "slackStandupChannel": "",
   "statusAging": {
     "In Progress": 5,

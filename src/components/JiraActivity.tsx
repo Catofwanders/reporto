@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
+import ChatBubbleOutlineRoundedIcon from '@mui/icons-material/ChatBubbleOutlineRounded';
+import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded';
 import type { JiraActivityItem, JiraReport, PrsReport } from '../types';
 import {
   ACTIVITY_WINDOW_DAYS,
@@ -25,6 +27,11 @@ interface JiraActivityProps {
 
 type Filter = 'unread' | 'all';
 
+/**
+ * A comment and a change want different reading. A comment is somebody's words, so the row
+ * shows the words; a change is an event, so the row shows what happened in a sentence the
+ * server already wrote. The icon says which without spending a word on it.
+ */
 const Row = ({
   item,
   unread,
@@ -35,7 +42,10 @@ const Row = ({
   unread: boolean;
   onRead: () => void;
   onDismiss: () => void;
-}) => (
+}) => {
+  const change = (item.kind ?? 'comment') === 'change';
+  const Icon = change ? SwapHorizRoundedIcon : ChatBubbleOutlineRoundedIcon;
+  return (
   <li className={`activity-row${unread ? ' is-unread' : ''}${item.mentionsMe ? ' is-mention' : ''}`}>
     <button
       type="button"
@@ -44,13 +54,18 @@ const Row = ({
       title={`${item.ticket} — ${item.summary}`}
     >
       <span className="activity-line">
+        {/* Labelled, not decorative: it is the only thing separating a comment from a move. */}
+        <Icon className="activity-kind" fontSize="small" titleAccess={change ? 'change' : 'comment'} />
         <span className="activity-key">{item.ticket}</span>
         <span className="activity-who">{item.author ?? 'someone'}</span>
-        {item.mentionsMe && <span className="chip chip-warn">mentions you</span>}
+        {item.mentionsMe && (
+          <span className="chip chip-warn">{change ? 'assigned to you' : 'mentions you'}</span>
+        )}
         <span className="activity-age">{timeAgo(item.at)}</span>
       </span>
-      {/* The excerpt, not the comment: enough to know whether it needs answering now. */}
-      <span className="activity-excerpt">{item.excerpt || 'no text — an attachment or a table'}</span>
+      <span className="activity-excerpt">
+        {item.excerpt || (change ? 'changed something' : 'no text — an attachment or a table')}
+      </span>
     </button>
     {unread && (
       <button
@@ -64,7 +79,8 @@ const Row = ({
       </button>
     )}
   </li>
-);
+  );
+};
 
 /**
  * Comments on my tickets that I have not read.
@@ -91,6 +107,8 @@ export const JiraActivity = ({ report, prs = null, onChanged }: JiraActivityProp
   };
 
   const items = report.activity;
+  // The pull states the window it used; the constant is only for a report written before it did.
+  const days = report.activityDays ?? ACTIVITY_WINDOW_DAYS;
   const pendingActivity = report.pending?.includes('activity') ?? false;
   const unread = items ? unreadItems(items, marks) : [];
   const mentions = items ? mentionCount(items, marks) : 0;
@@ -112,7 +130,7 @@ export const JiraActivity = ({ report, prs = null, onChanged }: JiraActivityProp
       <section className="panel activity is-quiet">
         <p className="status">
           <NotificationsRoundedIcon fontSize="small" aria-hidden="true" /> Nobody else has
-          commented on your tickets in the last {ACTIVITY_WINDOW_DAYS} days.
+          touched your tickets in the last {days} days.
           {report.activityNote && <span className="panel-pending"> · {report.activityNote}</span>}
         </p>
       </section>
@@ -130,8 +148,8 @@ export const JiraActivity = ({ report, prs = null, onChanged }: JiraActivityProp
             <h2>Unread activity</h2>
             <p className="panel-sub">
               {items
-                ? `${unread.length} unread of ${plural(items.length, 'comment')} in the last ${ACTIVITY_WINDOW_DAYS} days`
-                : 'Comments by other people on your tickets'}
+                ? `${unread.length} unread of ${plural(items.length, 'event')} in the last ${days} days`
+                : 'Comments and changes by other people on your tickets'}
               {mentions > 0 && (
                 <span className="activity-mentions">
                   {' '}
@@ -174,8 +192,8 @@ export const JiraActivity = ({ report, prs = null, onChanged }: JiraActivityProp
       {!items && (
         <p className="status">
           {pendingActivity && running.has('jira')
-            ? 'Comments loading…'
-            : 'Comments not fetched — press the Jira update button.'}
+            ? 'Comments and changes loading…'
+            : 'Not fetched — press the Jira update button.'}
         </p>
       )}
       {items && items.length > 0 && rows.length === 0 && (

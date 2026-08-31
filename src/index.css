@@ -1417,3 +1417,6 @@ body { background: var(--canvas); }
 .activity.is-quiet { padding: .45rem .6rem; }
 .activity.is-quiet .status { margin: 0; display: flex; align-items: center; gap: .35rem; font-size: .8rem; }
 .activity.is-quiet .status svg { color: var(--ink-2); }
+/* The icon that separates a comment from a change; quiet, because the sentence carries it. */
+.activity-kind { color: var(--ink-2); font-size: 1rem; flex: 0 0 auto; }
+.activity-row.is-mention .activity-kind { color: var(--warn-ink); }

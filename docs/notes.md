@@ -52,11 +52,31 @@ Jira's own bell is not available to this app. The feed behind it lives on a gate
 it only works with a browser session cookie. So there is no notification list to fetch and no
 read flag to read or write back.
 
-What is reachable is the comments themselves. The full pull reads the last five comments on
-each of the first forty board tickets, four requests in flight, keeps the ones somebody else
-wrote inside a fourteen-day window, and flattens each body to a one-line excerpt. A comment
-that tags me is marked by **accountId, never by display name** — two colleagues here share a
-first name, and a name match would put someone else's mention in my queue.
+What is reachable is the comments and the changelog. The full pull reads, for each of the
+first forty board tickets and four requests in flight, the last five comments and the whole
+changelog; it keeps what somebody else wrote or did inside the configured window, and flattens
+each comment body to a one-line excerpt. A comment that tags me is marked by **accountId,
+never by display name** — two colleagues here share a first name, and a name match would put
+someone else's mention in my queue. Being **assigned** a ticket counts as a mention for the
+same reason, matched the same way.
+
+Comments alone were not enough, and the measurement is why: on this board, other people had
+written one comment across eight tickets, 672 days old — while the changelog showed 108
+entries by other people across twelve tickets. Nobody comments here; tickets get moved and
+reassigned. So the changelog is the half that actually fires.
+
+Two things follow from that. **Fields are a whitelist**, because a board also generates
+description edits, summary rewordings and backlog rank churn, and a queue carrying those is a
+queue nobody reads — universal Jira field names in code, the board's own custom ones in
+`activityFields` in config, for the same reason the status vocabulary lives there. And **the
+window is config** (`activityDays`), because a fortnight is right for a busy board and shows a
+misleading nothing on a slow one; the pull writes the number it used into the report, so the
+panel's wording cannot drift from the fetch.
+
+One changelog read now serves two answers — time-in-status for the aged tickets and "who moved
+this" for all of them — where those used to be separate requests. Aged tickets are scanned
+first, so a board longer than the forty-ticket cap still measures the columns somebody is
+waiting on.
 
 Read state is therefore ours, in `localStorage`: a `seenAt` instant plus the ids dismissed out
 of order. Two details that are not obvious:
@@ -66,8 +86,8 @@ of order. Two details that are not obvious:
 - The mark **never moves backwards**, so opening a stale report cannot un-read anything.
 
 An empty list has three causes that look identical and mean opposite things, so the panel says
-which: *not fetched* (an old report, or only the fast phase ran), *nobody has commented in the
-last 14 days*, and *all read* — the last one with the time the mark was set, and the **All**
+which: *not fetched* (an old report, or only the fast phase ran), *nobody has touched them
+inside the window*, and *all read* — the last one with the time the mark was set, and the **All**
 filter to see them again. The same reasoning covers the scan's edges: tickets past the
 forty-ticket cap, and tickets whose comments would not load, are counted in the panel head
 rather than passed off as silence.

@@ -46,6 +46,31 @@ otherwise" findings. That is the right failure — a guess there would invent co
 status name in a `status changed to` clause counts a confident zero, so an unnamed metric
 reports as unavailable instead.
 
+### Unread activity
+
+The panel above the Jira board lists what other people did to your tickets — comments they
+wrote, and changes they made — with the read mark kept locally in the browser. Two keys tune it:
+
+```jsonc
+"activityDays": 30,                        // how far back "unread" reaches
+"activityFields": ["Release Date"]         // this board's own changelog fields
+```
+
+`activityDays` matters more than it looks. Boards differ by an order of magnitude in how often
+anybody touches somebody else's ticket, and a window too short for a slow board shows an empty
+panel that reads like good news. Measure before choosing: on the board this was built against,
+colleagues had last touched the tickets 55 days earlier, so 14 days showed nothing while
+nothing was wrong.
+
+`activityFields` exists for the same reason the status vocabulary is config. Committed code
+knows the universal Jira fields — `status`, `assignee`, `priority`, `resolution`, `duedate`,
+`labels`, `Sprint`, `Epic Link` — and a real board's custom fields are named after its owner's
+process, so those names go here. Anything not named is not a notification: description edits,
+summary rewording and backlog rank are exactly the noise that makes a queue unreadable.
+
+Being assigned a ticket counts as a mention, matched by account id like every other mention
+here — it is the strongest "this is yours now" signal Jira has.
+
 ### Google Calendar
 
 Two ways in. A plain API key is not one of them: Google accepts keys only for public data.

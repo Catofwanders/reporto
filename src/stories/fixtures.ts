@@ -194,6 +194,7 @@ export const jiraReport: JiraReport = {
   activity: [
     {
       id: 'SHOP-790:10241',
+      kind: 'comment',
       ticket: 'SHOP-790',
       ticketUrl: 'https://jira.example.com/browse/SHOP-790',
       summary: 'Confirm payment before the order-confirmation screen renders',
@@ -207,6 +208,7 @@ export const jiraReport: JiraReport = {
     },
     {
       id: 'SHOP-455:10238',
+      kind: 'comment',
       ticket: 'SHOP-455',
       ticketUrl: 'https://jira.example.com/browse/SHOP-455',
       summary: 'Seller onboarding needs the new payout fields',
@@ -218,8 +220,43 @@ export const jiraReport: JiraReport = {
       excerpt: 'Parking this until the payout contract is signed. Nothing to do here this week.',
     },
     {
+      // A change rather than a comment: on a quiet board this is most of the queue.
+      id: 'SHOP-812:change:88:status',
+      kind: 'change',
+      field: 'status',
+      from: 'Ready for QA',
+      to: 'QA rejected',
+      ticket: 'SHOP-812',
+      ticketUrl: 'https://jira.example.com/browse/SHOP-812',
+      summary: 'Cache the seller catalogue so a cold product page stops hitting search',
+      status: 'In Progress',
+      author: 'A QC tester',
+      avatar: null,
+      at: AT('09:05'),
+      mentionsMe: false,
+      excerpt: 'moved it from Ready for QA to QA rejected',
+    },
+    {
+      // Being handed a ticket: the strongest "this is yours now" signal Jira has.
+      id: 'SHOP-644:change:91:assignee',
+      kind: 'change',
+      field: 'assignee',
+      from: 'Dana',
+      to: 'you',
+      ticket: 'SHOP-644',
+      ticketUrl: 'https://jira.example.com/browse/SHOP-644',
+      summary: 'Move the payout report off the nightly scheduler',
+      status: 'In Progress',
+      author: 'Dana',
+      avatar: null,
+      at: AT('08:40'),
+      mentionsMe: true,
+      excerpt: 'assigned it to you',
+    },
+    {
       // No text at all: a comment that is one screenshot. The row still has to read.
       id: 'SHOP-781:10230',
+      kind: 'comment',
       ticket: 'SHOP-781',
       ticketUrl: 'https://jira.example.com/browse/SHOP-781',
       summary: 'Reconnect the delivery-tracking socket after a terminate frame',

@@ -225,6 +225,9 @@ export const PULLERS = {
       jql: c.jiraJql ?? DEFAULT_JQL,
       jiraBrowseUrl: c.jiraBrowseUrl,
       tones: c.statuses?.tones ?? {},
+      // The board's own custom field names, and how far back the unread queue looks.
+      activityFields: c.activityFields ?? [],
+      ...(c.activityDays ? { activityDays: c.activityDays } : {}),
       resolvePrs: c.githubAuthor
         ? (tickets) =>
             pullTicketPrs({

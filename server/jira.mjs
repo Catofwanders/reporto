@@ -178,11 +178,6 @@ export async function jiraTransition({ site, email, apiToken, key, transitionId,
   throw new Error(`Jira transition for ${key} failed: ${res.status} ${text.slice(0, 200)}`)
 }
 
-/** At most this many changelogs per pull: one request each, and a board is not a quarter. */
-const AGING_LOOKUPS = 40
-
-/** In flight at once. Jira's limits are per-token and generous; four is nowhere near them. */
-const AGING_CONCURRENCY = 4
 
 /** Comments read per ticket. Newest first, because an old comment is not news. */
 const ACTIVITY_COMMENTS = 5
@@ -194,8 +189,12 @@ const ACTIVITY_LOOKUPS = 40
 const ACTIVITY_CONCURRENCY = 4
 
 /**
- * Older than this is history rather than a notification, however unread it is. Mirrored as
- * `ACTIVITY_WINDOW_DAYS` in `src/jiraActivity.ts`, which words the empty list — change both.
+ * Older than this is history rather than a notification, however unread it is — a default,
+ * overridable per board with `activityDays` in config. Boards differ by an order of magnitude
+ * in how often anybody touches somebody else's ticket, and a window that is too short for a
+ * slow board shows an empty queue that looks like good news.
+ *
+ * The report carries the number it used, so nothing on the client has to guess it.
  */
 const ACTIVITY_DAYS = 14
 
@@ -255,6 +254,85 @@ function mentionsAccount(node, accountId) {
 }
 
 /**
+ * Changelog fields worth telling somebody about.
+ *
+ * A whitelist, not a blacklist: a board generates edits nobody wants a notification for —
+ * description tweaks, backlog rank, summary rewording — and a queue carrying all of them is a
+ * queue nobody reads.
+ *
+ * Universal Jira field names only, for the same reason the status vocabulary is config
+ * (rules/nda.md): a real board's custom fields are named after its owner's process, and those
+ * names belong in gitignored config under `activityFields`, never here.
+ */
+const ACTIVITY_FIELDS = [
+  'status',
+  'assignee',
+  'priority',
+  'resolution',
+  'duedate',
+  'labels',
+  'Sprint',
+  'Epic Link',
+]
+
+/** What a change reads as in a row. `to` is the display value, which is what a person recognises. */
+function changeSentence(field, from, to) {
+  switch (field) {
+    case 'status':
+      return from ? `moved it from ${from} to ${to}` : `moved it to ${to}`
+    case 'assignee':
+      return to ? `assigned it to ${to}` : 'took the assignee off it'
+    case 'priority':
+      return `set priority to ${to}`
+    case 'resolution':
+      return to ? `resolved it as ${to}` : 'reopened it'
+    case 'duedate':
+      return to ? `set the due date to ${to}` : 'cleared the due date'
+    case 'Sprint':
+      return to ? `moved it into ${to}` : 'took it out of the sprint'
+    default:
+      return `changed ${field} to ${to}`
+  }
+}
+
+/**
+ * Changes somebody else made to one ticket, from a changelog already fetched.
+ *
+ * This is the half the comment scan misses, and on a quiet board it is the half that actually
+ * fires: nobody comments, but tickets get moved, reassigned and re-prioritised around me all
+ * week. Being assigned something counts as a mention — it is the strongest "this is yours now"
+ * signal Jira has, matched by accountId like every other mention here.
+ */
+function ticketChanges({ ticket, entries, accountId, since, fields }) {
+  const out = []
+  for (const entry of entries) {
+    const at = entry.created
+    if (!at || new Date(at).getTime() < since) continue
+    if ((entry.author?.accountId ?? null) === accountId) continue
+    for (const item of entry.items ?? []) {
+      if (!fields.has(item.field)) continue
+      out.push({
+        id: `${ticket.key}:change:${entry.id}:${item.field}`,
+        kind: 'change',
+        ticket: ticket.key,
+        ticketUrl: ticket.url,
+        summary: ticket.summary,
+        status: ticket.status,
+        author: entry.author?.displayName ?? null,
+        avatar: entry.author?.avatarUrls?.['24x24'] ?? null,
+        at,
+        field: item.field,
+        from: item.fromString ?? null,
+        to: item.toString ?? null,
+        mentionsMe: item.field === 'assignee' && item.to === accountId,
+        excerpt: changeSentence(item.field, item.fromString, item.toString),
+      })
+    }
+  }
+  return out
+}
+
+/**
  * Recent comments on one ticket that somebody else wrote.
  *
  * Jira's notification feed — the bell — is not reachable with an API token: the gateway route
@@ -280,6 +358,7 @@ async function ticketActivity({ base, auth, ticket, accountId, since }) {
     .filter((comment) => comment.created && new Date(comment.created).getTime() >= since)
     .map((comment) => ({
       id: `${ticket.key}:${comment.id}`,
+      kind: 'comment',
       ticket: ticket.key,
       ticketUrl: ticket.url,
       summary: ticket.summary,
@@ -293,32 +372,24 @@ async function ticketActivity({ base, auth, ticket, accountId, since }) {
 }
 
 /**
- * When the ticket entered the status it is in now.
+ * When the ticket entered the status it is in now, from a changelog already fetched.
  *
  * The board looks identical on day one and day seven of a review column, which is the whole
  * problem: a ticket can sit in review for a week and nothing on screen says so. The changelog
- * is the only place that knows, at one request per ticket — so only tickets whose status is
- * worth aging get one, and a ticket that never transitioned falls back to when it was created.
+ * is the only place that knows.
+ *
+ * `undefined` entries mean the read failed, and that must answer null rather than `created`.
+ * A pull does this forty times on one token, so a 429 or a permissions blip is ordinary — and
+ * falling back to the creation date turned an ordinary ticket into a years-overdue one,
+ * inflating the stuck count and inventing Unstick rows out of a rate limit.
  */
-async function statusSinceFor({ site, email, apiToken, key, status, created }) {
-  let history
-  try {
-    history = await jiraStatusHistory({ site, email, apiToken, key })
-  } catch {
-    /*
-     * Null, not `created`. This runs up to forty times per pull on one token, so a 429 or a
-     * permissions blip is ordinary — and falling back to the creation date turned a normal
-     * ticket into a years-overdue one, inflating the stuck count and inventing Unstick rows.
-     * Null is the "not measured" state the pill and the KPI already render honestly.
-     */
-    return null
-  }
-  // Oldest first, so the last entry into this status is the one that still holds.
-  const entries = history.filter(
-    (entry) => (entry.to ?? '').trim().toLowerCase() === status.trim().toLowerCase(),
+function statusSinceFrom(entries, status, created) {
+  if (!entries) return null
+  const into = statusChanges(entries).filter(
+    (change) => (change.to ?? '').trim().toLowerCase() === status.trim().toLowerCase(),
   )
   // No transition into it at all means it has been there since it existed, which is true.
-  return entries.length ? entries[entries.length - 1].at : (created ?? null)
+  return into.length ? into[into.length - 1].at : (created ?? null)
 }
 
 /**
@@ -344,6 +415,10 @@ export async function pullJira({
   agingStatuses = [],
   /** `{ tone: [status, ...] }` from config, for the fallback chip written into the report. */
   tones = {},
+  /** Extra changelog fields worth a notification on this board — its own custom fields. */
+  activityFields = [],
+  /** How far back the unread queue looks, in days. */
+  activityDays = ACTIVITY_DAYS,
   phase = 'full',
 }) {
   if (!site) throw new Error('no Jira site configured — set jiraSite in config/reporto.json')
@@ -386,56 +461,80 @@ export async function pullJira({
   })
 
   /*
+   * One changelog read per ticket, answering two questions: how long the aged ones have sat
+   * where they are, and who moved anything of mine this fortnight. They used to be separate
+   * reads for the first question only.
+   *
    * Four at a time, not one. These share a token with the searches above, so an unbounded
    * burst of forty is how a pull earns a 429 — but strictly sequential made this the fifteen
    * seconds the two-phase pull exists to hide. Four is well inside Jira's limits.
    */
   const aging = new Set(fast ? [] : agingStatuses.map((name) => name.trim().toLowerCase()))
-  const needAging = tickets
-    .filter((ticket) => aging.has(ticket.status.trim().toLowerCase()))
-    .slice(0, AGING_LOOKUPS)
-  const since = await pooled(needAging, AGING_CONCURRENCY, (ticket) =>
-    statusSinceFor({
-      site,
-      email,
-      apiToken,
-      key: ticket.key,
-      status: ticket.status,
-      created: ticket.created,
-    }),
+  const isAged = (ticket) => aging.has(ticket.status.trim().toLowerCase())
+  /*
+   * Aged tickets first, so a board longer than the cap still measures the columns somebody is
+   * waiting on. The JQL decides reading order everywhere else; here it would decide which
+   * tickets get an age, which is not its job.
+   */
+  const scanned = fast
+    ? []
+    : [...tickets.filter(isAged), ...tickets.filter((ticket) => !isAged(ticket))].slice(
+        0,
+        ACTIVITY_LOOKUPS,
+      )
+  const histories = await pooled(scanned, ACTIVITY_CONCURRENCY, (ticket) =>
+    jiraChangelog({ site, email, apiToken, key: ticket.key }),
   )
-  needAging.forEach((ticket, at) => {
-    ticket.statusSince = since[at] ?? null
+  scanned.forEach((ticket, at) => {
+    if (!isAged(ticket)) return
+    ticket.statusSince = statusSinceFrom(histories[at], ticket.status, ticket.created)
   })
-  for (const ticket of tickets) delete ticket.created
 
   /*
-   * Comments other people wrote, which is as close to the bell as a token gets. Same phase
-   * rule as the ages: the fast pass names it pending so the subsection shimmers instead of
-   * claiming there is nothing new.
+   * The unread queue: comments other people wrote, and changes other people made. Jira's own
+   * bell is not reachable with an API token, and comments alone are a thin source — on a quiet
+   * board nobody comments, but tickets are moved and reassigned around me all week.
+   *
+   * Same phase rule as the ages: the fast pass names it pending so the subsection shimmers
+   * instead of claiming there is nothing new.
    */
   let activity
   let activityNote
   if (!fast) {
     const { base, auth } = requireAuth({ site, email, apiToken })
-    const scanned = tickets.slice(0, ACTIVITY_LOOKUPS)
-    const cutoff = Date.now() - ACTIVITY_DAYS * 24 * 60 * 60 * 1000
+    const cutoff = Date.now() - activityDays * 24 * 60 * 60 * 1000
+    const accountId = me.accountId ?? null
+    const fields = new Set([...ACTIVITY_FIELDS, ...activityFields])
     const comments = await pooled(scanned, ACTIVITY_CONCURRENCY, (ticket) =>
-      ticketActivity({ base, auth, ticket, accountId: me.accountId ?? null, since: cutoff }),
+      ticketActivity({ base, auth, ticket, accountId, since: cutoff }),
     )
-    activity = comments
-      .filter(Boolean)
-      .flat()
-      .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-    // A ticket whose comments would not load is not a ticket with no comments. Say which.
-    const unreadable = comments.filter((result) => result === undefined).length
+    const changes = scanned.flatMap((ticket, at) =>
+      histories[at]
+        ? ticketChanges({ ticket, entries: histories[at], accountId, since: cutoff, fields })
+        : [],
+    )
+    activity = [...comments.filter(Boolean).flat(), ...changes].sort(
+      (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime(),
+    )
+    /*
+     * A ticket whose history would not load is not a ticket nothing happened to. Both halves
+     * are counted, because either failing turns a real event into silence.
+     */
+    const unreadable = new Set()
+    scanned.forEach((ticket, at) => {
+      if (comments[at] === undefined || histories[at] === undefined) unreadable.add(ticket.key)
+    })
     const skipped = tickets.length - scanned.length
     const notes = [
-      unreadable ? `${unreadable} ticket${unreadable === 1 ? '' : 's'} could not be read` : '',
+      unreadable.size
+        ? `${unreadable.size} ticket${unreadable.size === 1 ? '' : 's'} could not be read`
+        : '',
       skipped ? `${skipped} beyond the ${ACTIVITY_LOOKUPS}-ticket scan` : '',
     ].filter(Boolean)
     if (notes.length) activityNote = notes.join(', ')
   }
+
+  for (const ticket of tickets) delete ticket.created
 
   // Named so a view can tell "not fetched yet" from "fetched, and there is none".
   const pending = fast
@@ -447,7 +546,7 @@ export async function pullJira({
     date: new Date().toLocaleDateString('en-CA'),
     generatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
     groups: groupByStatus(tickets),
-    ...(activity ? { activity } : {}),
+    ...(activity ? { activity, activityDays } : {}),
     ...(activityNote ? { activityNote } : {}),
     ...(pending.length ? { partial: true, pending } : {}),
     footer:
@@ -492,7 +591,7 @@ export async function jiraSearchKeys({ site, email, apiToken, jql }) {
  * `expand: ["changelog"]`, so the history has to be asked for per issue — which is why
  * callers should sample rather than walk a whole quarter.
  */
-export async function jiraStatusHistory({ site, email, apiToken, key }) {
+export async function jiraChangelog({ site, email, apiToken, key }) {
   const { base, auth } = requireAuth({ site, email, apiToken })
   const res = await fetchWithTimeout(
     `${base}/rest/api/3/issue/${encodeURIComponent(key)}/changelog?maxResults=100`,
@@ -502,13 +601,22 @@ export async function jiraStatusHistory({ site, email, apiToken, key }) {
     throw new Error(`Jira changelog for ${key} failed: ${res.status} ${res.statusText}`)
   }
   const body = await res.json()
-  return (body.values ?? [])
-    .flatMap((entry) =>
-      (entry.items ?? [])
-        .filter((item) => item.field === 'status')
-        .map((item) => ({ at: entry.created, from: item.fromString, to: item.toString })),
-    )
-    .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+  return (body.values ?? []).sort(
+    (a, b) => new Date(a.created).getTime() - new Date(b.created).getTime(),
+  )
+}
+
+/** Status changes only, oldest first — what time-in-status and the stand-up both read. */
+export function statusChanges(entries) {
+  return entries.flatMap((entry) =>
+    (entry.items ?? [])
+      .filter((item) => item.field === 'status')
+      .map((item) => ({ at: entry.created, from: item.fromString, to: item.toString })),
+  )
+}
+
+export async function jiraStatusHistory({ site, email, apiToken, key }) {
+  return statusChanges(await jiraChangelog({ site, email, apiToken, key }))
 }
 
 /** Comments per drawer. Newest first, and few enough to read rather than scroll. */

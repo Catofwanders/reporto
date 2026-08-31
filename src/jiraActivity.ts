@@ -15,10 +15,11 @@ export interface ActivityMarks {
 }
 
 /**
- * The window the puller scans, in days — only for wording an empty list truthfully.
+ * Fallback window, in days, for a report written before the puller started stating its own.
  *
- * Duplicated deliberately: the number that decides the fetch is `ACTIVITY_DAYS` in
- * `server/jira.mjs`, which is Node and cannot be imported here. Change one, change both.
+ * The number that decides the fetch lives in config and is written into the report as
+ * `activityDays`; this is only what an old file gets worded with. It used to be a mirrored
+ * constant, which is a duplicate waiting to drift.
  */
 export const ACTIVITY_WINDOW_DAYS = 14;
 

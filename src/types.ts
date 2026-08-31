@@ -45,8 +45,20 @@ export interface TicketGroup {
  * read flag to fetch either. Read state is therefore ours and local — see `src/jiraActivity.ts`.
  */
 export interface JiraActivityItem {
-  /** `<KEY>:<commentId>` — stable across refetches, so a dismissal is not undone by one. */
+  /**
+   * `<KEY>:<commentId>` for a comment, `<KEY>:change:<entryId>:<field>` for a change — stable
+   * across refetches, so a dismissal is not undone by one.
+   */
   id: string;
+  /**
+   * Optional because reports written before changes were scanned have no kind, and those are
+   * all comments. Read it as `kind ?? 'comment'`.
+   */
+  kind?: 'comment' | 'change';
+  /** Which field moved, for a change: status, assignee, priority, resolution, duedate, Sprint. */
+  field?: string;
+  from?: string | null;
+  to?: string | null;
   ticket: string;
   ticketUrl: string;
   /** The ticket's summary and status, so a row reads without looking back at the board. */
@@ -55,9 +67,16 @@ export interface JiraActivityItem {
   author: string | null;
   avatar: string | null;
   at: string;
-  /** Tagged by accountId, never by display name — two colleagues share a first name. */
+  /**
+   * Tagged by accountId, never by display name — two colleagues share a first name. For a
+   * change it means the ticket was assigned to me, which is the strongest "this is yours now"
+   * signal Jira has.
+   */
   mentionsMe: boolean;
-  /** ADF flattened to one line, capped. The drawer renders the real thing. */
+  /**
+   * A comment's ADF flattened to one line and capped, or what a change did in words. The
+   * drawer renders the real thing.
+   */
   excerpt: string;
 }
 
@@ -76,6 +95,8 @@ export interface JiraReport {
   pending?: ('prs' | 'aging' | 'activity')[];
   /** Comments by other people, newest first. Absent means not fetched, not none. */
   activity?: JiraActivityItem[];
+  /** How far back that scan looked, in days — the config value the pull actually used. */
+  activityDays?: number;
   /** What the activity scan could not cover — a cap hit, or tickets that would not read. */
   activityNote?: string;
   restNote?: string;

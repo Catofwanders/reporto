@@ -12,6 +12,13 @@ const text = (value) => ({ type: 'text', text: value })
 const paragraph = (...content) => ({ type: 'paragraph', content })
 const doc = (...content) => ({ type: 'doc', version: 1, content })
 
+const change = (field, from, to, { at = hoursAgo(3), author = 'acct-other', name = 'A teammate', id = '1', toId } = {}) => ({
+  id,
+  created: at,
+  author: { accountId: author, displayName: name, avatarUrls: { '24x24': 'https://a/24.png' } },
+  items: [{ field, fromString: from, toString: to, ...(toId ? { to: toId } : {}) }],
+})
+
 const issue = (key, status, summary = `${key} summary`) => ({
   key,
   fields: { summary, status: { name: status, statusCategory: { name: 'In Progress' } }, created: daysAgo(40) },
@@ -186,6 +193,132 @@ describe('pullJira activity', () => {
   })
 })
 
+describe('pullJira changes', () => {
+  it('reports a status move somebody else made', async () => {
+    stubJira({
+      issues: [issue('SHOP-1', 'In Review')],
+      changelog: { 'SHOP-1': [change('status', 'In Progress', 'In Review')] },
+    })
+    const [item] = (await pullJira({ ...AUTH, jql: 'x' })).activity
+    expect(item.kind).toBe('change')
+    expect(item.field).toBe('status')
+    expect(item.excerpt).toBe('moved it from In Progress to In Review')
+    expect(item.author).toBe('A teammate')
+  })
+
+  it('ignores my own changes', async () => {
+    stubJira({
+      issues: [issue('SHOP-1', 'In Review')],
+      changelog: { 'SHOP-1': [change('status', 'In Progress', 'In Review', { author: ME })] },
+    })
+    expect((await pullJira({ ...AUTH, jql: 'x' })).activity).toEqual([])
+  })
+
+  it('ignores changes older than the window', async () => {
+    stubJira({
+      issues: [issue('SHOP-1', 'In Review')],
+      changelog: { 'SHOP-1': [change('status', 'To Do', 'In Review', { at: daysAgo(30) })] },
+    })
+    expect((await pullJira({ ...AUTH, jql: 'x' })).activity).toEqual([])
+  })
+
+  /*
+   * A board generates edits nobody wants a notification for — description tweaks, backlog
+   * rank, summary rewording. A queue carrying all of them is a queue nobody reads.
+   */
+  it('ignores fields that are not worth a notification', async () => {
+    stubJira({
+      issues: [issue('SHOP-1', 'In Review')],
+      changelog: {
+        'SHOP-1': [
+          change('description', 'old', 'new'),
+          change('Rank', null, 'higher', { id: '2' }),
+          change('summary', 'a', 'b', { id: '3' }),
+        ],
+      },
+    })
+    expect((await pullJira({ ...AUTH, jql: 'x' })).activity).toEqual([])
+  })
+
+  /* Being handed a ticket is the strongest "this is yours now" signal Jira has. */
+  it('counts being assigned the ticket as a mention, by accountId', async () => {
+    stubJira({
+      issues: [issue('SHOP-1', 'In Review'), issue('SHOP-2', 'In Review')],
+      changelog: {
+        'SHOP-1': [change('assignee', 'A teammate', 'Me', { toId: ME })],
+        'SHOP-2': [change('assignee', 'A teammate', 'Someone else', { toId: 'acct-third' })],
+      },
+    })
+    const byTicket = Object.fromEntries(
+      (await pullJira({ ...AUTH, jql: 'x' })).activity.map((item) => [item.ticket, item.mentionsMe]),
+    )
+    expect(byTicket).toEqual({ 'SHOP-1': true, 'SHOP-2': false })
+  })
+
+  it('says each kind of change in words', async () => {
+    stubJira({
+      issues: [issue('SHOP-1', 'In Review')],
+      changelog: {
+        'SHOP-1': [
+          change('priority', 'Medium', 'High', { id: '1' }),
+          change('assignee', 'A teammate', null, { id: '2' }),
+          change('resolution', null, 'Done', { id: '3' }),
+          change('duedate', null, '2026-06-01', { id: '4' }),
+          change('Sprint', null, 'Sprint 14', { id: '5' }),
+        ],
+      },
+    })
+    const said = (await pullJira({ ...AUTH, jql: 'x' })).activity.map((item) => item.excerpt).sort()
+    expect(said).toEqual([
+      'moved it into Sprint 14',
+      'resolved it as Done',
+      'set priority to High',
+      'set the due date to 2026-06-01',
+      'took the assignee off it',
+    ].sort())
+  })
+
+  it('mixes comments and changes into one list, newest first', async () => {
+    stubJira({
+      issues: [issue('SHOP-1', 'In Review')],
+      comments: { 'SHOP-1': [comment('9001', { at: hoursAgo(1), body: doc(paragraph(text('a comment'))) })] },
+      changelog: { 'SHOP-1': [change('status', 'To Do', 'In Review', { at: hoursAgo(5) })] },
+    })
+    const activity = (await pullJira({ ...AUTH, jql: 'x' })).activity
+    expect(activity.map((item) => item.kind)).toEqual(['comment', 'change'])
+  })
+
+  it('counts a ticket whose changelog would not load', async () => {
+    stubJira({
+      issues: [issue('SHOP-1', 'In Review')],
+      fail: (_key, what) => what === 'changelog',
+    })
+    const report = await pullJira({ ...AUTH, jql: 'x' })
+    expect(report.activityNote).toBe('1 ticket could not be read')
+  })
+
+  it('gives each change a stable id, per entry and per field', async () => {
+    stubJira({
+      issues: [issue('SHOP-1', 'In Review')],
+      changelog: {
+        'SHOP-1': [
+          {
+            id: '55',
+            created: hoursAgo(2),
+            author: { accountId: 'acct-other', displayName: 'A teammate' },
+            items: [
+              { field: 'status', fromString: 'To Do', toString: 'In Review' },
+              { field: 'priority', fromString: 'Low', toString: 'High' },
+            ],
+          },
+        ],
+      },
+    })
+    const ids = (await pullJira({ ...AUTH, jql: 'x' })).activity.map((item) => item.id)
+    expect(ids).toEqual(['SHOP-1:change:55:status', 'SHOP-1:change:55:priority'])
+  })
+})
+
 describe('pullJira aging', () => {
   it('dates a ticket from the last transition into its current status', async () => {
     const at = daysAgo(4)
@@ -216,11 +349,41 @@ describe('pullJira aging', () => {
     expect(report.groups[0].tickets[0].statusSince).toBeNull()
   })
 
-  it('leaves a status nobody asked to age unmeasured, and reads no changelog for it', async () => {
-    const calls = stubJira({ issues: [issue('SHOP-1', 'Backlog')] })
+  /*
+   * The changelog is read for every scanned ticket now, because the activity feed needs it —
+   * but only an aged status gets a measured date. Unmeasured has to stay absent rather than
+   * become a zero.
+   */
+  it('leaves a status nobody asked to age unmeasured', async () => {
+    stubJira({ issues: [issue('SHOP-1', 'Backlog')] })
     const report = await pullJira({ ...AUTH, jql: 'x', agingStatuses: ['In Review'] })
     expect(report.groups[0].tickets[0].statusSince).toBeUndefined()
+  })
+
+  it('reads no changelog at all in the fast phase', async () => {
+    const calls = stubJira({ issues: [issue('SHOP-1', 'In Review')] })
+    await pullJira({ ...AUTH, jql: 'x', agingStatuses: ['In Review'], phase: 'fast' })
     expect(calls.some((path) => path.includes('/changelog'))).toBe(false)
+  })
+
+  /*
+   * Aged tickets are scanned first. A board longer than the cap would otherwise measure
+   * whatever the JQL happened to rank first, which is not what the age pill is for.
+   */
+  it('scans aged tickets before the rest', async () => {
+    const many = Array.from({ length: 45 }, (_, i) => issue(`SHOP-${i + 1}`, 'Backlog'))
+    many.push(issue('SHOP-99', 'In Review'))
+    stubJira({
+      issues: many,
+      changelog: {
+        'SHOP-99': [
+          { id: '1', created: daysAgo(2), author: { accountId: 'acct-other' }, items: [{ field: 'status', fromString: 'To Do', toString: 'In Review' }] },
+        ],
+      },
+    })
+    const report = await pullJira({ ...AUTH, jql: 'x', agingStatuses: ['In Review'] })
+    const aged = report.groups.flatMap((group) => group.tickets).find((t) => t.key === 'SHOP-99')
+    expect(aged.statusSince).not.toBeNull()
   })
 })
 
