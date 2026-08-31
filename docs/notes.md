@@ -340,6 +340,25 @@ undo fixes.
 disk as well as the environment: the dev server lifts `.env` at boot, so a token pasted by
 hand afterwards would otherwise leave Settings saying "configured" while every pull failed.
 
+## The weekly wrap
+
+The same note, over a wider window. A one-to-one asks a different question from a stand-up —
+what did you finish this week, not what moved since yesterday — but the machinery is identical:
+Jira transitions in the window, PRs merged in it, and what is still in flight.
+
+So it is a second button rather than a second panel: **Stand-up** and **This week** beside the
+heading, each rebuilding the note for its span. Three details worth keeping:
+
+- **On a Monday, "this week" is the week that just ended.** Six hours since midnight is not a
+  wrap, and Sunday belongs to the week it closes.
+- **Today's meetings are dropped from the weekly note.** By the time anybody reads it those
+  hours are spent, and five calendar lines bury the four things that shipped.
+- **The cap scales with the span** — 25 tickets for a day, 60 for a week — and anything past it
+  is still counted in the notes rather than silently cut.
+
+The headings the screen renders are the headings `standupText` writes, so what is read out and
+what lands in Slack cannot drift apart.
+
 ## Ticket aging
 
 The PR lanes have said "no review yet — 6 days, chase it" for a while. Tickets had no

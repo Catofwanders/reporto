@@ -5,7 +5,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CampaignRoundedIcon from '@mui/icons-material/CampaignRounded';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import type { CalendarReport, JiraReport, PrsReport, StandupSince } from '../types';
-import { fetchStandupSince } from '../standup';
+import { fetchStandupSince, type StandupSpan } from '../standup';
 import { buildStandup, standupText } from '../standupNote';
 import { copyText } from '../copyText';
 import { postStandup, standupChannel } from '../slackActions';
@@ -27,6 +27,7 @@ interface StandupCardProps {
 export const StandupCard = ({ jira, prs, calendar }: StandupCardProps) => {
   const { usable, statusAging, stuckStatuses } = useCapabilities();
   const [since, setSince] = useState<StandupSince | null>(null);
+  const [span, setSpan] = useState<StandupSpan>('day');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -47,11 +48,15 @@ export const StandupCard = ({ jira, prs, calendar }: StandupCardProps) => {
     };
   }, [usable]);
 
-  const build = async () => {
+  const build = async (want: StandupSpan = span) => {
     setBusy(true);
     setError(null);
+    setSpan(want);
+    // A note built for the other window would still be on screen under the new heading.
+    setSince(null);
+    setPosted(false);
     try {
-      setSince(await fetchStandupSince());
+      setSince(await fetchStandupSince(want));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -99,10 +104,12 @@ export const StandupCard = ({ jira, prs, calendar }: StandupCardProps) => {
             <CampaignRoundedIcon fontSize="small" />
           </span>
           <div>
-            <h2>Stand-up note</h2>
+            <h2>{span === 'week' ? 'Weekly wrap' : 'Stand-up note'}</h2>
             <p className="panel-sub">
               {note
-                ? `What moved since ${note.since}, what today holds, what is stuck`
+                ? span === 'week'
+                  ? `What you finished since ${note.since}, what is still in flight, what is stuck`
+                  : `What moved since ${note.since}, what today holds, what is stuck`
                 : 'Built from Jira transitions, merged PRs and today’s calendar'}
             </p>
           </div>
@@ -147,6 +154,26 @@ export const StandupCard = ({ jira, prs, calendar }: StandupCardProps) => {
               {copied ? 'Copied' : 'Copy note'}
             </Button>
           )}
+          {/*
+            Two windows, one note. The weekly wrap is the same three sections over a wider
+            span — what a one-to-one asks for — so it is a second button rather than a second
+            panel. Each press costs a Jira search and a changelog read per ticket, which is
+            why neither is built on load.
+          */}
+          <span className="segmented" role="group" aria-label="Note window">
+            {(['day', 'week'] as StandupSpan[]).map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={span === option}
+                className={span === option ? 'is-active' : ''}
+                disabled={busy}
+                onClick={() => void build(option)}
+              >
+                {option === 'day' ? 'Stand-up' : 'This week'}
+              </button>
+            ))}
+          </span>
           <Button
             size="small"
             onClick={() => void build()}
@@ -162,9 +189,13 @@ export const StandupCard = ({ jira, prs, calendar }: StandupCardProps) => {
 
       {note && (
         <div className="standup">
+          {/* The same headings `standupText` writes, so the screen and the clipboard agree. */}
           {[
-            { title: `Since ${note.since}`, lines: note.yesterday },
-            { title: 'Today', lines: note.today },
+            {
+              title: note.span === 'week' ? `Done since ${note.since}` : `Since ${note.since}`,
+              lines: note.yesterday,
+            },
+            { title: note.span === 'week' ? 'Still in flight' : 'Today', lines: note.today },
             { title: 'Blockers', lines: note.blockers },
           ].map((block) => (
             <div key={block.title} className="standup-block">

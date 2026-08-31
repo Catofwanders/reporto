@@ -9,16 +9,33 @@
 import { jiraSearchKeys, jiraStatusHistory } from './jira.mjs'
 import { pullMergedSince } from './github.mjs'
 
-/** Changelogs are one request each, so the window is capped rather than the whole board. */
-const MAX_TICKETS = 25
+/**
+ * Changelogs are one request each, so the window is capped rather than the whole board. A week
+ * legitimately touches more tickets than a day, and a cap that silently cut the wrap in half
+ * would be the usual lie — so the span raises it, and anything past it is still counted in the
+ * notes.
+ */
+const MAX_TICKETS = { day: 25, week: 60 }
 
 /**
- * Monday looks back to Friday, every other day to yesterday. Weekend work still shows up:
- * the window is a start date, not a list of days.
+ * Where the window starts, for the two spans this answers.
+ *
+ * `day` — the stand-up. Monday looks back to Friday, every other day to yesterday. Weekend
+ * work still shows up: the window is a start date, not a list of days.
+ *
+ * `week` — the wrap for a one-to-one. Monday of this week, except *on* Monday, where the
+ * useful answer is the week that just ended rather than the six hours since midnight.
  */
-export function windowStart(now = new Date()) {
+export function windowStart(now = new Date(), span = 'day') {
   const start = new Date(now)
   start.setHours(0, 0, 0, 0)
+  if (span === 'week') {
+    // 0 is Sunday, and Sunday belongs to the week that is ending rather than the one starting.
+    const weekday = start.getDay()
+    const back = weekday === 1 ? 7 : weekday === 0 ? 6 : weekday - 1
+    start.setDate(start.getDate() - back)
+    return start
+  }
   // 1 is Monday. Three days back from Monday reaches Friday morning.
   start.setDate(start.getDate() - (start.getDay() === 1 ? 3 : 1))
   return start
@@ -42,8 +59,10 @@ export async function readStandup({
   githubOrg,
   githubAccount,
   now = new Date(),
+  // `day` for the stand-up, `week` for the wrap a one-to-one wants.
+  span = 'day',
 }) {
-  const start = windowStart(now)
+  const start = windowStart(now, span)
   const since = iso(start)
   const jira = { site: jiraSite, email: jiraEmail, apiToken: jiraApiToken }
   const notes = []
@@ -56,7 +75,8 @@ export async function readStandup({
       ...jira,
       jql: `${jiraStatsJql} AND status changed AFTER "${since}"`,
     })
-    for (const key of keys.slice(0, MAX_TICKETS)) {
+    const cap = MAX_TICKETS[span] ?? MAX_TICKETS.day
+    for (const key of keys.slice(0, cap)) {
       try {
         const history = await jiraStatusHistory({ ...jira, key })
         const inWindow = history.filter((change) => new Date(change.at) >= start)
@@ -72,8 +92,8 @@ export async function readStandup({
         // One unreadable changelog costs that ticket's line, not the note.
       }
     }
-    if (keys.length > MAX_TICKETS) {
-      notes.push(`${keys.length - MAX_TICKETS} more tickets moved than this note lists`)
+    if (keys.length > cap) {
+      notes.push(`${keys.length - cap} more tickets moved than this note lists`)
     }
   } catch (err) {
     notes.push(`jira: ${err.message}`)
@@ -93,5 +113,5 @@ export async function readStandup({
 
   moved = moved.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
 
-  return { since, generatedAt: new Date().toISOString(), moved, merged, notes }
+  return { since, span, generatedAt: new Date().toISOString(), moved, merged, notes }
 }

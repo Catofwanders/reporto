@@ -14,7 +14,11 @@ export function standupPlugin(): Plugin {
           return
         }
         const config = loadConfig()
+        // Only the two spans exist; anything else is the stand-up rather than an error, since
+        // a mistyped query should not cost the note.
+        const span = /[?&]span=week(&|$)/.test(req.url ?? '') ? 'week' : 'day'
         void readStandup({
+          span,
           jiraSite: config.jiraSite,
           jiraEmail: process.env.JIRA_EMAIL,
           jiraApiToken: process.env.JIRA_API_TOKEN,

@@ -29,6 +29,21 @@ describe('windowStart', () => {
     }
   })
 
+  /*
+   * The weekly wrap. On a Monday the useful answer is the week that just ended rather than
+   * the six hours since midnight, and Sunday belongs to the week that is ending.
+   */
+  it('reaches back to Monday for the week span', () => {
+    // Wednesday 20 May 2026 → Monday 18th.
+    expect(windowStart(at('2026-05-20T09:00:00+02:00'), 'week').getDate()).toBe(18)
+    // Friday 22nd → the same Monday.
+    expect(windowStart(at('2026-05-22T18:00:00+02:00'), 'week').getDate()).toBe(18)
+    // Monday 18th → the previous Monday, 11th, not today.
+    expect(windowStart(at('2026-05-18T09:00:00+02:00'), 'week').getDate()).toBe(11)
+    // Sunday 24th → Monday 18th, the week it closes.
+    expect(windowStart(at('2026-05-24T12:00:00+02:00'), 'week').getDate()).toBe(18)
+  })
+
   it('starts at local midnight, not at the current time', () => {
     const start = windowStart(at('2026-05-20T23:45:00+02:00'))
     expect([start.getHours(), start.getMinutes(), start.getSeconds()]).toEqual([0, 0, 0])
@@ -93,6 +108,20 @@ describe('readStandup', () => {
     })
     expect(report.since).toBe('2026-05-19')
     expect(jql[0]).toContain('status changed AFTER "2026-05-19"')
+  })
+
+  it('reports the week window and says which span it used', async () => {
+    const jql = stub()
+    const report = await readStandup({
+      jiraSite: SITE,
+      jiraEmail: 'me@example.com',
+      jiraApiToken: 'token',
+      now: at('2026-05-20T09:00:00+02:00'),
+      span: 'week',
+    })
+    expect(report.since).toBe('2026-05-18')
+    expect(report.span).toBe('week')
+    expect(jql[0]).toContain('status changed AFTER "2026-05-18"')
   })
 
   it('reports the first and last status of the window, not every hop', async () => {

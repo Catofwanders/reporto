@@ -84,6 +84,17 @@ export interface ReportoConfig {
   };
   /** How many months the statistics report carries, newest first. */
   statsMonths?: number;
+  /**
+   * How far back the unread-activity panel looks, in days. Boards differ by an order of
+   * magnitude in how often anybody touches somebody else's ticket, and a window too short
+   * shows an empty panel that reads like good news.
+   */
+  activityDays?: number;
+  /**
+   * Changelog fields worth a notification beyond the universal Jira ones. A board's custom
+   * fields are named after its owner's process, so they live here rather than in code.
+   */
+  activityFields?: string[];
   commandGroups: CommandGroup[];
 }
 
@@ -95,6 +106,13 @@ export function loadDotEnv(): void;
 export function readReport(kind: string): unknown;
 
 export const PULLABLE: string[];
+
+/** The reports and history entries a prune would keep. Decided without touching the disk. */
+export function prunePlan(
+  index: { latest?: Record<string, string>; history?: { date?: string; [kind: string]: unknown }[] },
+  keepDays?: number,
+  now?: Date,
+): { history: { date?: string; [kind: string]: unknown }[]; keep: Set<string> };
 
 export function pullReport(
   kind: string,

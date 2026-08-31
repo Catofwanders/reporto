@@ -13,6 +13,8 @@ import { DEFAULT_VOCAB, inStatusGroup, type StatusVocab } from './statusVocab';
  */
 export interface StandupNote {
   since: string;
+  /** Which window this covers. A week's note reads differently from a morning's. */
+  span: 'day' | 'week';
   yesterday: string[];
   today: string[];
   blockers: string[];
@@ -57,6 +59,8 @@ export function buildStandup(
     ...(since?.merged ?? []).map((pr) => `merged ${pr.repo}#${pr.num} — ${pr.title}`),
   ];
 
+  const span = since?.span ?? 'day';
+
   const today = [
     ...allTickets(jira)
       .filter((ticket) => inStatusGroup(vocab, 'inFlight', ticket.status))
@@ -67,7 +71,12 @@ export function buildStandup(
         .filter((pr) => laneOf(pr) === 'needs-you')
         .map((pr) => `answer review on ${group.repo}#${pr.num}`),
     ),
-    ...(calendar?.events ?? []).map((event) => `${clock(event.start)} ${event.title}`),
+    /*
+     * Today's meetings belong in a stand-up and nowhere near a weekly wrap: by the time
+     * anybody reads the wrap those hours are either spent or irrelevant, and five calendar
+     * lines are enough to bury the four things that actually shipped.
+     */
+    ...(span === 'week' ? [] : (calendar?.events ?? []).map((event) => `${clock(event.start)} ${event.title}`)),
   ];
 
   const blockers = [
@@ -99,7 +108,7 @@ export function buildStandup(
     ),
   ];
 
-  return { since: since?.since ?? '', yesterday, today, blockers, notes: since?.notes ?? [] };
+  return { since: since?.since ?? '', span, yesterday, today, blockers, notes: since?.notes ?? [] };
 }
 
 const section = (title: string, lines: string[]) =>
@@ -108,8 +117,9 @@ const section = (title: string, lines: string[]) =>
 /** Plain text, because it is going into Slack or said out loud — not rendered. */
 export function standupText(note: StandupNote): string {
   return [
-    section(`Since ${note.since}`, note.yesterday),
-    section('Today', note.today),
+    // A week's note is read, not spoken, and "Done this week" is what a one-to-one asks for.
+    section(note.span === 'week' ? `Done since ${note.since}` : `Since ${note.since}`, note.yesterday),
+    section(note.span === 'week' ? 'Still in flight' : 'Today', note.today),
     section('Blockers', note.blockers),
   ].join('\n\n');
 }

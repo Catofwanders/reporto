@@ -445,6 +445,8 @@ export interface ProjectMap {
 export interface StandupSince {
   /** ISO date the window starts at. */
   since: string;
+  /** Which window the server actually used, so the note can word itself. */
+  span?: 'day' | 'week';
   generatedAt: string;
   moved: {
     key: string;

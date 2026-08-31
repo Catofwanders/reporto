@@ -10,6 +10,14 @@ export function pullJira(options: {
   resolvePrs?: (tickets: { key: string; status: string }[]) => Promise<Map<string, Pr[]>>;
   /** Status names per chip tone, from config: the board's vocabulary is not committed here. */
   tones?: Record<string, string[]>;
+  /** Statuses where time-in-status is worth a changelog read; empty means none are. */
+  agingStatuses?: string[];
+  /** Extra changelog fields worth a notification — this board's own custom fields. */
+  activityFields?: string[];
+  /** How far back the unread queue looks, in days. */
+  activityDays?: number;
+  /** `fast` writes the board alone and marks the rest pending. */
+  phase?: 'fast' | 'full';
 }): Promise<JiraReport>;
 
 export interface JiraTransition {
@@ -58,6 +66,35 @@ export function jiraStatusHistory(options: {
   apiToken: string | undefined;
   key: string;
 }): Promise<JiraStatusChange[]>;
+
+/** One changelog entry as Jira returns it: who, when, and which fields moved. */
+export interface JiraChangelogEntry {
+  id: string;
+  created: string;
+  author?: { accountId?: string; displayName?: string; avatarUrls?: Record<string, string> };
+  items?: {
+    field: string;
+    from?: string | null;
+    to?: string | null;
+    fromString?: string | null;
+    toString?: string | null;
+  }[];
+}
+
+/**
+ * The whole changelog for one issue, oldest first. One read serves both time-in-status and
+ * the unread-activity feed, which is why the raw entries are exposed rather than only the
+ * status changes.
+ */
+export function jiraChangelog(options: {
+  site: string | undefined;
+  email: string | undefined;
+  apiToken: string | undefined;
+  key: string;
+}): Promise<JiraChangelogEntry[]>;
+
+/** Status changes only, oldest first, from an already-fetched changelog. */
+export function statusChanges(entries: JiraChangelogEntry[]): JiraStatusChange[];
 
 /** An Atlassian Document Format node, as Jira returns it. Rendered client-side. */
 export interface AdfNode {
