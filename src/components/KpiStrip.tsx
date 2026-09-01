@@ -5,7 +5,6 @@ import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import HourglassBottomRoundedIcon from '@mui/icons-material/HourglassBottomRounded';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
-import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import type { Kpis } from '../needsYou';
 
 type Kind = 'prs' | 'reviews' | 'slack' | 'jira';
@@ -82,18 +81,6 @@ const TILES: Tile[] = [
     needs: 'jira',
   },
   {
-    key: 'activity',
-    counts: ['jira'],
-    label: 'unread on my tickets',
-    icon: NotificationsRoundedIcon,
-    to: '/jira',
-    tone: 'warn',
-    title:
-      'Comments and changes other people made to my tickets that I have not read. The read ' +
-      'mark is this browser\u2019s: Jira will not tell anybody what has been read',
-    needs: 'jira',
-  },
-  {
     key: 'conflicts',
     counts: ['jira', 'prs', 'slack'],
     label: 'Jira and GitHub disagree',
@@ -108,7 +95,7 @@ const TILES: Tile[] = [
 ];
 
 /**
- * The whole morning as six numbers.
+ * The whole morning as five numbers.
  *
  * This is the part of a dashboard that gets read in a second, so each tile is an icon, a
  * figure and two words — no sentences. A zero keeps its tile but loses its colour: "nothing to

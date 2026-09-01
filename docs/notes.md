@@ -98,9 +98,19 @@ Deliberately weak, in three ways:
   local calendar dates, because `toISOString().slice(0, 10)` on local midnight is yesterday at
   a positive offset, which would wake every snooze the moment it was set.
 
-## Unread activity on the Jira page
+## Unread activity, on the board and on the dashboard
 
-Above the board: comments other people left on my tickets, and which of them I have not read.
+Comments other people left on my tickets, the changes they made, and which of those I have not
+read. The same panel sits above the Jira board and under the dashboard queue, because it answers
+the half of the morning the queue cannot: not *what is waiting on me* but *what happened while I
+was not looking*.
+
+It replaced two things on the dashboard. A **count tile** in the strip, which said "0 unread"
+and could not say what — a number is the wrong shape for news. And the **Unstick group** in the
+queue, which was the one group whose rows nobody could act on from a queue: a ticket sitting too
+long needs a conversation, not a click, so it said the same thing every morning until that
+conversation happened. That fact still has a home — the count in the strip, the age pill on the
+board — it just no longer occupies a row reserved for things you can do something about.
 
 Jira's own bell is not available to this app. The feed behind it lives on a gateway route —
 `/gateway/api/notification-log/api/2/notifications` — that answers **404 to API-token auth**;
@@ -427,6 +437,17 @@ heading, each rebuilding the note for its span. Three details worth keeping:
 
 The headings the screen renders are the headings `standupText` writes, so what is read out and
 what lands in Slack cannot drift apart.
+
+## What the queue does not carry
+
+Three deliberate absences, and they are all the same rule: a row in the queue has to be
+something you can act on now.
+
+- **"Waiting on others" PRs.** Nothing there is mine to move, and it is the biggest lane.
+- **Review requests I have never opened.** Requests land on whole teams, so most are somebody
+  else's to take; a PR I reviewed that has since been pushed to is unambiguously mine.
+- **Stuck tickets.** They need a conversation rather than a click, and the age pill and the
+  count already say it without spending a row.
 
 ## Ticket aging
 

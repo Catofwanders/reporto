@@ -3,9 +3,7 @@ import type { SvgIconComponent } from '@mui/icons-material';
 import AltRouteRoundedIcon from '@mui/icons-material/AltRouteRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import ForumRoundedIcon from '@mui/icons-material/ForumRounded';
-import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
 import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
-import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
 import SnoozeRoundedIcon from '@mui/icons-material/SnoozeRounded';
 import { ACTION_LABEL, type FeedAction, type FeedItem, type FeedSource } from '../needsYou';
 
@@ -15,12 +13,6 @@ interface NeedsYouProps {
   total: number;
   /** No report has been pulled yet, so an empty queue is ignorance rather than good news. */
   unpulled?: boolean;
-  /**
-   * Read a ticket without leaving the dashboard. Every other row leads to a page that shows it
-   * in context; a ticket row led to a board of thirty cards where the answer was one more
-   * click away, and the drawer that answers it already exists.
-   */
-  onReadTicket?: (key: string) => void;
   /**
    * "Not today" for one row. A snooze lasts until tomorrow and is never silent: the count
    * below says how many are hidden, and they can be shown again from there.
@@ -39,7 +31,6 @@ const ICON: Record<FeedSource, SvgIconComponent> = {
   pr: AltRouteRoundedIcon,
   review: VisibilityRoundedIcon,
   slack: ForumRoundedIcon,
-  ticket: ConfirmationNumberRoundedIcon,
 };
 
 /** Said in the row, so the icon is confirmation rather than the only clue. */
@@ -47,11 +38,10 @@ const SOURCE_LABEL: Record<FeedSource, string> = {
   pr: 'PR',
   review: 'review',
   slack: 'Slack',
-  ticket: 'ticket',
 };
 
 /** Most blocking first — the same order the weights encode. */
-const ORDER: FeedAction[] = ['push', 'review', 'answer', 'merge', 'unstick'];
+const ORDER: FeedAction[] = ['push', 'review', 'answer', 'merge'];
 
 /**
  * One list, grouped by what to do.
@@ -62,7 +52,7 @@ const ORDER: FeedAction[] = ['push', 'review', 'answer', 'merge', 'unstick'];
  * a Slack message.
  *
  * So each row now carries a three-word reason and names its source in words, and the rows sit
- * under a one-word verb — Your move, Review, Answer, Merge, Unstick. The verb is what makes a
+ * under a one-word verb — Your move, Review, Answer, Merge. The verb is what makes a
  * merged list legible: it says what the group wants before any row is read. The full sentence
  * is still the tooltip, and the page behind each row has all of it.
  */
@@ -70,7 +60,6 @@ export const NeedsYou = ({
   items,
   total,
   unpulled = false,
-  onReadTicket,
   onSnooze,
   snoozed = 0,
   showSnoozed = false,
@@ -107,7 +96,6 @@ export const NeedsYou = ({
               <ul className="needs-list">
                 {group.rows.map((item) => {
                   const Icon = ICON[item.source];
-                  const readable = item.source === 'ticket' && onReadTicket;
                   return (
                     <li
                       key={item.id}
@@ -124,15 +112,15 @@ export const NeedsYou = ({
                           <SnoozeRoundedIcon fontSize="small" />
                         </button>
                       )}
-                      {readable && (
+                      {onSnooze && (
                         <button
                           type="button"
-                          className="needs-read"
-                          title={`Read ${item.label} here`}
-                          aria-label={`Read ${item.label} without leaving the dashboard`}
-                          onClick={() => onReadTicket(item.label)}
+                          className="needs-snooze"
+                          title={`Not today — hide ${item.label} until tomorrow`}
+                          aria-label={`Snooze ${item.label} until tomorrow`}
+                          onClick={() => onSnooze(item.id)}
                         >
-                          <ArticleRoundedIcon fontSize="small" />
+                          <SnoozeRoundedIcon fontSize="small" />
                         </button>
                       )}
                       <Link to={item.to} title={item.detail}>

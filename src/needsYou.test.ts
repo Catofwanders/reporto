@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { JiraReport, OpenPr, PrsReport, ReviewPr, ReviewsReport, SlackReport, SlackRow } from './types';
 import { kpis, needsYou, needsYouTotal } from './needsYou';
-import { statusVocab } from './statusVocab';
 
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
 const daysAgo = (days: number) => hoursAgo(days * 24);
@@ -178,34 +177,22 @@ describe('needsYou', () => {
     expect(needsYou({ ...EMPTY, slack: slack([answered]) })).toEqual([]);
   });
 
-  /* A ticket only counts as stuck in a status somebody is watching, and only past its limit. */
-  it('unsticks a ticket only where the vocabulary and the limits both agree', () => {
+  /*
+   * The board contributes no rows at all any more. "Unstick" was the one group whose rows
+   * nobody could act on from a queue — a ticket sitting too long needs a conversation, not a
+   * click — and it repeated itself every morning until that conversation happened. The count
+   * stays in the strip, the age pill stays on the board.
+   */
+  it('takes nothing from the board, however stuck a ticket is', () => {
     const args = {
       ...EMPTY,
-      jira: jira('In Progress', daysAgo(9)),
-      aging: { 'In Progress': 4 },
+      jira: jira('In Progress', daysAgo(90)),
+      aging: { 'In Progress': 1 },
       stuckStatuses: ['In Progress'],
     };
-    const feed = needsYou(args);
-    expect(feed).toHaveLength(1);
-    expect(feed[0].action).toBe('unstick');
-    expect(feed[0].label).toBe('SHOP-812');
-
-    expect(needsYou({ ...args, stuckStatuses: ['Blocked'] })).toEqual([]);
-    expect(needsYou({ ...args, aging: { 'In Progress': 30 } })).toEqual([]);
-    expect(needsYou({ ...args, jira: jira('In Progress') })).toEqual([]);
-  });
-
-  it('reads a configured status as in flight, which the generic vocabulary cannot', () => {
-    const args = {
-      ...EMPTY,
-      jira: jira('Ready for QA', daysAgo(9)),
-      aging: { 'Ready for QA': 3 },
-      stuckStatuses: ['Ready for QA'],
-    };
     expect(needsYou(args)).toEqual([]);
-    const vocab = statusVocab({ groups: { active: ['Ready for QA'] } });
-    expect(needsYou({ ...args, vocab })).toHaveLength(1);
+    // And it is still counted, so the fact is not lost — only the row is.
+    expect(kpis(args).stuck).toBe(1);
   });
 
   /* Most blocking first, then longest waiting — the order the morning should be read in. */
@@ -262,7 +249,7 @@ describe('kpis', () => {
       stuckStatuses: ['In Progress'],
       conflicts: 2,
     });
-    expect(counts).toEqual({ prs: 2, reviews: 1, tickets: 1, stuck: 1, conflicts: 2, activity: 0 });
+    expect(counts).toEqual({ prs: 2, reviews: 1, tickets: 1, stuck: 1, conflicts: 2 });
   });
 
   it('is all zeros with no reports, rather than throwing', () => {
@@ -272,15 +259,8 @@ describe('kpis', () => {
       tickets: 0,
       stuck: 0,
       conflicts: 0,
-      activity: 0,
     });
   });
 
-  /*
-   * The unread count is passed in, because the read mark lives in the browser and no report
-   * knows it. Zero must therefore mean "nothing unread", never "nobody told me".
-   */
-  it('carries the unread count through untouched', () => {
-    expect(kpis({ prs: null, reviews: null, jira: null, unread: 4 }).activity).toBe(4);
-  });
+
 });

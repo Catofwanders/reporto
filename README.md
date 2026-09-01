@@ -3,8 +3,9 @@
 My morning triage, on one screen. It reads Jira, GitHub, Slack and the calendar, and answers
 one question: **what should I do first?**
 
-![The dashboard: six counts across the top, one prioritised queue grouped by what to do,
-today as a timeline, open PRs as a proportional bar, and the stand-up note](docs/home.jpg)
+![The dashboard: five counts across the top, one prioritised queue grouped by what to do, the
+unread activity on my tickets, today as a timeline, open PRs as a proportional bar, and the
+stand-up note](docs/home.jpg)
 
 Everything in that screenshot is invented example data — see [Development](#development) —
 because the real thing is full of ticket detail and meeting links, and this remote is public.
@@ -21,9 +22,11 @@ merge them in your head, every morning.
 
 This does the merging:
 
-- **One queue**, grouped by the verb it wants — *Your move · Review · Answer · Merge ·
-  Unstick* — ordered by how much each thing is blocking, then by how long it has waited.
-- **Six counts** across the top, each one a number you can act on.
+- **One queue**, grouped by the verb it wants — *Your move · Review · Answer · Merge* —
+  ordered by how much each thing is blocking, then by how long it has waited.
+- **Unread activity in full** underneath it: every comment and change somebody else made to
+  your tickets, with the read mark kept locally.
+- **Five counts** across the top, each one a number you can act on.
 - **Today as a line**, because "how long until the next thing" is a distance, not a sentence.
 - **Contradictions on one folded line**: places where Jira and GitHub disagree about the same
   work, which is the class of problem nobody notices until QC asks.

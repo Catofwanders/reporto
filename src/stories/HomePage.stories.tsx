@@ -39,11 +39,11 @@ export const NothingWaiting: Story = {
 };
 
 /**
- * A quiet queue with one stuck ticket, which is the only way to see the Unstick group: it
- * carries the lowest weight in the feed, so on a busy morning it is the first thing cut. The
- * row offers to open the ticket in place — the drawer the board and the list already use.
+ * A quiet morning: nothing in the PR, review or Slack reports. The board contributes no rows —
+ * a stuck ticket is a count in the strip and an age pill on the board, not a queue row — so
+ * what this shows is the empty-queue wording next to a full unread-activity panel.
  */
-export const TicketStuck: Story = {
+export const QuietQueue: Story = {
   args: {
     prs: { ...prsReport, repos: [] },
     reviews: { ...reviewsReport, prs: [] },

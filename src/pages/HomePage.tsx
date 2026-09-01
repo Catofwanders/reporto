@@ -15,7 +15,7 @@ import { KpiStrip } from '../components/KpiStrip';
 import { NeedsYou } from '../components/NeedsYou';
 import { PrMix } from '../components/PrMix';
 import { StandupCard } from '../components/StandupCard';
-import { useTicketReader } from '../components/useTicketReader';
+import { JiraActivity } from '../components/JiraActivity';
 import { SinceYesterday } from '../components/SinceYesterday';
 import type { SinceReport } from '../sinceYesterday';
 import {
@@ -24,7 +24,6 @@ import {
   snooze as snoozeRow,
   writeSnoozes,
 } from '../snooze';
-import { readMarks, unreadCount } from '../jiraActivity';
 import { isDone, readDone } from '../slackDone';
 
 interface HomePageProps {
@@ -71,16 +70,6 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
     vocab: statuses,
   };
 
-  /*
-   * The same drawer the board and the list use, opened from the queue. Reusing the hook rather
-   * than a second piece of open-ticket state is the point — two copies is how one of them ends
-   * up showing a status the other has already changed.
-   */
-  const reader = useTicketReader({
-    report: sources.jira ?? { type: 'jira', date: '', generatedAt: '', groups: [] },
-    prs: sources.prs,
-  });
-
   const findings = flowFindings(sources.jira, sources.prs, sources.slack, statuses);
   // Before the first pull there is nothing to be relieved about; the panels say so instead of
   // rendering a confident emptiness.
@@ -104,13 +93,7 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
     slackWords,
     slackDone: (id) => isDone(id, slackDone),
   });
-  /*
-   * Read from `localStorage` on mount, not on every render: this is the same mark the Jira
-   * page owns, and the strip only needs the number. Opening the panel there and coming back
-   * re-mounts this page, so the count does not go stale in practice.
-   */
-  const unread = sources.jira?.activity ? unreadCount(sources.jira.activity, readMarks()) : 0;
-  const counts = kpis({ ...sources, conflicts: findings.length, unread });
+  const counts = kpis({ ...sources, conflicts: findings.length });
 
   return (
     <main className="home">
@@ -122,11 +105,17 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
       />
 
       <div className="home-split">
-        <NeedsYou
+        {/*
+          The queue and the unread activity share the column, because they answer the two
+          halves of the same question: what is waiting on me, and what happened while I was
+          not looking. The activity panel is the same one the Jira page carries — rows, the
+          unread filter, mark-all-read — rather than a count, which is what a tile was.
+        */}
+        <div className="home-queue">
+          <NeedsYou
           items={items}
           total={total}
           unpulled={unpulled}
-          onReadTicket={sources.jira ? reader.read : undefined}
           onSnooze={(id) => {
             const next = snoozeRow(id, snoozes);
             writeSnoozes(next);
@@ -136,7 +125,10 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
           showSnoozed={showSnoozed}
           onToggleSnoozed={() => setShowSnoozed((on: boolean) => !on)}
           isSnoozed={(id) => rowSnoozed(id, snoozes)}
-        />
+          />
+
+          {sources.jira && <JiraActivity report={sources.jira} prs={sources.prs} />}
+        </div>
 
         <div className="home-aside">
           {usable('calendar') &&
@@ -160,7 +152,6 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
       </div>
 
       <StandupCard jira={sources.jira} prs={sources.prs} calendar={calendar} />
-      {reader.drawer}
     </main>
   );
 };

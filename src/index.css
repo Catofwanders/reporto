@@ -1501,3 +1501,10 @@ body { background: var(--canvas); }
 }
 .board-col-fold:hover { color: var(--ink); }
 .board-col-fold:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/*
+ * The queue column holds two panels: what is waiting on me, and what happened while I was not
+ * looking. The queue takes the slack and the activity panel keeps its own height, so a long
+ * queue scrolls inside itself rather than pushing the activity off the frame.
+ */
+.home-queue { min-width: 0; min-height: 0; display: grid; gap: .8rem; grid-template-rows: minmax(0, 1fr) auto; }

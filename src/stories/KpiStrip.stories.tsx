@@ -14,7 +14,7 @@ const meta = {
   title: 'Panels/KpiStrip',
   component: KpiStrip,
   args: {
-    counts: { prs: 4, reviews: 2, tickets: 5, stuck: 1, conflicts: 2, activity: 3 },
+    counts: { prs: 4, reviews: 2, tickets: 5, stuck: 1, conflicts: 2 },
     usable: every,
   },
   parameters: { layout: 'padded' },
@@ -31,7 +31,7 @@ export const Busy: Story = {};
  * between loads, and "nothing to review" is worth reading.
  */
 export const AllClear: Story = {
-  args: { counts: { prs: 0, reviews: 0, tickets: 0, stuck: 0, conflicts: 0, activity: 0 } },
+  args: { counts: { prs: 0, reviews: 0, tickets: 0, stuck: 0, conflicts: 0 } },
 };
 
 /**

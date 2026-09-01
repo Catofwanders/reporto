@@ -27,21 +27,20 @@ import { DEFAULT_VOCAB, type StatusVocab } from './statusVocab';
  * The reason each item is here stays available as a tooltip rather than a line of prose: it is
  * what you read *after* deciding to look, and the dedicated pages carry it in full.
  */
-export type FeedSource = 'pr' | 'review' | 'slack' | 'ticket';
+export type FeedSource = 'pr' | 'review' | 'slack';
 
 /**
  * What the row wants doing, as one word. Rows are grouped under it, which is what makes a
  * merged list legible: without it, seven rows of "name + age" say what each thing *is* and
  * nothing about why it is in front of you.
  */
-export type FeedAction = 'push' | 'review' | 'answer' | 'merge' | 'unstick';
+export type FeedAction = 'push' | 'review' | 'answer' | 'merge';
 
 export const ACTION_LABEL: Record<FeedAction, string> = {
   push: 'Your move',
   review: 'Review',
   answer: 'Answer',
   merge: 'Merge',
-  unstick: 'Unstick',
 };
 
 export interface FeedItem {
@@ -78,7 +77,6 @@ const WEIGHT = {
   reviewUnseen: 85,
   slackAsked: 80,
   prReady: 70,
-  ticketStuck: 60,
   slackStale: 50,
 } as const;
 
@@ -118,9 +116,6 @@ export function needsYou({
   reviews,
   slack,
   jira,
-  aging = {},
-  stuckStatuses = [],
-  vocab = DEFAULT_VOCAB,
   slackWords = {},
   slackDone = () => false,
   limit = 7,
@@ -128,12 +123,8 @@ export function needsYou({
   prs: PrsReport | null;
   reviews: ReviewsReport | null;
   slack: SlackReport | null;
+  /** Only to name a review's ticket; the board itself no longer contributes rows. */
   jira: JiraReport | null;
-  aging?: AgingLimits;
-  /** Statuses where sitting still counts as stuck; empty means all that have a limit. */
-  stuckStatuses?: string[];
-  /** The board's status vocabulary, so "in flight" means what this workflow calls it. */
-  vocab?: StatusVocab;
   /** Extra ask/closer phrases from config, so the queue and the Slack page classify alike. */
   slackWords?: SlackWords;
   /** Rows dismissed by hand. The mark is in the browser, so only the caller knows it. */
@@ -223,29 +214,14 @@ export function needsYou({
     }
   }
 
-  if (jira) {
-    for (const ticket of activeTickets(jira, vocab)) {
-      // Only where sitting still is the problem: blocked and QC-failed tickets are loud
-      // enough through their own status, and their age says nothing new.
-      if (!countsAsStuck(ticket.status, stuckStatuses)) continue;
-      const age = agingOf(ticket, aging);
-      // Only the ones past their limit: a ticket moving normally is not waiting on anybody.
-      if (!age?.over) continue;
-      items.push({
-        id: `ticket:${ticket.key}`,
-        source: 'ticket',
-        action: 'unstick',
-        label: ticket.key,
-        why: `stuck in ${ticket.status.toLowerCase()}`,
-        detail: `${age.days} days in ${ticket.status}: ${ticket.summary}`,
-        url: ticket.url,
-        to: `/jira#${ticket.key}`,
-        days: age.days,
-        tone: age.tone === 'na' ? 'warn' : age.tone,
-        weight: WEIGHT.ticketStuck,
-      });
-    }
-  }
+  /*
+   * Stuck tickets are deliberately absent.
+   *
+   * "Unstick" was a group here, and it was the one group whose rows nobody could act on from a
+   * queue: a ticket sitting too long needs a conversation, not a click, and it said the same
+   * thing every morning until that conversation happened. The count stays in the strip and the
+   * age pill stays on the board, which is where the fact belongs.
+   */
 
   return items
     .sort((a, b) => b.weight - a.weight || b.days - a.days)
@@ -264,11 +240,6 @@ export interface Kpis {
   /** Tickets past the days-in-status limit configured for their status. */
   stuck: number;
   conflicts: number;
-  /**
-   * Unread comments and changes on my tickets. Passed in rather than derived: the read mark
-   * lives in the browser, not in any report, so only the caller can know it.
-   */
-  activity: number;
 }
 
 export const kpis = ({
@@ -279,7 +250,6 @@ export const kpis = ({
   stuckStatuses = [],
   vocab = DEFAULT_VOCAB,
   conflicts = 0,
-  unread = 0,
 }: {
   prs: PrsReport | null;
   reviews: ReviewsReport | null;
@@ -290,7 +260,6 @@ export const kpis = ({
   stuckStatuses?: string[];
   vocab?: StatusVocab;
   conflicts?: number;
-  unread?: number;
 }): Kpis => {
   const reviewLanes = reviews ? toReviewLanes(reviews, jira) : new Map();
   const active = jira ? activeTickets(jira, vocab) : [];
@@ -305,6 +274,5 @@ export const kpis = ({
       (ticket) => countsAsStuck(ticket.status, stuckStatuses) && agingOf(ticket, aging)?.over,
     ).length,
     conflicts,
-    activity: unread,
   };
 };

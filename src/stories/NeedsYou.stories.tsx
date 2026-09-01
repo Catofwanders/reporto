@@ -8,8 +8,8 @@ const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISO
 
 /**
  * The board with times-in-status, which the fixtures leave off — a pull only reads changelogs
- * for the statuses configured as worth aging. Without one of these the Unstick group cannot
- * appear at all, since an unmeasured ticket is not a slow ticket.
+ * for the statuses configured as worth aging. The feed no longer draws rows from the board, so
+ * this is here to prove exactly that: an aged, stuck ticket produces no row.
  */
 const aged: JiraReport = {
   ...jiraReport,
@@ -42,9 +42,7 @@ const feed = (over: Partial<Parameters<typeof needsYou>[0]> = {}) => {
 const meta = {
   title: 'Panels/NeedsYou',
   component: NeedsYou,
-  // `onReadTicket` is what puts the "read it here" control on a ticket row; the dashboard
-  // passes the shared drawer's opener, and a story only needs to prove the control appears.
-  args: { ...feed(), onReadTicket: () => {} },
+  args: { ...feed() },
   parameters: { layout: 'padded' },
 } satisfies Meta<typeof NeedsYou>;
 
@@ -52,9 +50,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Every verb group at once. Needs a raised limit to show them: Unstick carries the lowest
- * weight of anything in the feed, so at the dashboard's own limit of seven it is the first
- * group to fall off — which is the ordering working, not a bug.
+ * Every verb group at once. Needs a raised limit to show them: the lightest weights fall off
+ * first at the dashboard's own limit of seven, which is the ordering working, not a bug.
  */
 export const AllGroups: Story = { args: feed({ limit: 20 }) };
 
