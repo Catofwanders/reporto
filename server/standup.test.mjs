@@ -8,25 +8,56 @@ const SITE = 'https://jira.example.com'
 
 const at = (iso) => new Date(iso)
 
+/*
+ * These tests are *about* local time, so they have to name the zone rather than inherit it.
+ *
+ * The first version inherited it, and so encoded the machine it was written on: the instant
+ * `2026-05-20T00:30:00+03:00` is the 20th in Kyiv and the 19th in UTC, which makes the window
+ * start the 19th on this laptop and the 18th on a CI runner. It passed locally and failed in
+ * CI — the wrong way round for a test whose whole point is that the code reads *local* dates,
+ * a claim that only means something against a stated zone.
+ *
+ * Node re-reads `process.env.TZ` per call, so setting it around a block is enough.
+ */
+const inZone = (tz, run) => {
+  const before = process.env.TZ
+  process.env.TZ = tz
+  try {
+    return run()
+  } finally {
+    if (before === undefined) delete process.env.TZ
+    else process.env.TZ = before
+  }
+}
+
 describe('windowStart', () => {
   /* Monday looks back to Friday morning, so the weekend's work is still in the note. */
-  it('reaches back to Friday on a Monday', () => {
-    const monday = at('2026-05-18T09:30:00+02:00')
-    const start = windowStart(monday)
-    expect(start.getDay()).toBe(5)
-    expect(start.getDate()).toBe(15)
-    expect([start.getHours(), start.getMinutes()]).toEqual([0, 0])
+  it('reaches back to Friday on a Monday, in any zone', () => {
+    for (const [tz, iso] of [
+      ['Europe/Kyiv', '2026-05-18T09:30:00+03:00'],
+      ['UTC', '2026-05-18T09:30:00Z'],
+      ['America/New_York', '2026-05-18T09:30:00-04:00'],
+    ]) {
+      inZone(tz, () => {
+        const start = windowStart(at(iso))
+        expect(start.getDay()).toBe(5)
+        expect(start.getDate()).toBe(15)
+        expect([start.getHours(), start.getMinutes()]).toEqual([0, 0])
+      })
+    }
   })
 
   it('reaches back to yesterday on every other day', () => {
-    for (const [day, expected] of [
-      ['2026-05-19T09:00:00+02:00', 18],
-      ['2026-05-20T09:00:00+02:00', 19],
-      ['2026-05-23T09:00:00+02:00', 22],
-      ['2026-05-24T09:00:00+02:00', 23],
-    ]) {
-      expect(windowStart(at(day)).getDate()).toBe(expected)
-    }
+    inZone('UTC', () => {
+      for (const [day, expected] of [
+        ['2026-05-19T09:00:00Z', 18],
+        ['2026-05-20T09:00:00Z', 19],
+        ['2026-05-23T09:00:00Z', 22],
+        ['2026-05-24T09:00:00Z', 23],
+      ]) {
+        expect(windowStart(at(day)).getDate()).toBe(expected)
+      }
+    })
   })
 
   /*
@@ -34,19 +65,23 @@ describe('windowStart', () => {
    * the six hours since midnight, and Sunday belongs to the week that is ending.
    */
   it('reaches back to Monday for the week span', () => {
-    // Wednesday 20 May 2026 → Monday 18th.
-    expect(windowStart(at('2026-05-20T09:00:00+02:00'), 'week').getDate()).toBe(18)
-    // Friday 22nd → the same Monday.
-    expect(windowStart(at('2026-05-22T18:00:00+02:00'), 'week').getDate()).toBe(18)
-    // Monday 18th → the previous Monday, 11th, not today.
-    expect(windowStart(at('2026-05-18T09:00:00+02:00'), 'week').getDate()).toBe(11)
-    // Sunday 24th → Monday 18th, the week it closes.
-    expect(windowStart(at('2026-05-24T12:00:00+02:00'), 'week').getDate()).toBe(18)
+    inZone('UTC', () => {
+      // Wednesday 20 May 2026 → Monday 18th.
+      expect(windowStart(at('2026-05-20T09:00:00Z'), 'week').getDate()).toBe(18)
+      // Friday 22nd → the same Monday.
+      expect(windowStart(at('2026-05-22T18:00:00Z'), 'week').getDate()).toBe(18)
+      // Monday 18th → the previous Monday, 11th, not today.
+      expect(windowStart(at('2026-05-18T09:00:00Z'), 'week').getDate()).toBe(11)
+      // Sunday 24th → Monday 18th, the week it closes.
+      expect(windowStart(at('2026-05-24T12:00:00Z'), 'week').getDate()).toBe(18)
+    })
   })
 
   it('starts at local midnight, not at the current time', () => {
-    const start = windowStart(at('2026-05-20T23:45:00+02:00'))
-    expect([start.getHours(), start.getMinutes(), start.getSeconds()]).toEqual([0, 0, 0])
+    inZone('Europe/Kyiv', () => {
+      const start = windowStart(at('2026-05-20T23:45:00+03:00'))
+      expect([start.getHours(), start.getMinutes(), start.getSeconds()]).toEqual([0, 0, 0])
+    })
   })
 })
 
@@ -99,15 +134,37 @@ describe('readStandup', () => {
    */
   it('asks Jira for the local calendar date of the window start', async () => {
     const jql = stub()
-    const now = at('2026-05-20T00:30:00+03:00')
-    const report = await readStandup({
-      jiraSite: SITE,
-      jiraEmail: 'me@example.com',
-      jiraApiToken: 'token',
-      now,
-    })
+    /*
+     * Half past midnight local, at a positive offset — the case the local-date rule exists
+     * for. `toISOString().slice(0, 10)` of that instant is the *previous* day, so the window
+     * would open a day early and Sunday's work would be reported as "since yesterday". The
+     * zone is named rather than inherited, or the assertion is about the machine.
+     */
+    const report = await inZone('Europe/Kyiv', () =>
+      readStandup({
+        jiraSite: SITE,
+        jiraEmail: 'me@example.com',
+        jiraApiToken: 'token',
+        now: at('2026-05-20T00:30:00+03:00'),
+      }),
+    )
     expect(report.since).toBe('2026-05-19')
     expect(jql[0]).toContain('status changed AFTER "2026-05-19"')
+  })
+
+  /* The same instant read in UTC is the day before, and the window is one day earlier. */
+  it('follows the machine’s own zone rather than UTC', async () => {
+    const jql = stub()
+    const report = await inZone('UTC', () =>
+      readStandup({
+        jiraSite: SITE,
+        jiraEmail: 'me@example.com',
+        jiraApiToken: 'token',
+        now: at('2026-05-20T00:30:00+03:00'),
+      }),
+    )
+    expect(report.since).toBe('2026-05-18')
+    expect(jql[0]).toContain('status changed AFTER "2026-05-18"')
   })
 
   it('reports the week window and says which span it used', async () => {

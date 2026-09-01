@@ -15,6 +15,18 @@ export default defineConfig({
   test: {
     environment: 'node',
     /*
+     * The suite runs in UTC, whatever the machine is set to.
+     *
+     * Half of this codebase is about local dates — the stand-up window, the snooze that lasts
+     * until tomorrow, the report filenames — and a test that inherits the developer's zone
+     * asserts something about that laptop. One did: it passed at +03 and failed in CI at UTC,
+     * and running the suite across zones then turned up a second one that only broke at +14.
+     *
+     * So the default is fixed here, and a test whose *subject* is local time names its zone
+     * explicitly (`inZone` in `server/standup.test.mjs`) rather than relying on this.
+     */
+    env: { TZ: 'UTC' },
+    /*
      * The server half is plain `.mjs` and runs under the same node environment. It used to be
      * outside the suite entirely, which meant every fix in a puller — a null fallback, a date
      * window, a status compare — was verified once by hand and by nothing afterwards.
