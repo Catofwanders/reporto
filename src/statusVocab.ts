@@ -145,15 +145,24 @@ export const inStatusGroup = (
 /**
  * Position on the board, left to right.
  *
- * Blocked comes first, whatever the configured order says. A blocked ticket is the only kind
- * whose position in the workflow is beside the point — it is not moving, and somebody has to
- * unstick it — so it belongs where the eye lands rather than wherever the pipeline puts it.
- * Expressed through the `blocked` group, so no status name is needed here (rules/nda.md).
+ * Blocked comes first, whatever the configured order says: it is the one status whose place in
+ * the pipeline is beside the point — the ticket is not moving, and somebody has to unstick it.
+ *
+ * Read from the **committed** blocked list, not the config-merged group, and that distinction
+ * is the whole subtlety. A workflow legitimately puts its own stages in the blocked group so
+ * they reach the stand-up's blockers — a failed-QC column is blocking in that sense — but such
+ * a stage is still a stage, and it belongs where the pipeline puts it. Using the merged group
+ * dragged those columns to the front of the board and buried the order the workflow had
+ * explicitly configured.
+ *
+ * `blocked` is universal Jira vocabulary, so naming it here breaks no confidentiality rule
+ * (rules/nda.md), and a board whose blocking column is called something else says so the
+ * documented way: by putting it first in `order`.
  *
  * Unknown statuses sort after every known one.
  */
 export const statusRank = (vocab: StatusVocab, status: string): number => {
-  if (inStatusGroup(vocab, 'blocked', status)) return -1;
+  if (DEFAULT_GROUPS.blocked.some((name) => key(name) === key(status))) return -1;
   const at = vocab.order.indexOf(key(status));
   return at === -1 ? vocab.order.length : at;
 };

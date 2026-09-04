@@ -73,27 +73,45 @@ describe('statusVocab', () => {
   });
 
   /*
-   * Blocked first, wherever the configured order puts it. A blocked ticket is the one kind
-   * whose place in the pipeline says nothing: it is not moving, and somebody has to unstick it.
+   * Blocked first, wherever the configured order puts it — it is the one status whose place in
+   * the pipeline says nothing, since the ticket is not moving at all.
    */
-  it('ranks a blocked status ahead of every column, whatever the order says', () => {
-    const withBlocked = statusVocab({
-      order: ['Backlog', 'In Progress', 'QA rejected', 'Ready to ship'],
-      groups: { blocked: ['QA rejected'] },
+  it('ranks blocked ahead of every column, whatever the order says', () => {
+    const vocabWithBlockedLast = statusVocab({
+      order: ['Backlog', 'In Progress', 'Ready to ship', 'Blocked'],
     });
-    expect(statusRank(withBlocked, 'QA rejected')).toBeLessThan(
-      statusRank(withBlocked, 'Backlog'),
+    expect(statusRank(vocabWithBlockedLast, 'Blocked')).toBeLessThan(
+      statusRank(vocabWithBlockedLast, 'Backlog'),
     );
-    // The universal word too, even though the default order lists it near the end.
     expect(statusRank(DEFAULT_VOCAB, 'Blocked')).toBeLessThan(
       statusRank(DEFAULT_VOCAB, 'Backlog'),
     );
   });
 
-  /* A group emptied by config means the rule does not fire — no blocked statuses, no reorder. */
-  it('does not move anything when the workflow has no blocked group', () => {
+  /*
+   * And only *blocked* leads. A workflow puts its own stages in the blocked group so they
+   * reach the stand-up's blockers — a failed-QC column is blocking in that sense — but such a
+   * stage is still a stage and belongs where the pipeline puts it. Reading the merged group
+   * here dragged those columns to the front and buried the configured order.
+   */
+  it('leaves a stage the workflow merely calls blocking where the order puts it', () => {
+    const withQaStage = statusVocab({
+      order: ['Backlog', 'In Progress', 'QA rejected', 'Ready to ship'],
+      groups: { blocked: ['QA rejected'] },
+    });
+    expect(statusRank(withQaStage, 'QA rejected')).toBe(2);
+    expect(statusRank(withQaStage, 'QA rejected')).toBeGreaterThan(
+      statusRank(withQaStage, 'In Progress'),
+    );
+    // It is still a blocker everywhere else, which is why it is in the group at all.
+    expect(inStatusGroup(withQaStage, 'blocked', 'QA rejected')).toBe(true);
+  });
+
+  /* Emptying the group does not move blocked off the front: board order is not that group. */
+  it('still leads with blocked when the group is emptied', () => {
     const none = statusVocab({ order: ['Backlog', 'In Progress'], groups: { blocked: [] } });
-    expect(statusRank(none, 'Blocked')).toBe(none.order.length);
+    expect(statusRank(none, 'Blocked')).toBe(-1);
+    expect(inStatusGroup(none, 'blocked', 'Blocked')).toBe(false);
   });
 
   it('merges tones, and lets config move a status the defaults already knew', () => {

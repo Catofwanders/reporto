@@ -37,9 +37,16 @@ that grew with its content would make a busy status wider than a quiet one.
 
 **Blocked is the first column**, wherever the configured order puts it. It is the one status
 whose place in the pipeline says nothing — the ticket is not moving, and somebody has to unstick
-it — so it goes where the eye lands. The rule reads the `blocked` *group* rather than any status
-name, so it works for a workflow whose blocking column is called something else, and a workflow
-that empties that group simply keeps its own order.
+it — so it goes where the eye lands.
+
+It reads the **committed** blocked list, not the config-merged group, and that distinction took
+one wrong version to find. A workflow legitimately puts its own stages in the blocked group so
+they reach the stand-up's blockers — a failed-QC column is blocking in that sense — but such a
+stage is still a stage, and it belongs where the pipeline puts it. Reading the merged group
+dragged those columns to the front of the board and buried an order the workflow had explicitly
+configured. `blocked` is universal Jira vocabulary, so naming it in code breaks no rule, and a
+board whose blocking column is called something else says so the documented way: by putting it
+first in `order`.
 
 **Every column shows by default, and any column can be folded** to a header and a count. That
 default was briefly the other way round — the backlog is seventeen of the twenty-three cards
