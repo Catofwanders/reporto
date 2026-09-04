@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { JiraReport, PrsReport } from '../types';
 import { formatStatus } from '../jiraStatus';
 import { TicketStatus } from './TicketStatus';
@@ -5,7 +6,8 @@ import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumbe
 import { ReportAccordion } from './ReportAccordion';
 import { RefreshButton } from './RefreshButton';
 import { useTicketReader } from './useTicketReader';
-import { prLabel } from '../format';
+import { prLabel, prMark } from '../format';
+import { openPrIndex, reviewOf } from '../ticketPrs';
 
 interface JiraReportViewProps {
   report: JiraReport;
@@ -17,6 +19,7 @@ interface JiraReportViewProps {
 
 export const JiraReportView = ({ report, onChanged, prs = null }: JiraReportViewProps) => {
   const { read, drawer } = useTicketReader({ report, prs, onChanged });
+  const openPrs = useMemo(() => openPrIndex(prs), [prs]);
 
   return (
     <section className="panel">
@@ -69,15 +72,23 @@ export const JiraReportView = ({ report, onChanged, prs = null }: JiraReportView
                   </button>
                   {ticket.prs.length > 0 && (
                     <p className="prs">
-                      {ticket.prs.map((pr) => (
-                        <span key={pr.url} className={`pr pr-${pr.state}`}>
-                          {pr.state === 'merged' ? '✓' : '◌'}{' '}
-                          <a href={pr.url} target="_blank" rel="noopener">
-                            {prLabel(pr)}
-                          </a>
-                          {pr.note && <em> ({pr.note})</em>}
-                        </span>
-                      ))}
+                      {ticket.prs.map((pr) => {
+                        // The full wording here: a list row has the room a card does not.
+                        const review = reviewOf(pr, openPrs);
+                        return (
+                          <span key={pr.url} className={`pr pr-${pr.state}`}>
+                            {prMark(pr.state)}{' '}
+                            <a href={pr.url} target="_blank" rel="noopener">
+                              {prLabel(pr)}
+                            </a>
+                            {review ? (
+                              <span className={`chip chip-${review.tone}`}>{review.label}</span>
+                            ) : (
+                              pr.note && <em> ({pr.note})</em>
+                            )}
+                          </span>
+                        );
+                      })}
                     </p>
                   )}
                   {ticket.notes.map((note) => (

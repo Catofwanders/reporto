@@ -27,6 +27,18 @@ export const PR_STATE_LABEL: Record<PrState, string> = {
   'awaiting-re-review': 'awaiting re-review',
 };
 
+/**
+ * The same five, short enough for a board card, which is 14rem wide and already carrying a
+ * summary, a key, an age pill and a status chip.
+ */
+export const PR_STATE_SHORT: Record<PrState, string> = {
+  approved: 'approved',
+  'changes-requested': 'changes',
+  'awaiting-review': 'no review',
+  commented: 'commented',
+  'awaiting-re-review': 're-review',
+};
+
 export const PR_STATE_TONE: Record<PrState, 'ok' | 'bad' | 'open' | 'warn'> = {
   approved: 'ok',
   'changes-requested': 'bad',

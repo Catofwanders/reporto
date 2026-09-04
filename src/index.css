@@ -1508,3 +1508,10 @@ body { background: var(--canvas); }
  * queue scrolls inside itself rather than pushing the activity off the frame.
  */
 .home-queue { min-width: 0; min-height: 0; display: grid; gap: .8rem; grid-template-rows: minmax(0, 1fr) auto; }
+
+/* PR plus its review state on a card: they belong together, so they wrap together. */
+.board-card-pr { display: inline-flex; align-items: center; gap: .25rem; }
+.board-card-prs { display: flex; flex-wrap: wrap; gap: .3rem; }
+.board-card-pr .chip { font-size: .68rem; padding: .05rem .3rem; }
+/* In the list the chip follows the link, so it needs the same small gap. */
+.prs .pr .chip { margin-left: .3rem; }

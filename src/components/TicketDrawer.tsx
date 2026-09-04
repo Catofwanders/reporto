@@ -4,7 +4,8 @@ import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import type { Pr, PrsReport, Ticket } from '../types';
 import { formatStatus } from '../jiraStatus';
 import { laneOf, LANES } from '../prLanes';
-import { PR_STATE_LABEL, PR_STATE_TONE, prState } from '../prState';
+import { openPrIndex, reviewOf, type TicketPrReview } from '../ticketPrs';
+import { prMark } from '../format';
 import { fetchTicketDetail, type TicketDetail } from '../ticketDetail';
 import { timeAgo } from '../timeAgo';
 import { Adf } from './Adf';
@@ -30,16 +31,24 @@ const laneTitle = (id: string) => LANES.find((lane) => lane.id === id)?.title ??
  * you". That state already exists in `prState`/`laneOf`, so this looks the PR up in the open-PR
  * report and reuses it rather than deriving a second opinion here.
  */
-const PrRow = ({ pr, open }: { pr: Pr; open?: PrsReport['repos'][number]['prs'][number] }) => {
-  const state = open ? prState(open) : null;
+const PrRow = ({
+  pr,
+  open,
+  review,
+}: {
+  pr: Pr;
+  open?: PrsReport['repos'][number]['prs'][number];
+  /** From `ticketPrs`, so the drawer, the board and the list say the same thing. */
+  review: TicketPrReview | null;
+}) => {
   return (
     <li className="drawer-pr">
       <a href={pr.url} target="_blank" rel="noopener noreferrer">
         <span className={`pr pr-${pr.state}`}>
-          {pr.state === 'merged' ? '✓' : '◌'} {pr.repo.split('/').pop()}#{pr.num}
+          {prMark(pr.state)} {pr.repo.split('/').pop()}#{pr.num}
         </span>
-        {state ? (
-          <span className={`chip chip-${PR_STATE_TONE[state]}`}>{PR_STATE_LABEL[state]}</span>
+        {review ? (
+          <span className={`chip chip-${review.tone}`}>{review.label}</span>
         ) : (
           <span className="chip chip-na">{pr.note ?? pr.state}</span>
         )}
@@ -142,11 +151,7 @@ export const TicketDrawer = ({ ticket, prs, onClose, onChanged }: TicketDrawerPr
   // claims something is still on its way.
   const pending = !detail && !error;
 
-  const openPrs = new Map(
-    (prs?.repos ?? []).flatMap((group) =>
-      group.prs.map((pr) => [`${group.repo}#${pr.num}`, pr] as const),
-    ),
-  );
+  const openPrs = openPrIndex(prs);
 
   return (
     <div
@@ -237,7 +242,12 @@ export const TicketDrawer = ({ ticket, prs, onClose, onChanged }: TicketDrawerPr
             <h3>Pull requests</h3>
             <ul className="drawer-prs">
               {ticket.prs.map((pr) => (
-                <PrRow key={pr.url} pr={pr} open={openPrs.get(`${pr.repo}#${pr.num}`)} />
+                <PrRow
+                  key={pr.url}
+                  pr={pr}
+                  open={openPrs.get(`${pr.repo}#${pr.num}`)}
+                  review={reviewOf(pr, openPrs)}
+                />
               ))}
             </ul>
           </section>

@@ -1,14 +1,15 @@
-import { useState } from 'react';
-import type { JiraReport, PrsReport, Ticket } from '../types';
+import { useMemo, useState } from 'react';
+import type { JiraReport, OpenPr, PrsReport, Ticket } from '../types';
 import { formatStatus, statusTone } from '../jiraStatus';
 import { useHashTarget } from '../useHashTarget';
 import { TicketStatus } from './TicketStatus';
 import { agingOf } from '../ticketAging';
+import { openPrIndex, reviewOf } from '../ticketPrs';
 import { useCapabilities } from '../capabilitiesContext';
 import { statusRank } from '../statusVocab';
 import { useRefresh } from '../refreshContext';
 import { useTicketReader } from './useTicketReader';
-import { plural, prLabel } from '../format';
+import { plural, prLabel, prMark } from '../format';
 
 interface JiraBoardProps {
   report: JiraReport;
@@ -58,6 +59,7 @@ const BoardCard = ({
   onChanged,
   onOpen,
   pendingPrs = false,
+  openPrs,
 }: {
   ticket: Ticket;
   onChanged?: () => void;
@@ -65,6 +67,8 @@ const BoardCard = ({
   onOpen: () => void;
   /** The report is the fast half of a pull, so PRs are not absent — just not here yet. */
   pendingPrs?: boolean;
+  /** The open-PR report, indexed — where a PR's review state comes from. */
+  openPrs: Map<string, OpenPr>;
 }) => {
   const { running } = useRefresh();
   const { statusAging, statuses } = useCapabilities();
@@ -89,18 +93,32 @@ const BoardCard = ({
 
       {ticket.prs.length > 0 && (
         <p className="board-card-prs">
-          {ticket.prs.map((pr) => (
-            <a
-              key={pr.url}
-              className={`pr pr-${pr.state}`}
-              href={pr.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={pr.note ?? `${pr.state} pull request`}
-            >
-              {pr.state === 'merged' ? '✓' : '◌'} {prLabel(pr)}
-            </a>
-          ))}
+          {ticket.prs.map((pr) => {
+            /*
+             * The review state beside the PR, because "open" was doing the work of five
+             * different answers: approved and waiting for the button, changes requested and
+             * waiting on me, and nobody having looked at all read identically on a card.
+             */
+            const review = reviewOf(pr, openPrs);
+            return (
+              <span key={pr.url} className="board-card-pr">
+                <a
+                  className={`pr pr-${pr.state}`}
+                  href={pr.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={review?.label ?? pr.note ?? `${pr.state} pull request`}
+                >
+                  {prMark(pr.state)} {prLabel(pr)}
+                </a>
+                {review && (
+                  <span className={`chip chip-${review.tone}`} title={review.label}>
+                    {review.short}
+                  </span>
+                )}
+              </span>
+            );
+          })}
         </p>
       )}
 
@@ -136,6 +154,9 @@ export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => 
   const { statuses } = useCapabilities();
   const pendingPrs = Boolean(report.partial && report.pending?.includes('prs'));
   const { read, drawer } = useTicketReader({ report, prs, onChanged });
+  // Built once per render rather than per card: forty cards each walking the report is the
+  // same answer computed forty times.
+  const openPrs = useMemo(() => openPrIndex(prs), [prs]);
   /**
    * Columns folded by hand this visit. Everything starts open: a board that hides a column by
    * default is a board you have to remember to check, and the count in a folded header does not
@@ -201,6 +222,7 @@ export const JiraBoard = ({ report, onChanged, prs = null }: JiraBoardProps) => 
                   onChanged={onChanged}
                   onOpen={() => read(ticket.key)}
                   pendingPrs={pendingPrs}
+                  openPrs={openPrs}
                 />
               ))}
             </div>

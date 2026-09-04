@@ -55,6 +55,37 @@ A board card holds the summary, its PRs, and a deploy-qc warning when a merged P
 from that branch. Everything else — per-ticket notes, PR remarks — lives in the **List**
 view behind the toggle in the card header.
 
+## Review state on a ticket's PRs
+
+A board card said `◌ orders-api#77` and nothing more, so the two answers a reader actually
+wants — approved and waiting for the merge button, versus changes requested and waiting on me —
+looked identical. Worse, so did "nobody has looked at it yet".
+
+The state itself was never missing. `prState` has derived it since the PR page existed; what
+was missing was the *join*, because a ticket names its PRs as `repo#num` while the review data
+lives in the open-PR report. So `ticketPrs.ts` is that join, in one place, used by the board,
+the list and the drawer — three copies of it is how one of them starts disagreeing about the
+same PR. The drawer had its own copy and now uses this one.
+
+The board gets short labels (`approved`, `changes`, `no review`, `commented`, `re-review`)
+because a card is 14rem wide and already carries a summary, a key, an age pill and a status
+chip; the list and the drawer get the full wording.
+
+Three things it refuses to say:
+
+- **Nothing for a merged or closed PR.** That review is history — the ✓ and the deploy-qc
+  warning are the live facts.
+- **Nothing for a draft.** Nobody has been asked yet, which the draft chip already says.
+- **Nothing where nothing is known.** A PR the open-PR report does not cover falls back to the
+  coarse note the ticket carries (`approved` / `changes requested`) and otherwise shows no
+  chip. "Awaiting review" for a PR nobody has looked *for* is the confident wrong answer this
+  dashboard exists to avoid.
+
+One thing came out of building it: three PR states were sharing two glyphs, with colour
+carrying the difference between open and closed. That was survivable until an open PR gained a
+chip beside it, at which point a closed PR read as "open, and nobody has looked". Each state
+now has its own mark — `✓` merged, `◌` open, `✕` closed.
+
 ## Since the last report
 
 Every other panel describes *now*: what is open, what is waiting, how long it has waited. None
