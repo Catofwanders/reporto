@@ -47,10 +47,16 @@ export const JiraPage = ({ report, prs = null }: JiraPageProps) => {
                 {total} tickets across {report.groups.length} statuses
                 {/* Says what the shimmering cards are waiting for, so the gaps read as
                     "loading" rather than as "none". */}
-                {report.partial && (
+                {report.partial ? (
                   <span className="panel-pending">
                     {running.has('jira') ? ' · PRs and ages loading…' : ' · PRs and ages not fetched'}
                   </span>
+                ) : (
+                  // A complete board is held as it is while the pull runs, so say why nothing
+                  // is moving — otherwise the spinner reads as a page that failed to update.
+                  running.has('jira') && (
+                    <span className="panel-pending"> · updating; this board until it lands</span>
+                  )
                 )}
               </p>
             </div>

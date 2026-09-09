@@ -15,12 +15,18 @@ const POLL_MS = 3000;
 
 interface RefreshProviderProps {
   onReload: (kinds: ReportKind[]) => Promise<void>;
+  /**
+   * Whether what is on screen for a kind is already a complete report. Jira's fast pass only
+   * earns its extra request when there is nothing complete to look at; run it over a finished
+   * board and the page spends twenty seconds showing less than it did before.
+   */
+  isComplete?: (kind: ReportKind) => boolean;
   children: React.ReactNode;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) => {
+export const RefreshProvider = ({ onReload, isComplete, children }: RefreshProviderProps) => {
   const { usable } = useCapabilities();
   const [running, setRunning] = useState<Set<ReportKind>>(new Set());
   const [errors, setErrors] = useState<Partial<Record<ReportKind, string>>>({});
@@ -105,8 +111,12 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
            * more. Waiting for the second before showing the first meant twenty seconds of
            * nothing, so the fast pass lands first and the page fills in behind it — the
            * spinner stays on until both are done, because the data is not complete until then.
+           *
+           * Skipped once there is a complete board on screen: the page then holds the state it
+           * had and swaps in the finished pull in one go, rather than dropping to skeletons and
+           * climbing back out of them.
            */
-          if (kind === 'jira') await pull('?phase=fast');
+          if (kind === 'jira' && !isComplete?.('jira')) await pull('?phase=fast');
           await pull();
           return;
         }
@@ -145,7 +155,7 @@ export const RefreshProvider = ({ onReload, children }: RefreshProviderProps) =>
         setBusy(affected, false);
       }
     },
-    [apiKinds, commandOf, onReload, setBusy],
+    [apiKinds, commandOf, isComplete, onReload, setBusy],
   );
 
   /*

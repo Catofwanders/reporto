@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import type {
   CalendarReport,
@@ -15,6 +15,7 @@ import { RefreshProvider } from './refresh';
 import { CapabilitiesProvider } from './capabilities';
 import { assertReport } from './reportSchema';
 import { previousFiles, sinceYesterday } from './sinceYesterday';
+import { shouldReplace } from './reportMerge';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ModuleGate } from './components/ModuleGate';
@@ -185,8 +186,13 @@ export const App = () => {
       const next = { ...prev };
       kinds.forEach((kind, i) => {
         const result = settled[i];
+        if (result.status !== 'fulfilled') return;
+        // A half-fetched report yields to a complete one for the same day, so an update never
+        // trades real data for skeletons. See reportMerge.ts. `null` is the index naming no
+        // file at all, which still clears the card.
+        if (result.value && !shouldReplace(prev[kind] ?? null, result.value)) return;
         // Each kind's file matches its own report shape; the index keys them by kind.
-        if (result.status === 'fulfilled') next[kind] = result.value as never;
+        next[kind] = result.value as never;
       });
       return next;
     });
@@ -204,6 +210,22 @@ export const App = () => {
       return next;
     });
   }, []);
+
+  /*
+   * Read through a ref, not from `reports` directly: this callback goes into `RefreshProvider`,
+   * whose `run` is a dependency of LiveRefresh's staleness sweep. Closing over the state would
+   * change `run`'s identity on every load and tear that sweep down mid-flight.
+   */
+  const latest = useRef(reports);
+  useEffect(() => {
+    latest.current = reports;
+  }, [reports]);
+
+  /** Whether the report on screen for a kind is whole — only Jira is ever fetched in halves. */
+  const isComplete = useCallback(
+    (kind: ReportKind) => (kind === 'jira' ? Boolean(latest.current.jira && !latest.current.jira.partial) : true),
+    [],
+  );
 
   /** Every kind, re-read from disk. What `LiveRefresh` calls when the window wakes. */
   const reload = useCallback(() => {
@@ -242,7 +264,7 @@ export const App = () => {
   return (
     <BrowserRouter>
       <CapabilitiesProvider>
-        <RefreshProvider onReload={load}>
+        <RefreshProvider onReload={load} isComplete={isComplete}>
           <AppShell
             generatedAt={generatedAt}
             onWake={reload}
