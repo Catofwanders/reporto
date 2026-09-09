@@ -1455,12 +1455,20 @@ body { background: var(--canvas); }
 .activity-row.is-mention .activity-kind { color: var(--warn-ink); }
 
 /*
- * "Not today" on a queue row. Left of the row rather than right, where the read button is —
- * two controls at the same edge on hover is a mis-click waiting to happen. Same `:focus`
- * rule as the read button: a control holding the keyboard must be visible.
+ * "Not today" on a queue row.
+ *
+ * It sits at the right edge, past the age chip, and the row reserves the space for it
+ * permanently — at `right: 2.1rem` it landed on top of the chip, hiding how old the thing was
+ * at the exact moment you were deciding whether to put it off. Reserved rather than made on
+ * hover, because a row whose contents shift as the pointer arrives is a mis-click.
+ *
+ * Same `:focus` rule as the read button: a control holding the keyboard must be visible.
  */
+/* Only rows that actually have the button pay for the space: the "since" panel reuses
+   this row markup without one. */
+.needs-row:has(.needs-snooze) a { padding-right: 2.35rem; }
 .needs-snooze {
-  position: absolute; right: 2.1rem; top: 50%; transform: translateY(-50%);
+  position: absolute; right: .3rem; top: 50%; transform: translateY(-50%);
   display: inline-flex; padding: .2rem; border-radius: .35rem; z-index: 1;
   background: var(--panel); border: 1px solid var(--line); color: var(--ink-2); cursor: pointer;
   opacity: 0;

@@ -112,17 +112,6 @@ export const NeedsYou = ({
                           <SnoozeRoundedIcon fontSize="small" />
                         </button>
                       )}
-                      {onSnooze && (
-                        <button
-                          type="button"
-                          className="needs-snooze"
-                          title={`Not today — hide ${item.label} until tomorrow`}
-                          aria-label={`Snooze ${item.label} until tomorrow`}
-                          onClick={() => onSnooze(item.id)}
-                        >
-                          <SnoozeRoundedIcon fontSize="small" />
-                        </button>
-                      )}
                       <Link to={item.to} title={item.detail}>
                         <Icon className={`needs-icon is-${item.source}`} fontSize="small" />
                         <span className="needs-body">
