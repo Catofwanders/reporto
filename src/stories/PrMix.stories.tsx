@@ -38,5 +38,5 @@ export const OneLane: Story = {
   },
 };
 
-/** No open PRs: the component renders nothing at all rather than an empty bar. */
+/** No open PRs: the card says so rather than drawing an empty bar. */
 export const Empty: Story = { args: { report: { ...prsReport, repos: [] } } };

@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom';
 import AltRouteRoundedIcon from '@mui/icons-material/AltRouteRounded';
 import type { PrsReport } from '../types';
 import { LANES, toLanes } from '../prLanes';
+import { MixCard } from './MixCard';
 
 interface PrMixProps {
   report: PrsReport;
@@ -15,73 +15,26 @@ const TONE: Record<string, string> = {
   drafts: 'var(--na-ink)',
 };
 
-/**
- * Where my open PRs stand, as one bar.
- *
- * Four numbers in a row is a list to read; the same four as segments is a shape to glance at —
- * whether the pile is mostly waiting on other people or mostly waiting on me is the question,
- * and proportion answers it faster than arithmetic. The counts stay as labels underneath,
- * because a segment nobody can measure is decoration.
- *
- * Deliberately not a donut: these are parts of one pile, and a bar compares lengths, which is
- * the comparison people read accurately.
- */
+/** Where my open PRs stand, as one bar. */
 export const PrMix = ({ report }: PrMixProps) => {
   const lanes = toLanes(report);
   const parts = LANES.map((lane) => ({
     id: lane.id,
     title: lane.title,
     count: (lanes.get(lane.id) ?? []).length,
+    ink: TONE[lane.id],
   })).filter((part) => part.count > 0);
   const total = parts.reduce((sum, part) => sum + part.count, 0);
-  // Said rather than rendered as an absence: a missing card and an empty pile look the same,
-  // and only one of them is news.
-  if (total === 0) {
-    return (
-      <section className="panel pr-mix">
-        <div className="mini-head">
-          <span className="panel-icon badge-open" aria-hidden="true">
-            <AltRouteRoundedIcon fontSize="small" />
-          </span>
-          <h2>My PRs</h2>
-        </div>
-        <p className="mini-empty">No open pull requests.</p>
-      </section>
-    );
-  }
 
   return (
-    <section className="panel pr-mix">
-      <div className="mini-head">
-        <span className="panel-icon badge-open" aria-hidden="true">
-          <AltRouteRoundedIcon fontSize="small" />
-        </span>
-        <h2>My PRs</h2>
-        <Link className="day-more" to="/prs">
-          {total} open
-        </Link>
-      </div>
-
-      <div className="pr-mix-bar" role="img" aria-label={parts.map((p) => `${p.count} ${p.title}`).join(', ')}>
-        {parts.map((part) => (
-          <span
-            key={part.id}
-            className="pr-mix-part"
-            style={{ flexGrow: part.count, background: TONE[part.id] }}
-            title={`${part.count} ${part.title.toLowerCase()}`}
-          />
-        ))}
-      </div>
-
-      <ul className="pr-mix-legend">
-        {parts.map((part) => (
-          <li key={part.id}>
-            <span className="pr-mix-swatch" style={{ background: TONE[part.id] }} aria-hidden="true" />
-            <strong>{part.count}</strong>
-            <span>{part.title.toLowerCase()}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <MixCard
+      icon={<AltRouteRoundedIcon fontSize="small" />}
+      badge="badge-open"
+      title="My PRs"
+      to="/prs"
+      linkLabel={`${total} open`}
+      parts={parts}
+      empty="No open pull requests."
+    />
   );
 };

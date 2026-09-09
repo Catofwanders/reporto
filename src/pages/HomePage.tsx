@@ -14,6 +14,7 @@ import { FlowChecks } from '../components/FlowChecks';
 import { KpiStrip } from '../components/KpiStrip';
 import { NeedsYou } from '../components/NeedsYou';
 import { PrMix } from '../components/PrMix';
+import { ReviewMix } from '../components/ReviewMix';
 import { StandupCard } from '../components/StandupCard';
 import { JiraActivity } from '../components/JiraActivity';
 import { SinceYesterday } from '../components/SinceYesterday';
@@ -143,6 +144,7 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
               </section>
             ))}
           {sources.prs && <PrMix report={sources.prs} />}
+          {sources.reviews && <ReviewMix report={sources.reviews} jira={sources.jira} />}
           {/* Folded: this answers a Monday question, not an every-morning one. */}
           {since && <SinceYesterday report={since} />}
           {/* Folded by default: a contradiction is worth knowing about, not worth a third of
