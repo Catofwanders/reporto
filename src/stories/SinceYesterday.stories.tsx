@@ -50,11 +50,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Folded, which is how the dashboard shows it: one line and a count. */
-export const Folded: Story = {};
+/** Open, which is how the dashboard shows it: arrivals first, then moves, then what left. */
+export const Open: Story = {};
 
-/** Open: arrivals first, then moves, then what left. */
-export const Open: Story = { args: { open: true } };
+/** Folded by the toggle: one line and a count. */
+export const Folded: Story = { args: { open: false } };
 
 /** A quiet weekend. Said plainly, because "nothing" is a real and useful answer here. */
 export const NothingMoved: Story = {

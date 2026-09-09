@@ -8,7 +8,7 @@ import { plural } from '../format';
 
 interface SinceYesterdayProps {
   report: SinceReport;
-  /** Folded by default on the dashboard; a story opens it. */
+  /** Open by default; the toggle folds it away for the rest of the session. */
   open?: boolean;
 }
 
@@ -22,14 +22,15 @@ const dayLabel = (date: string) => {
 /**
  * What moved since the last day there is a report for.
  *
- * Folded by default: this answers a question you have on a Monday or after a day off, not one
- * you have every morning, and the dashboard's first screen belongs to what is waiting now. The
- * summary line carries the count, so opening it is a decision rather than a search.
+ * Open by default: a count with a "show" beside it is a question, and answering it took a
+ * click every single morning. The list is bounded and scrolls in place, so it costs the aside
+ * a fixed strip rather than the page's whole height — and the toggle is still there for
+ * anyone who wants it out of the way.
  *
  * It costs nothing to produce — the reports are dated files and yesterday's is still on disk —
  * which is why it can be here at all rather than behind a fetch.
  */
-export const SinceYesterday = ({ report, open = false }: SinceYesterdayProps) => {
+export const SinceYesterday = ({ report, open = true }: SinceYesterdayProps) => {
   const [shown, setShown] = useState(open);
 
   // No earlier report at all: a fresh clone, or one day of history. Nothing to compare, and

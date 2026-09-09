@@ -131,7 +131,6 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
             ))}
           {sources.prs && <PrMix report={sources.prs} />}
           {sources.reviews && <ReviewMix report={sources.reviews} jira={sources.jira} />}
-          {/* Folded: this answers a Monday question, not an every-morning one. */}
           {since && <SinceYesterday report={since} />}
           {/* Folded by default: a contradiction is worth knowing about, not worth a third of
               the screen every morning, and its count is already in the strip above. */}
