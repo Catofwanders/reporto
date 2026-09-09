@@ -91,7 +91,7 @@ describe('the report loader', () => {
       'prs-2026-05-14.json': () => json(PRS),
     });
     render(<App />);
-    expect(await screen.findByText('my open PRs')).toBeDefined();
+    expect(await screen.findByText('My PRs')).toBeDefined();
     expect(screen.queryByText(/report is malformed/)).toBeNull();
   });
 
@@ -107,7 +107,7 @@ describe('the report loader', () => {
     // The broken one is named, with its kind…
     expect(await screen.findByText(/jira report is malformed/)).toBeDefined();
     // …and the PR report is still on screen rather than blanked with it.
-    expect(await screen.findByText('my open PRs')).toBeDefined();
+    expect(await screen.findByText('My PRs')).toBeDefined();
   });
 
   /*
@@ -139,7 +139,7 @@ describe('the report loader', () => {
     });
     render(<App />);
     expect(await screen.findByText(/the server returned the app shell/)).toBeDefined();
-    expect(await screen.findByText('my open PRs')).toBeDefined();
+    expect(await screen.findByText('My PRs')).toBeDefined();
   });
 
   /* A fresh checkout has no report data at all — expected, not an error. */
@@ -148,7 +148,7 @@ describe('the report loader', () => {
     render(<App />);
     await waitFor(() => expect(screen.queryByText(/Loading reports/)).toBeNull());
     expect(screen.queryByText(/Could not read the report index/)).toBeNull();
-    expect(screen.getByText('my open PRs')).toBeDefined();
+    expect(screen.getByText('Needs you')).toBeDefined();
   });
 
   /* But an unreachable server is a failure, and must not masquerade as "no reports". */

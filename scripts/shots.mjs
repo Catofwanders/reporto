@@ -29,7 +29,7 @@ const SHOTS = [
  *
  * It found another project's Storybook on 6007, decided it was already running, and shot the
  * README pictures against it. What saved the repo from publishing somebody else's UI was the
- * `.kpi-strip` wait timing out — which is luck, not a check. So the port is now identified by
+ * the `.needs-you` wait timing out — which is luck, not a check. So the port is now identified by
  * the story it must contain.
  */
 const hasStory = async (url) => {
@@ -120,7 +120,7 @@ try {
     )
     // The dashboard measures itself — the timeline packs its pills from rendered widths — so
     // give it a frame after load before believing the layout.
-    await page.waitForSelector('.kpi-strip')
+    await page.waitForSelector('.needs-you')
     await page.waitForTimeout(400)
     await writeFile(shot.file, await page.screenshot({ type: 'jpeg', quality: 90 }))
     console.log(`${shot.file} — ${shot.palette}`)

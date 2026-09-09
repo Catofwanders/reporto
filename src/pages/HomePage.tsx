@@ -7,11 +7,9 @@ import type {
   SlackReport,
 } from '../types';
 import { useCapabilities } from '../capabilitiesContext';
-import { flowFindings } from '../flowChecks';
-import { kpis, needsYou, needsYouTotal } from '../needsYou';
+import { needsYou, needsYouTotal } from '../needsYou';
 import { DayTimeline } from '../components/DayTimeline';
 import { FlowChecks } from '../components/FlowChecks';
-import { KpiStrip } from '../components/KpiStrip';
 import { NeedsYou } from '../components/NeedsYou';
 import { PrMix } from '../components/PrMix';
 import { ReviewMix } from '../components/ReviewMix';
@@ -53,7 +51,7 @@ interface HomePageProps {
  * the page that owns it. This screen decides where to look; it does not do the work.
  */
 export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePageProps) => {
-  const { usable, statusAging, stuckStatuses, statuses, slackWords } = useCapabilities();
+  const { usable, slackWords } = useCapabilities();
   const [snoozes, setSnoozes] = useState(readSnoozes);
   // Slack rows dismissed by hand, read once on mount like the other local marks.
   const [slackDone] = useState(readDone);
@@ -66,12 +64,8 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
     prs: usable('prs') ? prs : null,
     reviews: usable('reviews') ? reviews : null,
     slack: usable('slack') ? slack : null,
-    aging: statusAging,
-    stuckStatuses,
-    vocab: statuses,
   };
 
-  const findings = flowFindings(sources.jira, sources.prs, sources.slack, statuses);
   // Before the first pull there is nothing to be relieved about; the panels say so instead of
   // rendering a confident emptiness.
   const unpulled = !sources.jira && !sources.prs && !sources.reviews && !sources.slack;
@@ -81,9 +75,9 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
     slackDone: (id) => isDone(id, slackDone),
   });
   /*
-   * Snoozed rows leave the list but not the counting: the KPI strip keeps the true total, and
-   * the panel says how many it is holding back. A number that quietly shrinks when a row is
-   * dismissed is the failure mode this whole dashboard exists to avoid.
+   * Snoozed rows leave the list but not the counting: the panel keeps the true total and says
+   * how many it is holding back. A number that quietly shrinks when a row is dismissed is the
+   * failure mode this whole dashboard exists to avoid.
    */
   const snoozedNow = queue.filter((item) => rowSnoozed(item.id, snoozes));
   const items = showSnoozed ? queue : queue.filter((item) => !rowSnoozed(item.id, snoozes));
@@ -94,17 +88,9 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
     slackWords,
     slackDone: (id) => isDone(id, slackDone),
   });
-  const counts = kpis({ ...sources, conflicts: findings.length });
 
   return (
     <main className="home">
-      {/* `loaded` is what keeps a never-pulled report from reading as a clear morning. */}
-      <KpiStrip
-        counts={counts}
-        usable={usable}
-        loaded={(kind) => Boolean(sources[kind])}
-      />
-
       <div className="home-split">
         {/*
           The queue and the unread activity share the column, because they answer the two

@@ -18,12 +18,23 @@ const TONE: Record<string, string> = {
 /** Where my open PRs stand, as one bar. */
 export const PrMix = ({ report }: PrMixProps) => {
   const lanes = toLanes(report);
-  const parts = LANES.map((lane) => ({
-    id: lane.id,
-    title: lane.title,
-    count: (lanes.get(lane.id) ?? []).length,
-    ink: TONE[lane.id],
-  })).filter((part) => part.count > 0);
+  const parts = LANES.map((lane) => {
+    const rows = lanes.get(lane.id) ?? [];
+    return {
+      id: lane.id,
+      title: lane.title,
+      count: rows.length,
+      ink: TONE[lane.id],
+      // Named rather than counted: the segment says how many, the popup says which. No author
+      // line here — every PR in this report is mine, so naming me four times says nothing.
+      items: rows.map((row) => ({
+        id: row.pr.url,
+        name: `${row.repo}#${row.pr.num}`,
+        title: row.pr.title,
+        note: row.reason,
+      })),
+    };
+  }).filter((part) => part.count > 0);
   const total = parts.reduce((sum, part) => sum + part.count, 0);
 
   return (

@@ -2,12 +2,29 @@ import { describe, expect, it } from 'vitest';
 import type { ReviewLaneId, ReviewRow } from './reviewLanes';
 import { reviewMix } from './reviewMix';
 
-const rows = (n: number): ReviewRow[] =>
-  Array.from({ length: n }, () => ({}) as ReviewRow);
+let seq = 0;
+
+const rows = (lane: ReviewLaneId, n: number): ReviewRow[] =>
+  Array.from({ length: n }, () => {
+    seq += 1;
+    return {
+      pr: {
+        repo: 'shop-web',
+        num: seq,
+        title: `SHOP-${seq} - a change`,
+        url: `https://example.test/${lane}/${seq}`,
+        author: 'colleague',
+      },
+      reason: `${lane} reason`,
+    } as ReviewRow;
+  });
 
 const lanes = (counts: Partial<Record<ReviewLaneId, number>>) => {
+  seq = 0;
   const map = new Map<ReviewLaneId, ReviewRow[]>();
-  for (const [lane, n] of Object.entries(counts)) map.set(lane as ReviewLaneId, rows(n));
+  for (const [lane, n] of Object.entries(counts)) {
+    map.set(lane as ReviewLaneId, rows(lane as ReviewLaneId, n));
+  }
   return map;
 };
 
@@ -44,6 +61,23 @@ describe('reviewMix', () => {
   it('names the lanes behind a folded segment', () => {
     const [part] = reviewMix(lanes({ changed: 2, unseen: 1 }));
     expect(part.detail).toBe('2 changed since you looked, 1 never looked at');
+  });
+
+  /**
+   * The popup is the only place these rows are named, so it carries the handle, the title and
+   * whose PR it is — a count nobody can attach to a PR is what the legend already said.
+   */
+  it('names each PR behind a segment, with its author', () => {
+    const [part] = reviewMix(lanes({ unseen: 1 }));
+    expect(part.items).toEqual([
+      {
+        id: 'https://example.test/unseen/1',
+        name: 'shop-web#1',
+        title: 'SHOP-1 - a change',
+        author: 'colleague',
+        note: 'unseen reason',
+      },
+    ]);
   });
 
   /** An empty group is decoration: a zero-width segment with a legend entry nobody needs. */

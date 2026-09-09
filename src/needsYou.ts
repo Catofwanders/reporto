@@ -12,9 +12,6 @@ import { idleDays, laneOf, reasonOf } from './prLanes';
 import { laneOfReview, reasonOfReview, toReviewLanes } from './reviewLanes';
 import { laneOfSlack, reasonOfSlack, WAITING_LANES } from './slackLanes';
 import type { SlackWords } from './slackIntent';
-import { activeTickets } from './jiraActive';
-import { type AgingLimits, agingOf, countsAsStuck } from './ticketAging';
-import { DEFAULT_VOCAB, type StatusVocab } from './statusVocab';
 
 /**
  * One queue instead of four.
@@ -231,48 +228,3 @@ export function needsYou({
 /** Everything the feed drew from, for the "N more" line under it. */
 export const needsYouTotal = (args: Parameters<typeof needsYou>[0]): number =>
   needsYou({ ...args, limit: Number.MAX_SAFE_INTEGER }).length;
-
-/** Counts for the strip across the top, each one a number somebody can act on. */
-export interface Kpis {
-  prs: number;
-  reviews: number;
-  tickets: number;
-  /** Tickets past the days-in-status limit configured for their status. */
-  stuck: number;
-  conflicts: number;
-}
-
-export const kpis = ({
-  prs,
-  reviews,
-  jira,
-  aging = {},
-  stuckStatuses = [],
-  vocab = DEFAULT_VOCAB,
-  conflicts = 0,
-}: {
-  prs: PrsReport | null;
-  reviews: ReviewsReport | null;
-  /** Accepted and ignored: Slack has no tile, since the queue below already carries it. */
-  slack?: SlackReport | null;
-  jira: JiraReport | null;
-  aging?: AgingLimits;
-  stuckStatuses?: string[];
-  vocab?: StatusVocab;
-  conflicts?: number;
-}): Kpis => {
-  const reviewLanes = reviews ? toReviewLanes(reviews, jira) : new Map();
-  const active = jira ? activeTickets(jira, vocab) : [];
-
-  return {
-    // Open PRs of mine that are not finished — the number in the sidebar's PR row.
-    prs: (prs?.repos ?? []).reduce((n, group) => n + group.prs.length, 0),
-    // Same rule as the feed: my verdict is out of date, not "somebody asked the team".
-    reviews: (reviewLanes.get('changed') ?? []).length,
-    tickets: active.length,
-    stuck: active.filter(
-      (ticket) => countsAsStuck(ticket.status, stuckStatuses) && agingOf(ticket, aging)?.over,
-    ).length,
-    conflicts,
-  };
-};

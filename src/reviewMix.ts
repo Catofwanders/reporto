@@ -32,6 +32,8 @@ export interface ReviewMixPart {
   count: number;
   /** The lanes behind the number, so folding them does not hide them. */
   detail: string;
+  /** The PRs themselves, for the segment's popup — "1 needs you" begs the question *which*. */
+  items: { id: string; name: string; title: string; author: string; note: string }[];
 }
 
 const laneTitle = (id: ReviewLaneId): string =>
@@ -48,5 +50,15 @@ export const reviewMix = (lanes: Map<ReviewLaneId, ReviewRow[]>): ReviewMixPart[
       title: group.title,
       count: counts.reduce((sum, lane) => sum + lane.count, 0),
       detail: counts.map((lane) => `${lane.count} ${laneTitle(lane.id).toLowerCase()}`).join(', '),
+      items: group.lanes.flatMap((id) =>
+        (lanes.get(id) ?? []).map((row) => ({
+          id: row.pr.url,
+          name: `${row.pr.repo}#${row.pr.num}`,
+          title: row.pr.title,
+          // Whose review this is matters here in a way it does not on my own PRs.
+          author: row.pr.author,
+          note: row.reason,
+        })),
+      ),
     };
   }).filter((part) => part.count > 0);

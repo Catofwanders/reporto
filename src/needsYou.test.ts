@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { JiraReport, OpenPr, PrsReport, ReviewPr, ReviewsReport, SlackReport, SlackRow } from './types';
-import { kpis, needsYou, needsYouTotal } from './needsYou';
+import { needsYou, needsYouTotal } from './needsYou';
 
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
 const daysAgo = (days: number) => hoursAgo(days * 24);
@@ -180,8 +180,8 @@ describe('needsYou', () => {
   /*
    * The board contributes no rows at all any more. "Unstick" was the one group whose rows
    * nobody could act on from a queue — a ticket sitting too long needs a conversation, not a
-   * click — and it repeated itself every morning until that conversation happened. The count
-   * stays in the strip, the age pill stays on the board.
+   * click — and it repeated itself every morning until that conversation happened. The age
+   * pill on the board is where that fact lives.
    */
   it('takes nothing from the board, however stuck a ticket is', () => {
     const args = {
@@ -191,8 +191,6 @@ describe('needsYou', () => {
       stuckStatuses: ['In Progress'],
     };
     expect(needsYou(args)).toEqual([]);
-    // And it is still counted, so the fact is not lost — only the row is.
-    expect(kpis(args).stuck).toBe(1);
   });
 
   /* Most blocking first, then longest waiting — the order the morning should be read in. */
@@ -228,39 +226,4 @@ describe('needsYou', () => {
     expect(needsYou({ ...EMPTY, prs: many, limit: 3 })).toHaveLength(3);
     expect(needsYouTotal({ ...EMPTY, prs: many })).toBe(9);
   });
-});
-
-describe('kpis', () => {
-  it('counts open PRs, re-reviews, active tickets and stuck ones separately', () => {
-    const counts = kpis({
-      prs: prs([openPr({ num: 1 }), openPr({ num: 2, draft: true })]),
-      reviews: reviews([
-        reviewPr({ num: 10 }),
-        reviewPr({
-          num: 11,
-          myReviewState: 'APPROVED',
-          myReviewAt: daysAgo(5),
-          reworkCommits: 1,
-          reworkBy: 'colleague',
-        }),
-      ]),
-      jira: jira('In Progress', daysAgo(9)),
-      aging: { 'In Progress': 4 },
-      stuckStatuses: ['In Progress'],
-      conflicts: 2,
-    });
-    expect(counts).toEqual({ prs: 2, reviews: 1, tickets: 1, stuck: 1, conflicts: 2 });
-  });
-
-  it('is all zeros with no reports, rather than throwing', () => {
-    expect(kpis({ prs: null, reviews: null, jira: null })).toEqual({
-      prs: 0,
-      reviews: 0,
-      tickets: 0,
-      stuck: 0,
-      conflicts: 0,
-    });
-  });
-
-
 });
