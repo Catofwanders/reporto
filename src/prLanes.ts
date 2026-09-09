@@ -1,5 +1,5 @@
 import type { OpenPr, PrRepoGroup, PrsReport } from './types';
-import { prState, qcChip } from './prState';
+import { onQc, prState, qcAheadWork, qcChip } from './prState';
 import { plural } from './format';
 
 /**
@@ -109,8 +109,8 @@ export const reasonOf = (pr: OpenPr, days: number, me?: string): string => {
   if (state === 'approved') {
     const qc = qcChip(pr.deployQc);
     if (qc?.tone === 'qc') return 'approved · on QC — merge it';
-    if (pr.deployQc && pr.deployQc.aheadBy > 0) {
-      return `approved — ${plural(pr.deployQc.aheadBy, 'commit')} not on deploy-qc yet`;
+    if (pr.deployQc && onQc(pr.deployQc) === false) {
+      return `approved — ${plural(qcAheadWork(pr.deployQc), 'commit')} not on deploy-qc yet`;
     }
     return 'approved — merge it';
   }

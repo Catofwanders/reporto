@@ -180,13 +180,18 @@ const QC_BRANCH = 'deploy-qc'
  * without the branch resolves `ref` to null, and a deleted head branch makes `compare`
  * null — both mean "nothing to say", not "not deployed".
  */
+const QC_AHEAD_PAGE = 50
+
 const QC_COMPARE = (org, prs) => `
 {
 ${prs
   .map(
     ({ repo, headRefName }, i) => `  p${i}: repository(owner: "${org}", name: "${repo}") {
     ref(qualifiedName: "refs/heads/${QC_BRANCH}") {
-      compare(headRef: "${headRefName}") { status aheadBy behindBy }
+      compare(headRef: "${headRefName}") {
+        status aheadBy behindBy
+        commits(first: ${QC_AHEAD_PAGE}) { nodes { parents { totalCount } } }
+      }
     }
   }`,
   )
@@ -194,9 +199,27 @@ ${prs
 }`
 
 /**
+ * Of the commits deploy-qc has not got, how many are somebody's work.
+ *
+ * Same rule as `reworkSince`: a commit with two parents is the base branch being pulled into
+ * the PR, and it can sit on top of work that is already deployed. That is what made an approved
+ * PR whose change was on QC read as "off QC · 1" — the one commit deploy-qc lacked was a merge
+ * of main, so the chip contradicted the environment.
+ *
+ * Undefined rather than a guess when the page did not cover every commit ahead: the callers
+ * fall back to the raw count there, which is the honest answer for a branch that far out.
+ */
+const aheadWorkOf = (compare) => {
+  const nodes = compare.commits?.nodes ?? []
+  if (compare.aheadBy > nodes.length) return undefined
+  return nodes.filter((commit) => (commit?.parents?.totalCount ?? 1) <= 1).length
+}
+
+/**
  * Whether each PR's head is contained in deploy-qc. The comparison runs base=deploy-qc to
  * head, so `aheadBy` counts commits the QC branch has not got yet: zero means the branch
- * is deployed there (BEHIND — QC has moved on since — or IDENTICAL).
+ * is deployed there (BEHIND — QC has moved on since — or IDENTICAL). `aheadWork` says how
+ * many of those are work rather than base-branch merges.
  *
  * `compare` throws NOT_FOUND for a branch it cannot resolve rather than returning null, so
  * a failure here degrades to "unknown" for the whole batch instead of losing the report.
@@ -215,10 +238,12 @@ async function pullQcState(org, prs, token) {
   targets.forEach((pr, i) => {
     const compare = data[`p${i}`]?.ref?.compare
     if (!compare) return
+    const aheadWork = aheadWorkOf(compare)
     byKey.set(`${pr.repo}#${pr.num}`, {
       status: compare.status,
       aheadBy: compare.aheadBy,
       behindBy: compare.behindBy,
+      ...(aheadWork === undefined ? {} : { aheadWork }),
     })
   })
   return byKey

@@ -137,6 +137,12 @@ export interface DeployQcState {
   aheadBy: number;
   /** Commits deploy-qc has that the PR head has not. */
   behindBy: number;
+  /**
+   * Of the commits ahead, the ones that are somebody's work rather than a merge of the base
+   * branch. Absent means the puller could not say — a branch further ahead than it pages, or
+   * a report written before this existed — and the callers fall back to `aheadBy`.
+   */
+  aheadWork?: number;
 }
 
 export interface OpenPr {

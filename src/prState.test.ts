@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { OpenPr } from './types';
-import { awaitingOthers, prState, qcChip } from './prState';
+import { awaitingOthers, onQc, prState, qcChip } from './prState';
 
 const at = (iso: string) => new Date(iso).toISOString();
 
@@ -106,7 +106,7 @@ describe('qcChip', () => {
     expect(qcChip(undefined)).toBeNull();
   });
 
-  /* aheadBy is the only field that matters: BEHIND just means QC moved on since. */
+  /* BEHIND just means QC moved on since — that is the normal state of a deployed branch. */
   it('reads zero commits ahead as deployed, however far QC has moved on', () => {
     expect(qcChip({ status: 'BEHIND', aheadBy: 0, behindBy: 12 })?.label).toBe('on QC');
     expect(qcChip({ status: 'IDENTICAL', aheadBy: 0, behindBy: 0 })?.tone).toBe('qc');
@@ -120,5 +120,40 @@ describe('qcChip', () => {
       '2 commits on this branch are not in deploy-qc',
     );
     expect(qcChip({ status: 'DIVERGED', aheadBy: 3, behindBy: 2 })?.label).toBe('off QC · 3');
+  });
+
+  /*
+   * The bug this rule exists for: an approved PR whose change was on QC read "off QC · 1"
+   * because the one commit deploy-qc lacked was a merge of main left by Update branch. The
+   * chip contradicted the environment, and the same count drove the flow-check warning.
+   */
+  it('is on QC when every commit deploy-qc lacks is a base-branch merge', () => {
+    const chip = qcChip({ status: 'DIVERGED', aheadBy: 1, behindBy: 29, aheadWork: 0 });
+    expect(chip?.label).toBe('on QC');
+    expect(chip?.title).toBe(
+      "this branch's work is in deploy-qc; the 1 commit it has on top is a merge of the base branch",
+    );
+  });
+
+  /* A sync merge sitting on top of real work does not excuse the work. */
+  it('counts only the work commits when some of both are ahead', () => {
+    expect(qcChip({ status: 'DIVERGED', aheadBy: 3, behindBy: 4, aheadWork: 2 })?.label).toBe(
+      'off QC · 2',
+    );
+  });
+
+  /* Absent means the puller could not say, and a guess of "deployed" would be the worse one. */
+  it('falls back to the raw count when the work split is unknown', () => {
+    expect(qcChip({ status: 'AHEAD', aheadBy: 1, behindBy: 0 })?.label).toBe('off QC · 1');
+  });
+});
+
+describe('onQc', () => {
+  /* Every consumer asks this one question, so they cannot drift apart on the answer. */
+  it('answers null with nothing to compare, and reads the work count otherwise', () => {
+    expect(onQc(null)).toBeNull();
+    expect(onQc({ status: 'BEHIND', aheadBy: 0, behindBy: 3 })).toBe(true);
+    expect(onQc({ status: 'DIVERGED', aheadBy: 1, behindBy: 29, aheadWork: 0 })).toBe(true);
+    expect(onQc({ status: 'AHEAD', aheadBy: 1, behindBy: 0 })).toBe(false);
   });
 });

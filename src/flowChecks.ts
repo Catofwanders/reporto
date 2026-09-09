@@ -1,6 +1,6 @@
 import type { JiraReport, OpenPr, Pr, PrsReport, SlackReport, SlackRow, Ticket } from './types';
 import { idleDays } from './prLanes';
-import { prState } from './prState';
+import { onQc, prState } from './prState';
 import { DEFAULT_VOCAB, inStatusGroup, type StatusVocab } from './statusVocab';
 import { prLabel } from './format';
 
@@ -53,7 +53,7 @@ function unmergedOnFinishedTicket(
     const open = qcOf(pr);
     // Not in the open-PR report — somebody else's PR, or a repo not covered. Cannot judge.
     if (!open?.deployQc) return false;
-    return open.deployQc.aheadBy > 0;
+    return onQc(open.deployQc) === false;
   });
   if (offQc.length === 0) return null;
   return {
@@ -253,7 +253,7 @@ function announcedOffQc(row: SlackRow, openPrs: Map<string, OpenPr>): FlowFindin
   if (row.bot) return null;
   const offQc = row.prs
     .map((ref) => ({ ref, pr: openPrs.get(ref) }))
-    .filter((entry) => entry.pr && (entry.pr.deployQc?.aheadBy ?? 0) > 0);
+    .filter((entry) => entry.pr && onQc(entry.pr.deployQc) === false);
   if (offQc.length === 0) return null;
 
   return {

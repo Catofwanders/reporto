@@ -7,7 +7,7 @@ import type {
   SlackReport,
   SlackRow,
 } from './types';
-import { prState } from './prState';
+import { onQc, prState } from './prState';
 import { idleDays, laneOf, reasonOf } from './prLanes';
 import { laneOfReview, reasonOfReview, toReviewLanes } from './reviewLanes';
 import { laneOfSlack, reasonOfSlack, WAITING_LANES } from './slackLanes';
@@ -83,7 +83,7 @@ const repoShort = (repo: string) => repo.split('/').pop() ?? repo;
 const prWhy = (pr: OpenPr): string => {
   const state = prState(pr);
   const threads = pr.unansweredThreads ?? 0;
-  if (state === 'approved') return pr.deployQc && pr.deployQc.aheadBy === 0 ? 'approved · on QC' : 'approved';
+  if (state === 'approved') return onQc(pr.deployQc) ? 'approved · on QC' : 'approved';
   if (state === 'changes-requested') return threads > 0 ? `changes + ${threads} to answer` : 'changes requested';
   if (state === 'commented') return threads > 0 ? `${threads} comments to answer` : 'reviewed, your move';
   return 'waiting on you';

@@ -1,4 +1,5 @@
 import type { DeployQcState, OpenPr } from './types';
+import { plural } from './format';
 
 /**
  * What the PR is actually waiting on, which is not the same as GitHub's reviewDecision.
@@ -84,28 +85,46 @@ export const awaitingOthers = (pr: OpenPr) => {
 };
 
 /**
- * How the PR sits against deploy-qc, for the chip beside the review state. `aheadBy` is
- * what matters: it counts commits the QC branch is missing, so zero means deployed — the
- * branch being BEHIND just means QC has moved on since, which is the normal steady state.
- * Returns null when there is nothing to claim: no deploy-qc branch, or no comparison.
+ * How far this branch's own work is from deploy-qc.
+ *
+ * Not `aheadBy`, which counts every commit the QC branch is missing — including the merge of
+ * the base branch that the Update branch button leaves behind. A PR whose change was on QC
+ * showed "off QC · 1" for exactly that commit, contradicting the environment. `aheadWork`
+ * excludes it, and the raw count is the fallback where the puller could not say.
+ */
+export const qcAheadWork = (deployQc: DeployQcState): number =>
+  deployQc.aheadWork ?? deployQc.aheadBy;
+
+/** Deployed to QC as far as this PR is concerned. Null when there is nothing to claim. */
+export const onQc = (deployQc: DeployQcState | null | undefined): boolean | null =>
+  deployQc ? qcAheadWork(deployQc) === 0 : null;
+
+/**
+ * How the PR sits against deploy-qc, for the chip beside the review state. Zero work commits
+ * ahead means deployed — the branch being BEHIND just means QC has moved on since, which is
+ * the normal steady state. Returns null when there is nothing to claim: no deploy-qc branch,
+ * or no comparison.
  */
 export const qcChip = (
   deployQc: DeployQcState | null | undefined,
 ): { label: string; tone: 'qc' | 'qcout'; title: string } | null => {
   if (!deployQc) return null;
-  if (deployQc.aheadBy === 0) {
+  const ahead = qcAheadWork(deployQc);
+  if (ahead === 0) {
+    const sync = deployQc.aheadBy > 0;
     return {
       label: 'on QC',
       tone: 'qc',
-      title:
-        deployQc.status === 'IDENTICAL'
+      title: sync
+        ? `this branch's work is in deploy-qc; the ${plural(deployQc.aheadBy, 'commit')} it has on top ${deployQc.aheadBy === 1 ? 'is a merge' : 'are merges'} of the base branch`
+        : deployQc.status === 'IDENTICAL'
           ? 'deploy-qc is at this exact commit'
           : `merged into deploy-qc; deploy-qc is ${deployQc.behindBy} commits further along`,
     };
   }
   return {
-    label: `off QC · ${deployQc.aheadBy}`,
+    label: `off QC · ${ahead}`,
     tone: 'qcout',
-    title: `${deployQc.aheadBy} commit${deployQc.aheadBy === 1 ? ' on this branch is' : 's on this branch are'} not in deploy-qc`,
+    title: `${ahead} commit${ahead === 1 ? ' on this branch is' : 's on this branch are'} not in deploy-qc`,
   };
 };

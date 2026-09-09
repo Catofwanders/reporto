@@ -55,14 +55,14 @@ const openPrs = (nodes, issueCount = nodes.length) => ({
   data: { search: { issueCount, nodes } },
 })
 
-const qcFor = (count) => ({
+const qcFor = (count, compare = { status: 'BEHIND', aheadBy: 0, behindBy: 7, commits: { nodes: [] } }) => ({
   data: Object.fromEntries(
-    Array.from({ length: count }, (_, i) => [
-      `p${i}`,
-      { ref: { compare: { status: 'BEHIND', aheadBy: 0, behindBy: 7 } } },
-    ]),
+    Array.from({ length: count }, (_, i) => [`p${i}`, { ref: { compare } }]),
   ),
 })
+
+/** A commit as the QC comparison returns it: two parents means a merge of the base branch. */
+const aheadCommit = (parents = 1) => ({ parents: { totalCount: parents } })
 
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'reporto-gh-'))
@@ -93,7 +93,44 @@ describe('pullOpenPrs', () => {
     expect(one.ticket).toBe('SHOP-1')
     expect(one.ticketUrl).toBe('https://jira.example.com/browse/SHOP-1')
     expect(one.review).toBe('APPROVED')
-    expect(one.deployQc).toEqual({ status: 'BEHIND', aheadBy: 0, behindBy: 7 })
+    expect(one.deployQc).toEqual({ status: 'BEHIND', aheadBy: 0, behindBy: 7, aheadWork: 0 })
+  })
+
+  /*
+   * The commit deploy-qc was missing on a real PR was a merge of main left by Update branch,
+   * so the card said "off QC · 1" about work that was on QC. Merges do not count as work.
+   */
+  it('separates work ahead of deploy-qc from base-branch merges', async () => {
+    writeFake({
+      openPrs: openPrs([pr()]),
+      qc: qcFor(1, {
+        status: 'DIVERGED',
+        aheadBy: 3,
+        behindBy: 29,
+        commits: { nodes: [aheadCommit(2), aheadCommit(), aheadCommit(2)] },
+      }),
+    })
+    const [one] = (await pull()).repos[0].prs
+    expect(one.deployQc).toEqual({ status: 'DIVERGED', aheadBy: 3, behindBy: 29, aheadWork: 1 })
+  })
+
+  /*
+   * Absence has to be distinguishable from zero: a branch further ahead than the page can
+   * show must not be reported as "no work ahead", which would read as deployed.
+   */
+  it('leaves the work count out when the page did not cover every commit ahead', async () => {
+    writeFake({
+      openPrs: openPrs([pr()]),
+      qc: qcFor(1, {
+        status: 'AHEAD',
+        aheadBy: 80,
+        behindBy: 0,
+        commits: { nodes: [aheadCommit(), aheadCommit()] },
+      }),
+    })
+    const [one] = (await pull()).repos[0].prs
+    expect(one.deployQc.aheadWork).toBeUndefined()
+    expect(one.deployQc.aheadBy).toBe(80)
   })
 
   /* An archived repo cannot be merged into, so an open PR there is history, not work. */
