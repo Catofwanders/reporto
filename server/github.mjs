@@ -107,8 +107,11 @@ const OPEN_PRS = (author, org) => `
         }
         reviews(last: 20) { nodes { submittedAt author { login } } }
         commits(last: 20) {
+          totalCount
           nodes {
             commit {
+              oid
+              messageHeadline
               committedDate
               pushedDate
               parents { totalCount }
@@ -180,7 +183,14 @@ const QC_BRANCH = 'deploy-qc'
  * without the branch resolves `ref` to null, and a deleted head branch makes `compare`
  * null — both mean "nothing to say", not "not deployed".
  */
-const QC_AHEAD_PAGE = 50
+const QC_AHEAD_PAGE = 100
+
+/**
+ * How far back deploy-qc is read for a cherry-picked copy of a commit. 100 is GitHub's own
+ * ceiling on a connection page — asking for more fails the whole query rather than trimming,
+ * which is how this silently degraded to "no history" the first time it ran.
+ */
+const QC_HISTORY_PAGE = 100
 
 const QC_COMPARE = (org, prs) => `
 {
@@ -190,7 +200,25 @@ ${prs
     ref(qualifiedName: "refs/heads/${QC_BRANCH}") {
       compare(headRef: "${headRefName}") {
         status aheadBy behindBy
-        commits(first: ${QC_AHEAD_PAGE}) { nodes { parents { totalCount } } }
+        commits(first: ${QC_AHEAD_PAGE}) { nodes { oid } }
+      }
+    }
+  }`,
+  )
+  .join('\n')}
+}`
+
+/** deploy-qc's own recent history, once per repo rather than once per PR. */
+const QC_HISTORY = (org, repos) => `
+{
+${repos
+  .map(
+    (repo, i) => `  h${i}: repository(owner: "${org}", name: "${repo}") {
+    ref(qualifiedName: "refs/heads/${QC_BRANCH}") {
+      target {
+        ... on Commit {
+          history(first: ${QC_HISTORY_PAGE}) { nodes { oid messageHeadline } }
+        }
       }
     }
   }`,
@@ -199,27 +227,86 @@ ${prs
 }`
 
 /**
- * Of the commits deploy-qc has not got, how many are somebody's work.
+ * What deploy-qc contains, by content rather than by commit id.
  *
- * Same rule as `reworkSince`: a commit with two parents is the base branch being pulled into
- * the PR, and it can sit on top of work that is already deployed. That is what made an approved
- * PR whose change was on QC read as "off QC · 1" — the one commit deploy-qc lacked was a merge
- * of main, so the chip contradicted the environment.
- *
- * Undefined rather than a guess when the page did not cover every commit ahead: the callers
- * fall back to the raw count there, which is the honest answer for a branch that far out.
+ * `messageHeadline` is the join: a cherry-pick keeps the subject and changes the id, and a
+ * squash merge writes "<title> (#<num>)", so the PR number is worth indexing too.
  */
-const aheadWorkOf = (compare) => {
-  const nodes = compare.commits?.nodes ?? []
-  if (compare.aheadBy > nodes.length) return undefined
-  return nodes.filter((commit) => (commit?.parents?.totalCount ?? 1) <= 1).length
+function qcContents(history) {
+  const nodes = history?.nodes ?? []
+  const headlines = new Set()
+  const prNums = new Set()
+  for (const commit of nodes) {
+    if (!commit?.messageHeadline) continue
+    headlines.add(commit.messageHeadline)
+    const squashed = /\(#(\d+)\)\s*$/.exec(commit.messageHeadline)
+    if (squashed) prNums.add(Number(squashed[1]))
+  }
+  return { headlines, prNums, capped: nodes.length >= QC_HISTORY_PAGE }
+}
+
+async function pullQcHistory(org, repos, token) {
+  if (!repos.length) return new Map()
+  let data
+  try {
+    data = await graphql(QC_HISTORY(org, repos), token)
+  } catch (err) {
+    console.warn(`[reporto] deploy-qc history skipped: ${String(err.message ?? err)}`)
+    return new Map()
+  }
+  const byRepo = new Map()
+  repos.forEach((repo, i) => {
+    const history = data[`h${i}`]?.ref?.target?.history
+    if (history) byRepo.set(repo, qcContents(history))
+  })
+  return byRepo
 }
 
 /**
- * Whether each PR's head is contained in deploy-qc. The comparison runs base=deploy-qc to
- * head, so `aheadBy` counts commits the QC branch has not got yet: zero means the branch
- * is deployed there (BEHIND — QC has moved on since — or IDENTICAL). `aheadWork` says how
- * many of those are work rather than base-branch merges.
+ * How much of **this PR's own work** deploy-qc has not got, and how it got there.
+ *
+ * Not "commits the branches differ by", which is what the comparison alone answers and what
+ * this used to report. Two things make that number a lie about the PR:
+ *
+ * - **Somebody else's work counts in it.** A branch cut from an up-to-date master carries
+ *   every commit master has gained since deploy-qc last moved, so a two-commit PR read
+ *   "off QC · 10" on the strength of eight commits that were never its own.
+ * - **Ancestry cannot see a cherry-pick.** deploy-qc here is built by cherry-picking the work
+ *   onto it, so the very same change lives there under a different id and no comparison of
+ *   commit ids will ever match it. Both PRs of a morning's work read "off QC" while sitting
+ *   on QC, which is the way round that matters: it says go and deploy something deployed.
+ *
+ * So the question is asked of the PR's own commits, and each is on QC if deploy-qc descends
+ * from it, carries a commit with the same subject, or squash-merged the PR by number. A merge
+ * of the base branch is not work and never counts.
+ *
+ * Undefined — "could not say", which the client renders as the raw count — when the PR has
+ * more commits than were fetched, or the branch is further ahead than the comparison pages.
+ */
+function qcMissingWork(pr, compare, contents) {
+  const own = (pr.commits?.nodes ?? []).map((node) => node?.commit).filter(Boolean)
+  const fetchedAll = (pr.commits?.totalCount ?? own.length) <= own.length
+  const aheadNodes = compare.commits?.nodes ?? []
+  if (!fetchedAll || compare.aheadBy > aheadNodes.length) return {}
+
+  const ahead = new Set(aheadNodes.map((commit) => commit?.oid))
+  const work = own.filter((commit) => (commit.parents?.totalCount ?? 1) <= 1)
+  if (contents?.prNums.has(pr.num)) return { aheadWork: 0, qcMatch: 'content' }
+
+  // An id deploy-qc does not have, under a subject it does not carry either.
+  const missing = work.filter(
+    (commit) => ahead.has(commit.oid) && !contents?.headlines.has(commit.messageHeadline),
+  )
+  if (missing.length > 0) return { aheadWork: missing.length }
+  const copied = work.some((commit) => ahead.has(commit.oid))
+  return { aheadWork: 0, qcMatch: copied ? 'content' : 'ancestor' }
+}
+
+/**
+ * Where each PR stands against deploy-qc. The comparison runs base=deploy-qc to head, so
+ * `aheadBy` counts commits the QC branch has not got: it is the raw divergence of two
+ * branches, kept for context and as the fallback figure. What the chip reads is `aheadWork`,
+ * which is about this PR alone — see `qcMissingWork`.
  *
  * `compare` throws NOT_FOUND for a branch it cannot resolve rather than returning null, so
  * a failure here degrades to "unknown" for the whole batch instead of losing the report.
@@ -234,16 +321,16 @@ async function pullQcState(org, prs, token) {
     console.warn(`[reporto] deploy-qc comparison skipped: ${String(err.message ?? err)}`)
     return new Map()
   }
+  const contents = await pullQcHistory(org, [...new Set(targets.map((pr) => pr.repo))], token)
   const byKey = new Map()
   targets.forEach((pr, i) => {
     const compare = data[`p${i}`]?.ref?.compare
     if (!compare) return
-    const aheadWork = aheadWorkOf(compare)
     byKey.set(`${pr.repo}#${pr.num}`, {
       status: compare.status,
       aheadBy: compare.aheadBy,
       behindBy: compare.behindBy,
-      ...(aheadWork === undefined ? {} : { aheadWork }),
+      ...qcMissingWork(pr, compare, contents.get(pr.repo)),
     })
   })
   return byKey
@@ -322,6 +409,8 @@ export async function pullOpenPrs({
       repo: n.repository.name,
       num: n.number,
       headRefName: n.headRefName,
+      // The PR's own commits: what "is this on QC" is actually a question about.
+      commits: n.commits,
     })),
     token,
   )

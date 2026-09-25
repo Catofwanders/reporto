@@ -13,7 +13,9 @@ let dir
 let realPath
 
 const writeFake = (responses) => {
-  for (const [key, body] of Object.entries(responses)) {
+  // deploy-qc's own history: empty unless a test says otherwise, which is the same as a repo
+  // whose QC branch has never carried a copy of anything.
+  for (const [key, body] of Object.entries({ qcHistory: qcHistoryFor([]), ...responses })) {
     fs.writeFileSync(path.join(dir, `${key}.json`), body === 'fail' ? 'FAIL' : JSON.stringify(body))
   }
   // A shell script rather than node: this is spawned several times per test, and starting a
@@ -23,6 +25,7 @@ case "$*" in
   *"auth token"*) echo fake-token; exit 0 ;;
 esac
 case "$*" in
+  *"history(first"*) f=qcHistory ;;
   *"compare(headRef"*) f=qc ;;
   *) f=openPrs ;;
 esac
@@ -36,6 +39,39 @@ cat "${dir}/$f.json"
   fs.writeFileSync(file, script, { mode: 0o755 })
 }
 
+/** deploy-qc history as the QC pass reads it: one repo, newest first. */
+const qcHistoryFor = (headlines, repos = 1) => ({
+  data: Object.fromEntries(
+    Array.from({ length: repos }, (_, i) => [
+      `h${i}`,
+      {
+        ref: {
+          target: {
+            history: {
+              nodes: headlines.map((messageHeadline, n) => ({
+                oid: `qc${n}`,
+                messageHeadline,
+              })),
+            },
+          },
+        },
+      },
+    ]),
+  ),
+})
+
+/** A commit on the PR's own branch. Two parents means a merge of the base branch. */
+const own = (oid, messageHeadline, parents = 1) => ({
+  commit: {
+    oid,
+    messageHeadline,
+    committedDate: '2026-05-14T08:00:00Z',
+    pushedDate: null,
+    parents: { totalCount: parents },
+    author: { name: 'me', user: { login: 'me' } },
+  },
+})
+
 const pr = (over = {}) => ({
   number: 1,
   title: 'SHOP-1 - cache the seller catalogue',
@@ -47,7 +83,7 @@ const pr = (over = {}) => ({
   repository: { name: 'orders-api', isArchived: false },
   reviewThreads: { nodes: [] },
   reviews: { nodes: [] },
-  commits: { nodes: [] },
+  commits: { totalCount: 0, nodes: [] },
   ...over,
 })
 
@@ -55,14 +91,14 @@ const openPrs = (nodes, issueCount = nodes.length) => ({
   data: { search: { issueCount, nodes } },
 })
 
-const qcFor = (count, compare = { status: 'BEHIND', aheadBy: 0, behindBy: 7, commits: { nodes: [] } }) => ({
+const qcFor = (
+  count,
+  compare = { status: 'BEHIND', aheadBy: 0, behindBy: 7, commits: { nodes: [] } },
+) => ({
   data: Object.fromEntries(
     Array.from({ length: count }, (_, i) => [`p${i}`, { ref: { compare } }]),
   ),
 })
-
-/** A commit as the QC comparison returns it: two parents means a merge of the base branch. */
-const aheadCommit = (parents = 1) => ({ parents: { totalCount: parents } })
 
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'reporto-gh-'))
@@ -93,25 +129,97 @@ describe('pullOpenPrs', () => {
     expect(one.ticket).toBe('SHOP-1')
     expect(one.ticketUrl).toBe('https://jira.example.com/browse/SHOP-1')
     expect(one.review).toBe('APPROVED')
-    expect(one.deployQc).toEqual({ status: 'BEHIND', aheadBy: 0, behindBy: 7, aheadWork: 0 })
+    expect(one.deployQc).toEqual({
+      status: 'BEHIND',
+      aheadBy: 0,
+      behindBy: 7,
+      aheadWork: 0,
+      qcMatch: 'ancestor',
+    })
   })
 
   /*
    * The commit deploy-qc was missing on a real PR was a merge of main left by Update branch,
    * so the card said "off QC · 1" about work that was on QC. Merges do not count as work.
    */
-  it('separates work ahead of deploy-qc from base-branch merges', async () => {
+  it('separates the PR\'s work ahead of deploy-qc from its base-branch merges', async () => {
     writeFake({
-      openPrs: openPrs([pr()]),
+      openPrs: openPrs([
+        pr({
+          commits: {
+            totalCount: 3,
+            nodes: [own('a', 'SHOP-1: the change'), own('m', 'Merge master', 2), own('b', 'SHOP-1: a fix')],
+          },
+        }),
+      ]),
       qc: qcFor(1, {
         status: 'DIVERGED',
         aheadBy: 3,
         behindBy: 29,
-        commits: { nodes: [aheadCommit(2), aheadCommit(), aheadCommit(2)] },
+        commits: { nodes: [{ oid: 'a' }, { oid: 'm' }, { oid: 'b' }] },
       }),
     })
     const [one] = (await pull()).repos[0].prs
-    expect(one.deployQc).toEqual({ status: 'DIVERGED', aheadBy: 3, behindBy: 29, aheadWork: 1 })
+    expect(one.deployQc).toEqual({ status: 'DIVERGED', aheadBy: 3, behindBy: 29, aheadWork: 2 })
+  })
+
+  /*
+   * What made two deployed PRs read "off QC · 10" and "off QC · 5": a branch cut from an
+   * up-to-date master carries every commit master gained since deploy-qc last moved, and none
+   * of them are this PR's business.
+   */
+  it('ignores commits the branch carries from other people', async () => {
+    writeFake({
+      openPrs: openPrs([pr({ commits: { totalCount: 1, nodes: [own('a', 'SHOP-1: the change')] } })]),
+      qc: qcFor(1, {
+        status: 'DIVERGED',
+        aheadBy: 9,
+        behindBy: 413,
+        // Eight of somebody else's commits, then this PR's one.
+        commits: { nodes: [...Array.from({ length: 8 }, (_, i) => ({ oid: `x${i}` })), { oid: 'a' }] },
+      }),
+      qcHistory: qcHistoryFor(['SHOP-1: the change']),
+    })
+    const [one] = (await pull()).repos[0].prs
+    expect(one.deployQc.aheadWork).toBe(0)
+  })
+
+  /*
+   * deploy-qc is built by cherry-picking, so the same change lives there under a different id
+   * and no comparison of ids will ever match it. Saying "off QC" there sends somebody to
+   * deploy what is deployed — the way round that actually costs something.
+   */
+  it('reads a cherry-picked copy on deploy-qc as deployed, and says so', async () => {
+    writeFake({
+      openPrs: openPrs([
+        pr({ commits: { totalCount: 2, nodes: [own('a', 'SHOP-1: the change'), own('b', 'SHOP-1: a fix')] } }),
+      ]),
+      qc: qcFor(1, {
+        status: 'DIVERGED',
+        aheadBy: 2,
+        behindBy: 413,
+        commits: { nodes: [{ oid: 'a' }, { oid: 'b' }] },
+      }),
+      qcHistory: qcHistoryFor(['SHOP-1: a fix', 'SHOP-1: the change']),
+    })
+    const [one] = (await pull()).repos[0].prs
+    expect(one.deployQc.aheadWork).toBe(0)
+    expect(one.deployQc.qcMatch).toBe('content')
+  })
+
+  /* A squash merge onto deploy-qc keeps no subject of the branch's own — only the number. */
+  it('reads a squash of the PR onto deploy-qc as deployed', async () => {
+    writeFake({
+      openPrs: openPrs([pr({ commits: { totalCount: 1, nodes: [own('a', 'SHOP-1: the change')] } })]),
+      qc: qcFor(1, {
+        status: 'DIVERGED',
+        aheadBy: 1,
+        behindBy: 4,
+        commits: { nodes: [{ oid: 'a' }] },
+      }),
+      qcHistory: qcHistoryFor(['SHOP-1 - cache the seller catalogue (#1)']),
+    })
+    expect((await pull()).repos[0].prs[0].deployQc.aheadWork).toBe(0)
   })
 
   /*
@@ -120,17 +228,31 @@ describe('pullOpenPrs', () => {
    */
   it('leaves the work count out when the page did not cover every commit ahead', async () => {
     writeFake({
-      openPrs: openPrs([pr()]),
+      openPrs: openPrs([pr({ commits: { totalCount: 1, nodes: [own('a', 'SHOP-1: the change')] } })]),
       qc: qcFor(1, {
         status: 'AHEAD',
-        aheadBy: 80,
+        aheadBy: 800,
         behindBy: 0,
-        commits: { nodes: [aheadCommit(), aheadCommit()] },
+        commits: { nodes: [{ oid: 'a' }, { oid: 'b' }] },
       }),
     })
     const [one] = (await pull()).repos[0].prs
     expect(one.deployQc.aheadWork).toBeUndefined()
-    expect(one.deployQc.aheadBy).toBe(80)
+    expect(one.deployQc.aheadBy).toBe(800)
+  })
+
+  /* The same rule for a PR whose own commit list was capped: unread, not "nothing missing". */
+  it('leaves the work count out when the PR has more commits than were fetched', async () => {
+    writeFake({
+      openPrs: openPrs([pr({ commits: { totalCount: 40, nodes: [own('a', 'SHOP-1: the change')] } })]),
+      qc: qcFor(1, {
+        status: 'AHEAD',
+        aheadBy: 1,
+        behindBy: 0,
+        commits: { nodes: [{ oid: 'a' }] },
+      }),
+    })
+    expect((await pull()).repos[0].prs[0].deployQc.aheadWork).toBeUndefined()
   })
 
   /* An archived repo cannot be merged into, so an open PR there is history, not work. */

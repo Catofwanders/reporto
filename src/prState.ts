@@ -85,12 +85,14 @@ export const awaitingOthers = (pr: OpenPr) => {
 };
 
 /**
- * How far this branch's own work is from deploy-qc.
+ * How much of this PR's own work deploy-qc has not got.
  *
- * Not `aheadBy`, which counts every commit the QC branch is missing — including the merge of
- * the base branch that the Update branch button leaves behind. A PR whose change was on QC
- * showed "off QC · 1" for exactly that commit, contradicting the environment. `aheadWork`
- * excludes it, and the raw count is the fallback where the puller could not say.
+ * Not `aheadBy`, which is how far two branches have drifted apart and counts three things
+ * that say nothing about this PR: the base-branch merge the Update branch button leaves,
+ * every commit the branch carries from other people's merged work, and the PR's own commits
+ * where deploy-qc holds a cherry-picked copy under a different id. All three have produced an
+ * "off QC" chip on work that was on QC. `aheadWork` is the count with them taken out, and the
+ * raw figure is the fallback for where the puller could not say.
  */
 export const qcAheadWork = (deployQc: DeployQcState): number =>
   deployQc.aheadWork ?? deployQc.aheadBy;
@@ -105,26 +107,36 @@ export const onQc = (deployQc: DeployQcState | null | undefined): boolean | null
  * the normal steady state. Returns null when there is nothing to claim: no deploy-qc branch,
  * or no comparison.
  */
+/**
+ * Why a branch that is *ahead* of deploy-qc is nonetheless deployed. Said, rather than left
+ * for the reader to reconcile with the number in the tooltip beside it.
+ */
+const onQcTitle = (deployQc: DeployQcState): string => {
+  if (deployQc.qcMatch === 'content') {
+    return `deploy-qc carries this PR's commits under different ids — cherry-picked or squashed onto it`;
+  }
+  if (deployQc.aheadBy > 0) {
+    return `every commit of this PR is in deploy-qc; the ${plural(deployQc.aheadBy, 'commit')} this branch has on top ${deployQc.aheadBy === 1 ? 'is' : 'are'} other people's work or a base-branch merge`;
+  }
+  return deployQc.status === 'IDENTICAL'
+    ? 'deploy-qc is at this exact commit'
+    : `merged into deploy-qc; deploy-qc is ${deployQc.behindBy} commits further along`;
+};
+
 export const qcChip = (
   deployQc: DeployQcState | null | undefined,
 ): { label: string; tone: 'qc' | 'qcout'; title: string } | null => {
   if (!deployQc) return null;
   const ahead = qcAheadWork(deployQc);
   if (ahead === 0) {
-    const sync = deployQc.aheadBy > 0;
-    return {
-      label: 'on QC',
-      tone: 'qc',
-      title: sync
-        ? `this branch's work is in deploy-qc; the ${plural(deployQc.aheadBy, 'commit')} it has on top ${deployQc.aheadBy === 1 ? 'is a merge' : 'are merges'} of the base branch`
-        : deployQc.status === 'IDENTICAL'
-          ? 'deploy-qc is at this exact commit'
-          : `merged into deploy-qc; deploy-qc is ${deployQc.behindBy} commits further along`,
-    };
+    return { label: 'on QC', tone: 'qc', title: onQcTitle(deployQc) };
   }
   return {
     label: `off QC · ${ahead}`,
     tone: 'qcout',
-    title: `${ahead} commit${ahead === 1 ? ' on this branch is' : 's on this branch are'} not in deploy-qc`,
+    title:
+      deployQc.aheadWork === undefined
+        ? `this branch is ${plural(ahead, 'commit')} ahead of deploy-qc; which of them are this PR's own could not be read`
+        : `${plural(ahead, 'commit')} of this PR ${ahead === 1 ? 'is' : 'are'} not in deploy-qc`,
   };
 };

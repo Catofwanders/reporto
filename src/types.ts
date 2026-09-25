@@ -138,11 +138,21 @@ export interface DeployQcState {
   /** Commits deploy-qc has that the PR head has not. */
   behindBy: number;
   /**
-   * Of the commits ahead, the ones that are somebody's work rather than a merge of the base
-   * branch. Absent means the puller could not say — a branch further ahead than it pages, or
-   * a report written before this existed — and the callers fall back to `aheadBy`.
+   * This PR's own commits that deploy-qc has not got, by content rather than by id: a
+   * cherry-picked or squashed copy counts as deployed, a base-branch merge is not work, and
+   * commits the branch carries from other people's merges are not this PR's business.
+   *
+   * Absent means the puller could not say — a PR with more commits than it fetches, a branch
+   * further ahead than the comparison pages, or a report written before this existed — and the
+   * callers fall back to `aheadBy`, which is the raw divergence of the two branches.
    */
   aheadWork?: number;
+  /**
+   * How the work was found on deploy-qc: `ancestor` if the QC branch descends from the PR's
+   * commits, `content` if it carries the same changes under different ids. Only set when the
+   * work is there, and only to explain a chip that would otherwise contradict `aheadBy`.
+   */
+  qcMatch?: 'ancestor' | 'content';
 }
 
 export interface OpenPr {

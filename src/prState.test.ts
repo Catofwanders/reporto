@@ -113,13 +113,27 @@ describe('qcChip', () => {
   });
 
   it('counts what QC is missing, singular and plural', () => {
-    expect(qcChip({ status: 'AHEAD', aheadBy: 1, behindBy: 0 })?.title).toBe(
-      '1 commit on this branch is not in deploy-qc',
+    expect(qcChip({ status: 'AHEAD', aheadBy: 1, behindBy: 0, aheadWork: 1 })?.title).toBe(
+      '1 commit of this PR is not in deploy-qc',
     );
-    expect(qcChip({ status: 'AHEAD', aheadBy: 2, behindBy: 0 })?.title).toBe(
-      '2 commits on this branch are not in deploy-qc',
+    expect(qcChip({ status: 'AHEAD', aheadBy: 2, behindBy: 0, aheadWork: 2 })?.title).toBe(
+      '2 commits of this PR are not in deploy-qc',
     );
-    expect(qcChip({ status: 'DIVERGED', aheadBy: 3, behindBy: 2 })?.label).toBe('off QC · 3');
+    expect(qcChip({ status: 'DIVERGED', aheadBy: 3, behindBy: 2, aheadWork: 3 })?.label).toBe(
+      'off QC · 3',
+    );
+  });
+
+  /*
+   * The fallback figure is the divergence of two branches, not a claim about this PR, and the
+   * tooltip has to stop short of making one — that overstatement is the bug it stands in for.
+   */
+  it('says the count is unread rather than the PR\'s when the work split is unknown', () => {
+    const chip = qcChip({ status: 'AHEAD', aheadBy: 4, behindBy: 0 });
+    expect(chip?.label).toBe('off QC · 4');
+    expect(chip?.title).toBe(
+      "this branch is 4 commits ahead of deploy-qc; which of them are this PR's own could not be read",
+    );
   });
 
   /*
@@ -131,7 +145,26 @@ describe('qcChip', () => {
     const chip = qcChip({ status: 'DIVERGED', aheadBy: 1, behindBy: 29, aheadWork: 0 });
     expect(chip?.label).toBe('on QC');
     expect(chip?.title).toBe(
-      "this branch's work is in deploy-qc; the 1 commit it has on top is a merge of the base branch",
+      "every commit of this PR is in deploy-qc; the 1 commit this branch has on top is other people's work or a base-branch merge",
+    );
+  });
+
+  /*
+   * The case that reads worst when it is wrong: deploy-qc is built by cherry-picking, so the
+   * work is there under different ids and the comparison says the branch is ahead. Saying
+   * "off QC" there sends somebody to deploy what is already deployed.
+   */
+  it('says how the work was found when deploy-qc holds a copy rather than the commit', () => {
+    const chip = qcChip({
+      status: 'DIVERGED',
+      aheadBy: 10,
+      behindBy: 413,
+      aheadWork: 0,
+      qcMatch: 'content',
+    });
+    expect(chip?.label).toBe('on QC');
+    expect(chip?.title).toBe(
+      "deploy-qc carries this PR's commits under different ids — cherry-picked or squashed onto it",
     );
   });
 
