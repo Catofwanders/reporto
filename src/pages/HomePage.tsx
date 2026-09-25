@@ -24,6 +24,7 @@ import {
   writeSnoozes,
 } from '../snooze';
 import { isDone, readDone } from '../slackDone';
+import { readIgnored, splitIgnored } from '../reviewIgnore';
 
 interface HomePageProps {
   jira: JiraReport | null;
@@ -59,10 +60,18 @@ export const HomePage = ({ jira, calendar, prs, reviews, slack, since }: HomePag
 
   // A module switched off in Settings, or one whose credentials are missing, contributes
   // nothing — not an empty row, not a zero in the strip.
+  /*
+   * Reviews ignored on the Reviews page are out of the queue and out of the bar too: a row you
+   * have said is not yours must not come back as "needs you" on the dashboard. The count of
+   * them lives on the page that owns the list, which is where the way back is.
+   */
+  const [reviewIgnores] = useState(readIgnored);
+  const ownedReviews = reviews ? splitIgnored(reviews, reviewIgnores).kept : null;
+
   const sources = {
     jira: usable('jira') ? jira : null,
     prs: usable('prs') ? prs : null,
-    reviews: usable('reviews') ? reviews : null,
+    reviews: usable('reviews') ? ownedReviews : null,
     slack: usable('slack') ? slack : null,
   };
 

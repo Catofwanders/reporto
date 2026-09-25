@@ -9,6 +9,13 @@ interface ReviewTableProps {
   onToggle: (url: string) => void;
   /** Select or clear the whole lane in one click — the usual way a batch starts. */
   onToggleAll: (urls: string[], next: boolean) => void;
+  /**
+   * "Not mine to review." Absent on the ignored list itself, where the row's own button is
+   * the way back — see `reviewIgnore.ts` for why the mark expires rather than sticking.
+   */
+  onIgnore?: (url: string, next: boolean) => void;
+  /** Whether the rows given are already ignored, which flips the button to an undo. */
+  ignored?: boolean;
 }
 
 /**
@@ -18,7 +25,14 @@ interface ReviewTableProps {
  * point is to tick several and hand them to an agent, and that needs a checkbox column
  * that lines up, an age column that compares at a glance, and one row per PR.
  */
-export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTableProps) => {
+export const ReviewTable = ({
+  rows,
+  selected,
+  onToggle,
+  onToggleAll,
+  onIgnore,
+  ignored = false,
+}: ReviewTableProps) => {
   const urls = rows.map((row) => row.pr.url);
   const picked = urls.filter((url) => selected.has(url)).length;
   const all = picked === urls.length && urls.length > 0;
@@ -46,6 +60,7 @@ export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTab
             <th>What it needs</th>
             <th className="review-col-ticket">Ticket</th>
             <th className="review-col-size">Size</th>
+            {onIgnore && <th className="review-col-act" aria-label="Ignore" />}
           </tr>
         </thead>
         <tbody>
@@ -111,6 +126,25 @@ export const ReviewTable = ({ rows, selected, onToggle, onToggleAll }: ReviewTab
                     {sizeLabel(pr)}
                   </span>
                 </td>
+                {onIgnore && (
+                  <td className="pr-cell-actions">
+                    {/*
+                      The escape hatch for a request that is never going to be a review:
+                      a repo you no longer touch, a spike, an abandoned branch. GitHub keeps
+                      the request until somebody submits a review, and approving it to clear
+                      the row would be a verdict on work you have not read.
+                    */}
+                    <button
+                      type="button"
+                      className="slack-done"
+                      aria-pressed={ignored}
+                      title={ignored ? 'Put it back in the queue' : 'Not mine to review — hide it'}
+                      onClick={() => onIgnore(pr.url, !ignored)}
+                    >
+                      {ignored ? '↩' : '✕'}
+                    </button>
+                  </td>
+                )}
               </tr>
             );
           })}

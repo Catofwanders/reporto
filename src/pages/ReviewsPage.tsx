@@ -5,6 +5,14 @@ import Button from '@mui/material/Button';
 import type { JiraReport, ReviewsReport } from '../types';
 import type { ReviewLaneId, ReviewRow } from '../reviewLanes';
 import { REVIEW_LANES, toReviewLanes } from '../reviewLanes';
+import {
+  KEEP_DAYS,
+  ignoreReview,
+  readIgnored,
+  splitIgnored,
+  unignoreReview,
+  writeIgnored,
+} from '../reviewIgnore';
 import { CopyPrLinks } from '../components/CopyPrLinks';
 import { RefreshButton } from '../components/RefreshButton';
 import { ReviewTable } from '../components/ReviewTable';
@@ -30,12 +38,49 @@ interface ReviewsPageProps {
 export const ReviewsPage = ({ report, jira }: ReviewsPageProps) => {
   const [hideBots, setHideBots] = useState(true);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  /** Read once on mount, like the other local marks; the writes go back through setState. */
+  const [ignores, setIgnores] = useState(readIgnored);
+  const [showIgnored, setShowIgnored] = useState(false);
   useHashTarget([report]);
 
-  const lanes = useMemo<Map<ReviewLaneId, ReviewRow[]>>(
-    () => (report ? toReviewLanes(report, jira) : new Map()),
-    [report, jira],
+  /*
+   * The lanes are built from the report with the ignored PRs taken out, so every count on the
+   * page — the lane counts, the subtitle, what "select all" picks up — comes from the same
+   * list. The ignored ones are kept separately rather than dropped, because a hidden row that
+   * nothing on the page mentions is indistinguishable from a row that never existed.
+   */
+  const { kept, ignored } = useMemo(
+    () => (report ? splitIgnored(report, ignores) : { kept: null, ignored: [] }),
+    [report, ignores],
   );
+
+  const lanes = useMemo<Map<ReviewLaneId, ReviewRow[]>>(
+    () => (kept ? toReviewLanes(kept, jira) : new Map()),
+    [kept, jira],
+  );
+
+  const ignoredRows = useMemo<ReviewRow[]>(
+    () =>
+      report && ignored.length > 0
+        ? [...toReviewLanes({ ...report, prs: ignored }, jira).values()].flat()
+        : [],
+    [report, ignored, jira],
+  );
+
+  const setIgnore = (url: string, next: boolean) => {
+    const marks = next ? ignoreReview(url, ignores) : unignoreReview(url, ignores);
+    writeIgnored(marks);
+    setIgnores(marks);
+    // A row that has left the queue must not stay ticked: the copy button would hand out a
+    // url that is no longer on screen.
+    if (next) {
+      setSelected((prev) => {
+        const rest = new Set(prev);
+        rest.delete(url);
+        return rest;
+      });
+    }
+  };
 
   const toggle = (url: string) =>
     setSelected((prev) => {
@@ -65,7 +110,7 @@ export const ReviewsPage = ({ report, jira }: ReviewsPageProps) => {
   }
 
   const bots = (lanes.get('bots') ?? []).length;
-  const mine = report.prs.filter((pr) => !pr.bot).length;
+  const mine = (kept?.prs ?? []).filter((pr) => !pr.bot).length;
 
   // Only what is on screen can be copied: a tick left over from a PR that has since merged,
   // or one hidden by "hide bots", would otherwise ride along invisibly.
@@ -85,7 +130,8 @@ export const ReviewsPage = ({ report, jira }: ReviewsPageProps) => {
             <div>
               <h2>Your review queue</h2>
               <p className="panel-sub">
-                {mine} from people{bots > 0 && `, ${bots} from bots`} · reviewing as{' '}
+                {mine} from people{bots > 0 && `, ${bots} from bots`}
+                {ignored.length > 0 && `, ${ignored.length} ignored`} · reviewing as{' '}
                 {report.reviewer}
                 {/* Said in the subtitle rather than a banner: it qualifies the count beside it. */}
                 {report.incomplete?.length ? (
@@ -147,10 +193,46 @@ export const ReviewsPage = ({ report, jira }: ReviewsPageProps) => {
                 selected={selected}
                 onToggle={toggle}
                 onToggleAll={toggleAll}
+                onIgnore={setIgnore}
               />
             </section>
           );
         })}
+
+        {/*
+          Folded, and stated: the count is in the subtitle either way, so an ignored PR is
+          hidden from the queue without being lost from the page. The mark expires after a
+          month, which is why this list is worth being able to open.
+        */}
+        {ignored.length > 0 && (
+          <section className="pr-lane pr-lane-ignored">
+            <header className="pr-lane-head">
+              <h3>Ignored</h3>
+              <span className="count">{ignored.length}</span>
+              <p className="pr-lane-hint">
+                Not yours to review. They come back after {KEEP_DAYS} days if still open.
+              </p>
+              <button
+                type="button"
+                className="needs-snoozed-toggle"
+                aria-expanded={showIgnored}
+                onClick={() => setShowIgnored((on: boolean) => !on)}
+              >
+                {showIgnored ? 'hide' : 'show'}
+              </button>
+            </header>
+            {showIgnored && (
+              <ReviewTable
+                rows={ignoredRows}
+                selected={selected}
+                onToggle={toggle}
+                onToggleAll={toggleAll}
+                onIgnore={setIgnore}
+                ignored
+              />
+            )}
+          </section>
+        )}
       </section>
 
       <p className="status">

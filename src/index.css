@@ -1493,6 +1493,10 @@ body { background: var(--canvas); }
 .since-list { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 
 /* "Nothing to answer" on a Slack row: the judgement the words cannot carry. */
+/* The ignored lane is a footnote, not a queue: dimmer head, and its rows read as set aside. */
+.pr-lane-ignored .pr-lane-head h3 { color: var(--ink-2); }
+.pr-lane-ignored .review-table tbody tr { opacity: .7; }
+.review-col-act { width: 2.4rem; }
 .slack-done {
   background: none; border: 1px solid transparent; border-radius: .35rem; cursor: pointer;
   color: var(--ink-2); font-size: .8rem; line-height: 1.4; padding: .1rem .3rem;
